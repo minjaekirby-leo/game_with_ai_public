@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>간단한 퐁 게임 - p5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        h1 {
+            text-align: center;
+            color: #00ff00;
+        }
+        .game-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .instructions {
+            text-align: center;
+            margin: 20px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏓 간단한 퐁 게임</h1>
+    <div class="instructions">
+        <p>마우스를 위아래로 움직여서 패들을 조종하세요!</p>
+        <p>공을 놓치지 마세요!</p>
+    </div>
+    <div class="game-container">
+        <script src="pong.js"></script>
+    </div>
+</body>
+</html>

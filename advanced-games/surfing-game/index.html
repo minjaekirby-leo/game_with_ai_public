@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서핑 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #87CEEB 0%, #4169E1 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: wave 2s ease-in-out infinite;
+        }
+        
+        @keyframes wave {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        canvas {
+            border: 5px solid #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #87CEEB 0%, #4169E1 100%);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #ffffff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4169E1, #87CEEB);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .trick-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #ffff00;
+            color: #ffff00;
+            font-weight: bold;
+        }
+        
+        .speed-meter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #ffffff;
+            font-weight: bold;
+            border: 3px solid #4169E1;
+        }
+        
+        .weather-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 15px;
+            border: 2px solid #87CEEB;
+            color: #87CEEB;
+            font-weight: bold;
+        }
+        
+        .combo-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 3px solid #4169E1;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏄‍♂️ 서핑 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 조작법:</strong></p>
+        <p>← → 화살표: 좌우 이동 | ↑ 화살표: 점프 | 스페이스: 트릭</p>
+        <p><strong>🌊 목표:</strong> 파도를 타면서 트릭을 성공시키고 장애물을 피하세요!</p>
+        <p><strong>⭐ 트릭:</strong> 공중에서 스페이스바를 눌러 트릭을 시도하세요!</p>
+    </div>
+    
+    <div class="game-info">
+        <div class="info-box">점수: <span id="score">0</span></div>
+        <div class="info-box">거리: <span id="distance">0</span>m</div>
+        <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="speed-meter">
+            <div style="font-size: 0.7rem;">속도</div>
+            <div id="speedDisplay" style="font-size: 1rem;">0</div>
+        </div>
+        
+        <div class="trick-indicator" id="trickIndicator">
+            트릭 준비!
+        </div>
+        
+        <div class="weather-indicator" id="weatherIndicator">
+            ☀️ 맑음
+        </div>
+        
+        <div class="combo-display" id="comboDisplay">
+            콤보: x1
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2 style="color: #4169E1;">🏄‍♂️ 게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>최종 거리: <span id="finalDistance">0</span>m</p>
+            <button onclick="resetGame()">다시 시작</button>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="startGame()">게임 시작</button>
+        <button onclick="pauseGame()">일시정지</button>
+        <button onclick="resetGame()">다시 시작</button>
+    </div>
+    
+    <script src="surfing-game.js"></script>
+</body>
+</html>

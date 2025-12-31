@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>15 퍼즐 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+        }
+        
+        .puzzle-container {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 5px;
+            width: 320px;
+            height: 320px;
+            background: #333;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .puzzle-tile {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 8px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .puzzle-tile:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .puzzle-tile.empty {
+            background: transparent;
+            box-shadow: none;
+            cursor: default;
+        }
+        
+        .puzzle-tile.empty:hover {
+            transform: none;
+        }
+        
+        .puzzle-tile.moveable {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+            to { box-shadow: 0 4px 20px rgba(255, 107, 107, 0.6); }
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .win-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            animation: winPulse 0.6s ease;
+        }
+        
+        @keyframes winPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.3);
+        }
+        
+        .difficulty-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧩 15 퍼즐 게임</h1>
+        
+        <div class="instructions">
+            <p><strong>🎯 목표:</strong> 숫자를 1부터 15까지 순서대로 배열하세요!</p>
+            <p><strong>🎮 조작법:</strong> 빈 칸 옆의 타일을 클릭하면 이동합니다.</p>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움 (10회 섞기)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">보통 (50회 섞기)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움 (100회 섞기)</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">이동 횟수: <span id="moves">0</span></div>
+            <div class="stat-box">시간: <span id="time">00:00</span></div>
+            <div class="stat-box">난이도: <span id="difficulty">쉬움</span></div>
+        </div>
+        
+        <div class="puzzle-container">
+            <div class="puzzle-grid" id="puzzleGrid">
+                <!-- 퍼즐 타일들이 여기에 동적으로 생성됩니다 -->
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="newGame()">새 게임</button>
+            <button onclick="shufflePuzzle()">섞기</button>
+            <button onclick="solvePuzzle()">해답 보기</button>
+        </div>
+    </div>
+    
+    <div class="win-message" id="winMessage">
+        <div>🎉 축하합니다! 🎉</div>
+        <div style="font-size: 1rem; margin-top: 10px;">
+            <span id="finalMoves"></span>번 이동으로 <span id="finalTime"></span>에 완성!
+        </div>
+    </div>
+    
+    <script src="puzzle-15.js"></script>
+</body>
+</html>

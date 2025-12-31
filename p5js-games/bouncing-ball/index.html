@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>튀는 공 게임 - p5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .game-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .instructions {
+            text-align: center;
+            margin: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏀 튀는 공 게임</h1>
+    <div class="instructions">
+        <p>마우스를 움직여서 공을 따라가보세요!</p>
+        <p>클릭하면 공의 색깔이 바뀝니다!</p>
+    </div>
+    <div class="game-container">
+        <script src="sketch.js"></script>
+    </div>
+</body>
+</html>

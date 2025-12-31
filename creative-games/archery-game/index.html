@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>궁수 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            color: #2c3e50;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            animation: sway 3s ease-in-out infinite;
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        canvas {
+            border: 5px solid #8b4513;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            cursor: crosshair;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid #8b4513;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #2c3e50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .power-meter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #e74c3c;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .power-fill {
+            width: 100%;
+            background: linear-gradient(0deg, #2ecc71, #f39c12, #e74c3c);
+            border-radius: 17px;
+            transition: height 0.1s;
+            height: 0%;
+        }
+        
+        .angle-meter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .angle-indicator {
+            position: absolute;
+            width: 3px;
+            height: 60px;
+            background: #e74c3c;
+            transform-origin: bottom center;
+            bottom: 50%;
+            left: 50%;
+            margin-left: -1.5px;
+            transition: transform 0.1s;
+        }
+        
+        .wind-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 20px;
+            border: 3px solid #95a5a6;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8b4513, #d2691e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            border-color: #8b4513;
+            background: rgba(139, 69, 19, 0.2);
+        }
+        
+        .difficulty-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .shot-history {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 400px;
+            color: #333;
+        }
+        
+        .shot-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .shot-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .achievement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 215, 0, 0.95);
+            color: #333;
+            padding: 20px 30px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: none;
+            z-index: 100;
+            border: 3px solid #ffd700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: achievementPop 0.5s ease-out;
+        }
+        
+        @keyframes achievementPop {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .trajectory-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏹 궁수 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎯 목표:</strong> 마우스로 각도를 조절하고 클릭해서 화살을 쏘세요!</p>
+        <p><strong>🎮 조작법:</strong> 마우스 위치로 각도 조절, 클릭 길이로 힘 조절!</p>
+        <p><strong>💨 바람:</strong> 바람의 방향과 세기를 고려해서 쏘세요!</p>
+        <p><strong>🏆 점수:</strong> 과녁 중심에 가까울수록 높은 점수!</p>
+    </div>
+    
+    <div class="difficulty-selector">
+        <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움</button>
+        <button class="difficulty-btn" onclick="setDifficulty('medium')">보통</button>
+        <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움</button>
+        <button class="difficulty-btn" onclick="setDifficulty('expert')">전문가</button>
+    </div>
+    
+    <div class="game-info">
+        <div class="info-box">점수: <span id="score">0</span></div>
+        <div class="info-box">화살: <span id="arrows">10</span></div>
+        <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+        <div class="info-box">정확도: <span id="accuracy">0</span>%</div>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="power-meter">
+            <div class="power-fill" id="powerFill"></div>
+        </div>
+        
+        <div class="angle-meter">
+            <div class="angle-indicator" id="angleIndicator"></div>
+            <span id="angleDisplay">45°</span>
+        </div>
+        
+        <div class="wind-indicator" id="windIndicator">
+            💨 바람: 없음
+        </div>
+        
+        <div class="achievement" id="achievement">
+            🏆 불스아이! +100점!
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="startGame()">🎮 게임 시작</button>
+        <button onclick="resetGame()">🔄 다시 시작</button>
+        <button onclick="showTrajectory()">📈 궤적 보기</button>
+        <button onclick="nextTarget()">🎯 다음 과녁</button>
+    </div>
+    
+    <div class="shot-history">
+        <h3>🏹 슛 기록</h3>
+        <div id="shotHistory">
+            <div style="text-align: center; color: #666; font-style: italic;">
+                게임을 시작해서 화살을 쏴보세요!
+            </div>
+        </div>
+    </div>
+    
+    <script src="archery-game.js"></script>
+</body>
+</html>

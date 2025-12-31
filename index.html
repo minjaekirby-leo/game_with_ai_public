@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 10살 어린이를 위한 게임 모음</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 10s ease infinite;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: bounceIn 1s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .game-card:nth-child(1) { animation-delay: 0.1s; }
+        .game-card:nth-child(2) { animation-delay: 0.2s; }
+        .game-card:nth-child(3) { animation-delay: 0.3s; }
+        .game-card:nth-child(4) { animation-delay: 0.4s; }
+        .game-card:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .game-card:hover::before {
+            left: 100%;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .game-card:nth-child(2) .game-icon { animation-delay: -0.5s; }
+        .game-card:nth-child(3) .game-icon { animation-delay: -1s; }
+        .game-card:nth-child(4) .game-icon { animation-delay: -1.5s; }
+        .game-card:nth-child(5) .game-icon { animation-delay: -2s; }
+
+        .game-title {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-description {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .game-tech {
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .play-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .play-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #4ecdc4, #ff6b6b);
+            transition: left 0.3s;
+            z-index: -1;
+        }
+
+        .play-button:hover::before {
+            left: 0;
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .play-button:active {
+            transform: scale(0.98);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 2s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .games-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .game-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🎮 게임 모음</h1>
+            <div class="subtitle">10살 어린이를 위한 코딩 학습 게임 - 총 20개!</div>
+            <div class="description">
+                AI와 함께 만든 재미있는 게임들로 코딩을 배워보세요!<br>
+                각 게임은 다른 기술로 만들어져서 다양한 프로그래밍 방식을 경험할 수 있어요.<br>
+                <strong>총 20개의 게임이 준비되어 있습니다! 🎮</strong>
+            </div>
+        </div>
+
+        <div class="games-grid">
+            <div class="game-card">
+                <span class="game-icon">🏀</span>
+                <h2 class="game-title">튀는 공 게임</h2>
+                <p class="game-description">
+                    마우스를 움직여서 공을 따라가보세요!<br>
+                    클릭하면 공의 색깔이 바뀌고, 스페이스바로 속도를 바꿀 수 있어요.
+                </p>
+                <div class="game-tech">p5.js 라이브러리</div>
+                <a href="p5js-games/bouncing-ball/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏓</span>
+                <h2 class="game-title">퐁 게임</h2>
+                <p class="game-description">
+                    마우스로 패들을 조종해서 컴퓨터와 대결하세요!<br>
+                    5점을 먼저 얻는 사람이 승리해요.
+                </p>
+                <div class="game-tech">p5.js 라이브러리</div>
+                <a href="p5js-games/simple-pong/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🐍</span>
+                <h2 class="game-title">뱀 게임</h2>
+                <p class="game-description">
+                    화살표 키로 뱀을 조종해서 빨간 사과를 먹어보세요!<br>
+                    벽이나 자신의 몸에 부딪히면 게임 오버예요.
+                </p>
+                <div class="game-tech">HTML5 Canvas</div>
+                <a href="canvas-games/snake-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎯</span>
+                <h2 class="game-title">물체 잡기 게임</h2>
+                <p class="game-description">
+                    마우스로 바구니를 움직여서 떨어지는 물체들을 잡아보세요!<br>
+                    사과와 보석은 점수를 주고, 폭탄은 점수를 빼요.
+                </p>
+                <div class="game-tech">HTML5 Canvas</div>
+                <a href="canvas-games/catch-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧱</span>
+                <h2 class="game-title">블록 깨기 게임</h2>
+                <p class="game-description">
+                    마우스로 패들을 조종해서 공을 튕겨 모든 블록을 깨트리세요!<br>
+                    화려한 파티클 효과와 함께 즐겨보세요.
+                </p>
+                <div class="game-tech">Scratch 스타일</div>
+                <a href="scratch-style/block-breaker/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h2 class="game-title">별 수집 게임</h2>
+                <p class="game-description">
+                    우주선을 조종해서 별을 수집하고 운석을 피하세요!<br>
+                    파워업을 먹으면 잠시 무적이 됩니다.
+                </p>
+                <div class="game-tech">객체 지향 프로그래밍</div>
+                <a href="new-games/star-collector/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎨</span>
+                <h2 class="game-title">그림 맞추기 게임</h2>
+                <p class="game-description">
+                    이모지 그림을 보고 정답을 맞춰보세요!<br>
+                    시간 제한이 있으니 빨리 생각해보세요.
+                </p>
+                <div class="game-tech">배열과 랜덤 함수</div>
+                <a href="new-games/drawing-quiz/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧩</span>
+                <h2 class="game-title">15 퍼즐 게임</h2>
+                <p class="game-description">
+                    숫자 타일을 움직여서 1부터 15까지 순서대로 배열하세요!<br>
+                    난이도를 선택할 수 있어요.
+                </p>
+                <div class="game-tech">2차원 배열과 알고리즘</div>
+                <a href="new-games/puzzle-15/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏎️</span>
+                <h2 class="game-title">레이싱 게임</h2>
+                <p class="game-description">
+                    자동차를 조종해서 다른 차들과 장애물을 피하세요!<br>
+                    미니맵과 속도계가 있어요.
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="new-games/racing-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎵</span>
+                <h2 class="game-title">리듬 게임</h2>
+                <p class="game-description">
+                    A, S, D, F 키로 떨어지는 노트를 정확한 타이밍에 누르세요!<br>
+                    Perfect, Great, Good 판정이 있어요.
+                </p>
+                <div class="game-tech">타이밍과 동기화</div>
+                <a href="new-games/rhythm-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🐸</span>
+                <h2 class="game-title">개구리 점프 게임</h2>
+                <p class="game-description">
+                    스페이스바로 점프 파워를 조절해서 연꽃잎에 착지하세요!<br>
+                    물에 빠지지 않게 조심하세요!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="advanced-games/frog-jump/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧠</span>
+                <h2 class="game-title">메모리 카드 게임</h2>
+                <p class="game-description">
+                    같은 그림의 카드 2장을 찾아서 모든 쌍을 맞추세요!<br>
+                    3가지 난이도로 도전해보세요!
+                </p>
+                <div class="game-tech">배열과 상태 관리</div>
+                <a href="advanced-games/memory-cards/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏄‍♂️</span>
+                <h2 class="game-title">서핑 게임</h2>
+                <p class="game-description">
+                    파도를 타면서 트릭을 성공시키고 장애물을 피하세요!<br>
+                    날씨 시스템과 콤보 시스템이 있어요!
+                </p>
+                <div class="game-tech">복잡한 물리 효과</div>
+                <a href="advanced-games/surfing-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏰</span>
+                <h2 class="game-title">타워 디펜스</h2>
+                <p class="game-description">
+                    적들이 기지에 도달하지 못하도록 타워를 설치하여 방어하세요!<br>
+                    4가지 타워와 업그레이드 시스템!
+                </p>
+                <div class="game-tech">전략과 알고리즘</div>
+                <a href="advanced-games/tower-defense/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 게임 모음</h2>
+                <p class="game-description">
+                    공중그네, 저글링, 줄타기, 동물조련까지!<br>
+                    4가지 미니게임을 한 번에 즐겨보세요!
+                </p>
+                <div class="game-tech">미니게임 시스템</div>
+                <a href="advanced-games/circus-games/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎨</span>
+                <h2 class="game-title">픽셀 아트 에디터</h2>
+                <p class="game-description">
+                    16x16 캔버스에서 픽셀 아트를 그려보세요!<br>
+                    다양한 도구와 색상으로 작품을 만들어보세요!
+                </p>
+                <div class="game-tech">그래픽 에디터</div>
+                <a href="creative-games/pixel-art-editor/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧙‍♂️</span>
+                <h2 class="game-title">마법사 주문 게임</h2>
+                <p class="game-description">
+                    마법사가 보여주는 원소 패턴을 기억하고 따라해보세요!<br>
+                    6가지 원소로 강력한 마법을 시전하세요!
+                </p>
+                <div class="game-tech">패턴 기억 게임</div>
+                <a href="creative-games/wizard-spells/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🚁</span>
+                <h2 class="game-title">헬리콥터 게임</h2>
+                <p class="game-description">
+                    스페이스바로 헬리콥터를 조종해서 장애물을 피하세요!<br>
+                    연료와 바람을 고려해서 안전하게 착륙하세요!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="creative-games/helicopter-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🍕</span>
+                <h2 class="game-title">피자 만들기 게임</h2>
+                <p class="game-description">
+                    손님이 주문한 피자를 정확하게 만들어 주세요!<br>
+                    다양한 토핑으로 맛있는 피자를 완성하세요!
+                </p>
+                <div class="game-tech">요리 시뮬레이션</div>
+                <a href="creative-games/pizza-maker/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏹</span>
+                <h2 class="game-title">궁수 게임</h2>
+                <p class="game-description">
+                    마우스로 각도와 힘을 조절해서 과녁을 맞춰보세요!<br>
+                    바람의 영향을 고려해서 정확하게 쏘세요!
+                </p>
+                <div class="game-tech">물리 계산</div>
+                <a href="creative-games/archery-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>🌟 학습 팁</h3>
+            <p>
+                각 게임의 코드를 열어보고 AI에게 질문해보세요!<br>
+                "이 부분은 어떻게 작동하나요?" 또는 "색깔을 바꾸려면 어떻게 해야 하나요?" 같은 질문을 해보세요.<br>
+                코딩은 실험하고 시도해보는 것이 가장 중요해요! 🚀
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 별 생성
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const numberOfStars = 50;
+
+            for (let i = 0; i < numberOfStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                // 랜덤 위치
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                
+                // 랜덤 크기
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                
+                // 랜덤 애니메이션 지연
+                star.style.animationDelay = Math.random() * 2 + 's';
+                
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // 페이지 로드 시 별 생성
+        window.addEventListener('load', createStars);
+
+        // 게임 카드 클릭 효과
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // 버튼 클릭 시 로딩 효과
+        document.querySelectorAll('.play-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const originalText = button.textContent;
+                button.textContent = '로딩 중... ⏳';
+                button.style.pointerEvents = 'none';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.pointerEvents = 'auto';
+                }, 1000);
+            });
+        });
+
+        // 스크롤 애니메이션
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.game-card');
+            cards.forEach(card => {
+                const cardTop = card.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+                
+                if (cardTop < windowHeight * 0.8) {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

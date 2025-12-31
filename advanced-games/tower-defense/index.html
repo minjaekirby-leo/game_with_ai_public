@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>타워 디펜스 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            color: #e74c3c;
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        canvas {
+            border: 5px solid #e74c3c;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: #27ae60;
+            cursor: crosshair;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #e74c3c;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .tower-shop {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #e74c3c;
+            min-width: 150px;
+        }
+        
+        .tower-btn {
+            display: block;
+            width: 100%;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tower-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+        }
+        
+        .tower-btn.selected {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .wave-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #3498db;
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 700px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 3px solid #e74c3c;
+        }
+        
+        .upgrade-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #f39c12;
+            color: #f39c12;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏰 타워 디펜스</h1>
+    
+    <div class="instructions">
+        <p><strong>🎯 목표:</strong> 적들이 기지에 도달하지 못하도록 타워를 설치하여 방어하세요!</p>
+        <p><strong>🎮 방법:</strong> 오른쪽 상점에서 타워를 선택하고 맵에 클릭하여 설치하세요!</p>
+        <p><strong>💰 자원:</strong> 적을 처치하면 골드를 얻어 더 강한 타워를 구매할 수 있어요!</p>
+    </div>
+    
+    <div class="game-info">
+        <div class="info-box">생명: <span id="lives">20</span></div>
+        <div class="info-box">골드: <span id="gold">100</span></div>
+        <div class="info-box">점수: <span id="score">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="wave-info" id="waveInfo">
+            <div>웨이브: <span id="currentWave">1</span></div>
+            <div>적 남은 수: <span id="enemiesLeft">10</span></div>
+            <div id="waveStatus">준비 중...</div>
+        </div>
+        
+        <div class="tower-shop">
+            <div style="margin-bottom: 10px; color: #fff;">타워 상점</div>
+            <button class="tower-btn" onclick="selectTower('basic')">
+                기본 타워<br>💰 20
+            </button>
+            <button class="tower-btn" onclick="selectTower('cannon')">
+                대포 타워<br>💰 50
+            </button>
+            <button class="tower-btn" onclick="selectTower('ice')">
+                얼음 타워<br>💰 75
+            </button>
+            <button class="tower-btn" onclick="selectTower('laser')">
+                레이저 타워<br>💰 100
+            </button>
+        </div>
+        
+        <div class="upgrade-panel" id="upgradePanel">
+            <div>타워 업그레이드</div>
+            <button onclick="upgradeTower()">업그레이드 💰 <span id="upgradePrice">30</span></button>
+            <button onclick="sellTower()">판매 💰 <span id="sellPrice">15</span></button>
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2 style="color: #e74c3c;">🏰 게임 오버!</h2>
+            <p>도달한 웨이브: <span id="finalWave">1</span></p>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button onclick="resetGame()">다시 시작</button>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="startWave()">웨이브 시작</button>
+        <button onclick="pauseGame()">일시정지</button>
+        <button onclick="resetGame()">다시 시작</button>
+    </div>
+    
+    <script src="tower-defense.js"></script>
+</body>
+</html>

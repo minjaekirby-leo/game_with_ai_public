@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>메모리 카드 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+            to { text-shadow: 2px 2px 20px rgba(255,255,255,0.8); }
+        }
+        
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.3);
+        }
+        
+        .difficulty-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .cards-grid {
+            display: grid;
+            gap: 10px;
+            margin: 30px 0;
+            justify-content: center;
+        }
+        
+        .cards-grid.easy {
+            grid-template-columns: repeat(4, 1fr);
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cards-grid.medium {
+            grid-template-columns: repeat(6, 1fr);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cards-grid.hard {
+            grid-template-columns: repeat(8, 1fr);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 15px;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .card.flipped {
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            color: #333;
+            transform: rotateY(180deg);
+        }
+        
+        .card.matched {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            animation: matchPulse 0.6s ease;
+        }
+        
+        .card.wrong {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            animation: wrongShake 0.6s ease;
+        }
+        
+        @keyframes matchPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .card-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border-radius: 15px;
+            transition: transform 0.6s;
+            backface-visibility: hidden;
+        }
+        
+        .card-front {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            color: #333;
+            border-radius: 15px;
+            transform: rotateY(180deg);
+            transition: transform 0.6s;
+            backface-visibility: hidden;
+        }
+        
+        .card.flipped .card-back {
+            transform: rotateY(180deg);
+        }
+        
+        .card.flipped .card-front {
+            transform: rotateY(0deg);
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .timer {
+            font-size: 1.5rem;
+            color: #ffff00;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .win-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            animation: winPulse 0.6s ease;
+        }
+        
+        @keyframes winPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧠 메모리 카드 게임</h1>
+        
+        <div class="instructions">
+            <p><strong>🎯 목표:</strong> 같은 그림의 카드 2장을 찾아서 모든 쌍을 맞추세요!</p>
+            <p><strong>🎮 방법:</strong> 카드를 클릭해서 뒤집고, 같은 그림을 찾아보세요!</p>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움 (4x4)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">보통 (6x6)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움 (8x8)</button>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-box">이동 횟수: <span id="moves">0</span></div>
+            <div class="info-box">맞춘 쌍: <span id="matches">0</span> / <span id="totalPairs">8</span></div>
+            <div class="info-box">시간: <span id="time">00:00</span></div>
+        </div>
+        
+        <div class="cards-grid easy" id="cardsGrid">
+            <!-- 카드들이 여기에 동적으로 생성됩니다 -->
+        </div>
+        
+        <div class="controls">
+            <button onclick="startGame()">새 게임</button>
+            <button onclick="shuffleCards()">카드 섞기</button>
+            <button onclick="showHint()">힌트 보기</button>
+        </div>
+    </div>
+    
+    <div class="win-message" id="winMessage">
+        <div>🎉 축하합니다! 🎉</div>
+        <div style="font-size: 1rem; margin-top: 10px;">
+            <span id="finalMoves"></span>번 만에 <span id="finalTime"></span>에 완성!
+        </div>
+    </div>
+    
+    <script src="memory-cards.js"></script>
+</body>
+</html>

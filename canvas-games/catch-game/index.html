@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>떨어지는 물체 잡기 게임 - HTML5 Canvas</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        h1 {
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        canvas {
+            border: 3px solid #fff;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .instructions {
+            margin: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px;
+            font-size: 18px;
+        }
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 떨어지는 물체 잡기 게임</h1>
+    <div class="instructions">
+        <p>마우스를 좌우로 움직여서 바구니를 조종하세요!</p>
+        <p>🍎 빨간 사과는 +10점, 💎 파란 보석은 +20점!</p>
+        <p>💣 검은 폭탄을 잡으면 -5점이에요!</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat">점수: <span id="score">0</span></div>
+        <div class="stat">잡은 개수: <span id="caught">0</span></div>
+        <div class="stat">놓친 개수: <span id="missed">0</span></div>
+    </div>
+    
+    <canvas id="gameCanvas" width="600" height="500"></canvas>
+    
+    <script src="catch.js"></script>
+</body>
+</html>

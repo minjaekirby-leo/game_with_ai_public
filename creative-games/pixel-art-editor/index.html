@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>픽셀 아트 에디터 + 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+            to { text-shadow: 2px 2px 20px rgba(255,255,255,0.8); }
+        }
+        
+        .game-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .editor-section {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .canvas-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        #pixelCanvas {
+            border: 2px solid #333;
+            cursor: crosshair;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        .tools-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            color: #333;
+            min-width: 200px;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin: 15px 0;
+        }
+        
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .color-btn.selected {
+            border-width: 4px;
+            transform: scale(1.1);
+        }
+        
+        .tool-btn {
+            display: block;
+            width: 100%;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tool-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .tool-btn.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .game-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .gallery-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .gallery-canvas {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #333;
+            image-rendering: pixelated;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎨 픽셀 아트 에디터 + 게임</h1>
+        
+        <div class="instructions">
+            <p><strong>🎨 에디터:</strong> 색상을 선택하고 캔버스에 클릭해서 픽셀 아트를 그려보세요!</p>
+            <p><strong>🎮 게임:</strong> 그린 작품을 갤러리에 저장하고 다른 작품들과 비교해보세요!</p>
+        </div>
+        
+        <div class="editor-section">
+            <div class="canvas-container">
+                <h3 style="color: #333; margin-bottom: 15px;">캔버스 (16x16)</h3>
+                <canvas id="pixelCanvas" width="320" height="320"></canvas>
+            </div>
+            
+            <div class="tools-panel">
+                <h3>도구</h3>
+                <button class="tool-btn active" id="paintTool" onclick="selectTool('paint')">🖌️ 그리기</button>
+                <button class="tool-btn" id="eraseTool" onclick="selectTool('erase')">🧽 지우기</button>
+                <button class="tool-btn" id="fillTool" onclick="selectTool('fill')">🪣 채우기</button>
+                <button class="tool-btn" id="eyedropTool" onclick="selectTool('eyedrop')">💧 색상 추출</button>
+                
+                <h3>색상 팔레트</h3>
+                <div class="color-palette" id="colorPalette">
+                    <!-- 색상들이 동적으로 생성됩니다 -->
+                </div>
+                
+                <h3>브러시 크기</h3>
+                <input type="range" id="brushSize" min="1" max="4" value="1" style="width: 100%;">
+                <span id="brushSizeDisplay">1px</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="clearCanvas()">🗑️ 전체 지우기</button>
+            <button onclick="saveToGallery()">💾 갤러리에 저장</button>
+            <button onclick="loadTemplate()">📋 템플릿 불러오기</button>
+            <button onclick="exportImage()">📤 이미지 내보내기</button>
+        </div>
+        
+        <div class="game-section">
+            <h2>🖼️ 픽셀 아트 갤러리</h2>
+            <div class="game-info">
+                <div class="info-box">작품 수: <span id="artworkCount">0</span></div>
+                <div class="info-box">총 픽셀: <span id="totalPixels">0</span></div>
+                <div class="info-box">사용된 색상: <span id="colorsUsed">0</span></div>
+            </div>
+            
+            <div class="gallery" id="gallery">
+                <!-- 저장된 작품들이 여기에 표시됩니다 -->
+            </div>
+            
+            <div class="controls">
+                <button onclick="startPixelGame()">🎮 픽셀 아트 챌린지</button>
+                <button onclick="clearGallery()">🗑️ 갤러리 비우기</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="pixel-art-editor.js"></script>
+</body>
+</html>
