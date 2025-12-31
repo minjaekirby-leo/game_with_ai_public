@@ -38,6 +38,12 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            cursor: pointer;
+            outline: none;
+        }
+        
+        canvas:focus {
+            border-color: #3498db;
         }
         
         .game-info {
@@ -234,10 +240,758 @@
         <button onclick="pauseGame()">일시정지</button>
         <button onclick="resetGame()">다시 시작</button>
         <p style="margin-top: 15px; color: #666;">
-            💡 팁: 스페이스바를 짧게 눌러서 부드럽게 조종하세요!
+            💡 팁: 스페이스바를 짧게 눌러서 부드럽게 조종하세요!<br>
+            🖱️ 마우스 클릭이나 캔버스 터치로도 조종 가능합니다!<br>
+            🎮 먼저 "게임 시작" 버튼을 눌러주세요!
         </p>
     </div>
     
-    <script src="helicopter-game.js"></script>
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameRunning = false;
+        let gamePaused = false;
+        let distance = 0;
+        let score = 0;
+        let bestScore = localStorage.getItem('helicopterBestScore') || 0;
+        let difficulty = 'easy';
+
+        // 헬리콥터 설정
+        const helicopter = {
+            x: 100,
+            y: canvas.height / 2,
+            width: 60,
+            height: 30,
+            velocityY: 0,
+            thrust: -0.8,
+            gravity: 0.4,
+            fuel: 100,
+            maxFuel: 100,
+            fuelConsumption: 0.1,
+            rotorAngle: 0,
+            trail: []
+        };
+
+        // 게임 설정
+        let gameSpeed = 2;
+        let obstacleSpawnRate = 0.02;
+        let windForce = 0;
+        let windDirection = 0;
+        let windChangeTimer = 0;
+
+        // 난이도별 설정
+        const difficultySettings = {
+            easy: { speed: 2, spawnRate: 0.015, fuelConsumption: 0.08 },
+            medium: { speed: 3, spawnRate: 0.025, fuelConsumption: 0.12 },
+            hard: { speed: 4, spawnRate: 0.035, fuelConsumption: 0.15 }
+        };
+
+        // 게임 객체들
+        let obstacles = [];
+        let particles = [];
+        let clouds = [];
+        let fuelPickups = [];
+
+        // 장애물 클래스
+        class Obstacle {
+            constructor(type, x, y, width, height) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.speed = gameSpeed;
+            }
+            
+            update() {
+                this.x -= this.speed;
+            }
+            
+            draw() {
+                ctx.save();
+                
+                if (this.type === 'building') {
+                    // 빌딩
+                    ctx.fillStyle = '#34495e';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    
+                    // 빌딩 창문
+                    ctx.fillStyle = '#f39c12';
+                    for (let i = 0; i < this.width; i += 20) {
+                        for (let j = 0; j < this.height; j += 25) {
+                            if (Math.random() < 0.7) {
+                                ctx.fillRect(this.x + i + 5, this.y + j + 5, 10, 15);
+                            }
+                        }
+                    }
+                } else if (this.type === 'mountain') {
+                    // 산
+                    ctx.fillStyle = '#27ae60';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.height);
+                    ctx.lineTo(this.x + this.width/2, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 산 정상 (눈)
+                    ctx.fillStyle = '#ecf0f1';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + this.width/2 - 15, this.y + 20);
+                    ctx.lineTo(this.x + this.width/2, this.y);
+                    ctx.lineTo(this.x + this.width/2 + 15, this.y + 20);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type === 'bird') {
+                    // 새
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🐦', this.x + this.width/2, this.y + this.height/2 + 7);
+                } else if (this.type === 'balloon') {
+                    // 풍선
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width/2, this.y + 15, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 풍선 줄
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + this.width/2, this.y + 30);
+                    ctx.lineTo(this.x + this.width/2, this.y + this.height);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+            
+            checkCollision(heli) {
+                return heli.x < this.x + this.width &&
+                       heli.x + heli.width > this.x &&
+                       heli.y < this.y + this.height &&
+                       heli.y + heli.height > this.y;
+            }
+            
+            isOffScreen() {
+                return this.x + this.width < 0;
+            }
+        }
+
+        // 연료 픽업 클래스
+        class FuelPickup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 30;
+                this.speed = gameSpeed;
+                this.pulse = 0;
+            }
+            
+            update() {
+                this.x -= this.speed;
+                this.pulse += 0.2;
+            }
+            
+            draw() {
+                const pulseSize = Math.sin(this.pulse) * 3;
+                
+                ctx.save();
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                
+                // 연료통
+                ctx.fillStyle = '#f39c12';
+                ctx.fillRect(-12 - pulseSize/2, -12 - pulseSize/2, 24 + pulseSize, 24 + pulseSize);
+                
+                // 연료 표시
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⛽', 0, 5);
+                
+                ctx.restore();
+            }
+            
+            checkCollision(heli) {
+                return heli.x < this.x + this.width &&
+                       heli.x + heli.width > this.x &&
+                       heli.y < this.y + this.height &&
+                       heli.y + heli.height > this.y;
+            }
+            
+            isOffScreen() {
+                return this.x + this.width < 0;
+            }
+        }
+
+        // 구름 클래스
+        class Cloud {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.speed = gameSpeed * 0.3;
+                this.opacity = Math.random() * 0.5 + 0.3;
+            }
+            
+            update() {
+                this.x -= this.speed;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = '#ffffff';
+                
+                // 구름 그리기
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 0.5, 0, Math.PI * 2);
+                ctx.arc(this.x + this.size * 0.3, this.y, this.size * 0.7, 0, Math.PI * 2);
+                ctx.arc(this.x + this.size * 0.6, this.y, this.size * 0.5, 0, Math.PI * 2);
+                ctx.arc(this.x - this.size * 0.3, this.y, this.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            isOffScreen() {
+                return this.x + this.size < 0;
+            }
+        }
+
+        // 파티클 클래스
+        class Particle {
+            constructor(x, y, color, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.dx = (Math.random() - 0.5) * 6;
+                this.dy = (Math.random() - 0.5) * 6;
+                this.color = color;
+                this.life = 30;
+                this.maxLife = 30;
+                this.size = Math.random() * 4 + 2;
+                this.type = type;
+            }
+            
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.life--;
+                
+                if (this.type === 'exhaust') {
+                    this.dy += 0.1; // 배기가스는 위로 올라감
+                    this.dx -= 0.2; // 뒤로 밀림
+                } else {
+                    this.dy += 0.2; // 중력
+                }
+                
+                this.dx *= 0.98; // 공기 저항
+            }
+            
+            draw() {
+                const alpha = this.life / this.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'exhaust') {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(this.x, this.y, this.size, this.size);
+                }
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // 배경 그리기
+        function drawBackground() {
+            // 하늘 그라데이션
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름들 그리기
+            clouds.forEach(cloud => cloud.draw());
+            
+            // 지평선
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        }
+
+        // 헬리콥터 그리기
+        function drawHelicopter() {
+            ctx.save();
+            ctx.translate(helicopter.x + helicopter.width/2, helicopter.y + helicopter.height/2);
+            
+            // 헬리콥터 궤적
+            if (helicopter.trail.length > 1) {
+                ctx.strokeStyle = 'rgba(52, 152, 219, 0.3)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i < helicopter.trail.length; i++) {
+                    const point = helicopter.trail[i];
+                    if (i === 0) {
+                        ctx.moveTo(point.x - helicopter.x, point.y - helicopter.y);
+                    } else {
+                        ctx.lineTo(point.x - helicopter.x, point.y - helicopter.y);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // 헬리콥터 몸체
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(-helicopter.width/2, -helicopter.height/2, helicopter.width, helicopter.height);
+            
+            // 헬리콥터 조종석
+            ctx.fillStyle = '#2980b9';
+            ctx.fillRect(-helicopter.width/2 + 10, -helicopter.height/2 + 5, 25, 20);
+            
+            // 헬리콥터 창문
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(-helicopter.width/2 + 12, -helicopter.height/2 + 7, 21, 16);
+            
+            // 메인 로터
+            ctx.save();
+            ctx.translate(0, -helicopter.height/2 - 10);
+            ctx.rotate(helicopter.rotorAngle);
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-40, 0);
+            ctx.lineTo(40, 0);
+            ctx.stroke();
+            ctx.restore();
+            
+            // 꼬리 로터
+            ctx.save();
+            ctx.translate(helicopter.width/2 + 5, 0);
+            ctx.rotate(helicopter.rotorAngle * 3);
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(8, 0);
+            ctx.moveTo(0, -8);
+            ctx.lineTo(0, 8);
+            ctx.stroke();
+            ctx.restore();
+            
+            // 착륙 장치
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(-helicopter.width/2 + 5, helicopter.height/2, 50, 3);
+            
+            ctx.restore();
+        }
+
+        // 장애물 생성
+        function generateObstacles() {
+            if (Math.random() < obstacleSpawnRate) {
+                const types = ['building', 'mountain', 'bird', 'balloon'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let obstacle;
+                const x = canvas.width + 50;
+                
+                if (type === 'building') {
+                    const height = Math.random() * 200 + 100;
+                    const y = canvas.height - 50 - height;
+                    obstacle = new Obstacle(type, x, y, 60, height);
+                } else if (type === 'mountain') {
+                    const height = Math.random() * 150 + 150;
+                    const y = canvas.height - 50 - height;
+                    obstacle = new Obstacle(type, x, y, 100, height);
+                } else if (type === 'bird') {
+                    const y = Math.random() * (canvas.height - 200) + 50;
+                    obstacle = new Obstacle(type, x, y, 30, 30);
+                } else if (type === 'balloon') {
+                    const y = Math.random() * (canvas.height - 300) + 50;
+                    obstacle = new Obstacle(type, x, y, 30, 80);
+                }
+                
+                obstacles.push(obstacle);
+            }
+        }
+
+        // 연료 픽업 생성
+        function generateFuelPickups() {
+            if (Math.random() < 0.005 && helicopter.fuel < 50) {
+                const x = canvas.width + 50;
+                const y = Math.random() * (canvas.height - 200) + 50;
+                fuelPickups.push(new FuelPickup(x, y));
+            }
+        }
+
+        // 구름 생성
+        function generateClouds() {
+            if (Math.random() < 0.01) {
+                const x = canvas.width + 100;
+                const y = Math.random() * (canvas.height - 200) + 50;
+                const size = Math.random() * 50 + 30;
+                clouds.push(new Cloud(x, y, size));
+            }
+        }
+
+        // 바람 업데이트
+        function updateWind() {
+            windChangeTimer++;
+            
+            if (windChangeTimer > 300) { // 5초마다 바람 변경
+                windDirection = (Math.random() - 0.5) * 2; // -1 ~ 1
+                windForce = Math.random() * 0.3;
+                windChangeTimer = 0;
+            }
+            
+            // 바람 표시 업데이트
+            let windText = '💨 바람: ';
+            if (Math.abs(windForce) < 0.1) {
+                windText += '없음';
+            } else if (windDirection > 0) {
+                windText += `오른쪽 ${windForce.toFixed(1)}`;
+            } else {
+                windText += `왼쪽 ${Math.abs(windForce).toFixed(1)}`;
+            }
+            
+            document.getElementById('windIndicator').textContent = windText;
+        }
+
+        // 헬리콥터 업데이트
+        function updateHelicopter() {
+            // 게임이 시작되지 않았으면 헬리콥터를 떨어뜨리지 않음
+            if (!gameRunning) return;
+            
+            // 로터 회전
+            helicopter.rotorAngle += 0.5;
+            
+            // 중력 적용
+            helicopter.velocityY += helicopter.gravity;
+            
+            // 바람 영향
+            helicopter.x += windDirection * windForce;
+            
+            // 위치 업데이트
+            helicopter.y += helicopter.velocityY;
+            
+            // 연료 소모
+            helicopter.fuel -= helicopter.fuelConsumption;
+            
+            // 궤적 업데이트
+            helicopter.trail.push({ x: helicopter.x + helicopter.width/2, y: helicopter.y + helicopter.height/2 });
+            if (helicopter.trail.length > 20) {
+                helicopter.trail.shift();
+            }
+            
+            // 배기가스 파티클
+            if (Math.random() < 0.3) {
+                particles.push(new Particle(
+                    helicopter.x - 10,
+                    helicopter.y + helicopter.height/2,
+                    'rgba(100, 100, 100, 0.6)',
+                    'exhaust'
+                ));
+            }
+            
+            // 경계 확인
+            if (helicopter.y < 0) {
+                helicopter.y = 0;
+                helicopter.velocityY = 0;
+            }
+            if (helicopter.y > canvas.height - 50 - helicopter.height) {
+                gameOver('지면에 충돌했습니다!');
+            }
+            if (helicopter.x < 0) {
+                helicopter.x = 0;
+            }
+            if (helicopter.x > canvas.width - helicopter.width) {
+                helicopter.x = canvas.width - helicopter.width;
+            }
+            
+            // 연료 부족
+            if (helicopter.fuel <= 0) {
+                gameOver('연료가 떨어졌습니다!');
+            }
+        }
+
+        // 게임 업데이트
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updateHelicopter();
+            updateWind();
+            
+            // 거리 및 점수 업데이트
+            distance += gameSpeed * 0.1;
+            score += Math.floor(gameSpeed);
+            
+            // 난이도 증가
+            if (distance > 100) {
+                gameSpeed = Math.min(6, difficultySettings[difficulty].speed + distance * 0.01);
+                obstacleSpawnRate = Math.min(0.05, difficultySettings[difficulty].spawnRate + distance * 0.0001);
+            }
+            
+            // 객체 생성
+            generateObstacles();
+            generateFuelPickups();
+            generateClouds();
+            
+            // 객체 업데이트
+            obstacles.forEach(obstacle => obstacle.update());
+            fuelPickups.forEach(pickup => pickup.update());
+            clouds.forEach(cloud => cloud.update());
+            particles.forEach(particle => particle.update());
+            
+            // 충돌 검사
+            for (let obstacle of obstacles) {
+                if (obstacle.checkCollision(helicopter)) {
+                    gameOver('장애물에 충돌했습니다!');
+                    return;
+                }
+            }
+            
+            // 연료 픽업 검사
+            for (let i = fuelPickups.length - 1; i >= 0; i--) {
+                const pickup = fuelPickups[i];
+                if (pickup.checkCollision(helicopter)) {
+                    helicopter.fuel = Math.min(helicopter.maxFuel, helicopter.fuel + 30);
+                    score += 50;
+                    
+                    // 연료 획득 파티클
+                    for (let j = 0; j < 10; j++) {
+                        particles.push(new Particle(pickup.x, pickup.y, '#f39c12'));
+                    }
+                    
+                    fuelPickups.splice(i, 1);
+                }
+            }
+            
+            // 화면 밖 객체 제거
+            obstacles = obstacles.filter(obstacle => !obstacle.isOffScreen());
+            fuelPickups = fuelPickups.filter(pickup => !pickup.isOffScreen());
+            clouds = clouds.filter(cloud => !cloud.isOffScreen());
+            particles = particles.filter(particle => !particle.isDead());
+            
+            updateDisplay();
+        }
+
+        // 게임 그리기
+        function draw() {
+            drawBackground();
+            
+            // 게임 객체들 그리기
+            obstacles.forEach(obstacle => obstacle.draw());
+            fuelPickups.forEach(pickup => pickup.draw());
+            drawHelicopter();
+            particles.forEach(particle => particle.draw());
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            update();
+            draw();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 초기 그리기 함수 (게임 시작 전에도 헬리콥터를 보여줌)
+        function initialDraw() {
+            if (!gameRunning) {
+                drawBackground();
+                drawHelicopter();
+                requestAnimationFrame(initialDraw);
+            }
+        }
+
+        // 헬리콥터 상승
+        function liftHelicopter() {
+            if (gameRunning && !gamePaused && helicopter.fuel > 0) {
+                helicopter.velocityY += helicopter.thrust;
+                helicopter.fuel -= helicopter.fuelConsumption * 2; // 상승 시 연료 더 소모
+                
+                // 추진 파티클
+                for (let i = 0; i < 3; i++) {
+                    particles.push(new Particle(
+                        helicopter.x + helicopter.width/2,
+                        helicopter.y + helicopter.height,
+                        'rgba(255, 100, 0, 0.8)',
+                        'exhaust'
+                    ));
+                }
+            }
+        }
+
+        // 게임 오버
+        function gameOver(reason) {
+            gameRunning = false;
+            
+            // 최고 기록 업데이트
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('helicopterBestScore', bestScore);
+            }
+            
+            document.getElementById('finalDistance').textContent = Math.floor(distance);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('crashReason').textContent = reason;
+            document.getElementById('gameOver').style.display = 'block';
+            
+            // 폭발 파티클
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(
+                    helicopter.x + helicopter.width/2,
+                    helicopter.y + helicopter.height/2,
+                    '#ff6b6b'
+                ));
+            }
+        }
+
+        // 디스플레이 업데이트
+        function updateDisplay() {
+            document.getElementById('distance').textContent = Math.floor(distance);
+            document.getElementById('score').textContent = score;
+            document.getElementById('bestScore').textContent = bestScore;
+            
+            // 고도계 업데이트
+            const altitudePercent = ((canvas.height - helicopter.y) / canvas.height) * 100;
+            document.getElementById('altitudeFill').style.height = altitudePercent + '%';
+            
+            // 연료계 업데이트
+            const fuelPercent = (helicopter.fuel / helicopter.maxFuel) * 100;
+            document.getElementById('fuelFill').style.height = fuelPercent + '%';
+        }
+
+        // 난이도 설정
+        function setDifficulty(newDifficulty) {
+            difficulty = newDifficulty;
+            
+            // 버튼 활성화 상태 업데이트
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 설정 적용
+            const settings = difficultySettings[difficulty];
+            gameSpeed = settings.speed;
+            obstacleSpawnRate = settings.spawnRate;
+            helicopter.fuelConsumption = settings.fuelConsumption;
+        }
+
+        // 게임 제어 함수들
+        function startGame() {
+            if (!gameRunning) {
+                resetGame(); // 게임 시작 시 초기화
+                gameRunning = true;
+                gamePaused = false;
+                gameLoop();
+            }
+        }
+
+        function pauseGame() {
+            gamePaused = !gamePaused;
+            if (!gamePaused && gameRunning) {
+                gameLoop();
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            distance = 0;
+            score = 0;
+            
+            // 헬리콥터 초기화
+            helicopter.x = 100;
+            helicopter.y = canvas.height / 2;
+            helicopter.velocityY = 0;
+            helicopter.fuel = helicopter.maxFuel;
+            helicopter.rotorAngle = 0;
+            helicopter.trail = [];
+            
+            // 설정 초기화
+            const settings = difficultySettings[difficulty];
+            gameSpeed = settings.speed;
+            obstacleSpawnRate = settings.spawnRate;
+            helicopter.fuelConsumption = settings.fuelConsumption;
+            
+            windForce = 0;
+            windDirection = 0;
+            windChangeTimer = 0;
+            
+            // 객체들 초기화
+            obstacles = [];
+            particles = [];
+            clouds = [];
+            fuelPickups = [];
+            
+            document.getElementById('gameOver').style.display = 'none';
+            updateDisplay();
+        }
+
+        // 키보드 및 마우스 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                liftHelicopter();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+            }
+        });
+
+        // 마우스 이벤트
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            liftHelicopter();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            e.preventDefault();
+            liftHelicopter();
+        });
+
+        // 터치 이벤트
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            liftHelicopter();
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
+
+        // 캔버스에 포커스 설정
+        canvas.setAttribute('tabindex', '0');
+        canvas.style.outline = 'none';
+        
+        // 페이지 로드 시 캔버스에 포커스
+        window.addEventListener('load', () => {
+            canvas.focus();
+        });
+
+        // 초기화
+        updateDisplay();
+        document.getElementById('bestScore').textContent = bestScore;
+        
+        // 게임 시작 전에도 헬리콥터를 화면에 표시
+        initialDraw();
+    </script>
 </body>
 </html>

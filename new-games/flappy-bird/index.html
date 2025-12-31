@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>플래피 버드 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            color: #2c3e50;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        canvas {
+            border: 5px solid #2c3e50;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            cursor: pointer;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid #2c3e50;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 3px solid #e74c3c;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            border: 3px solid #3498db;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🐦 플래피 버드</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 조작법:</strong> 스페이스바, 마우스 클릭, 또는 화면 터치로 새를 날게 하세요!</p>
+        <p><strong>🎯 목표:</strong> 파이프 사이를 통과하면서 최대한 멀리 날아가세요!</p>
+        <p><strong>⚠️ 주의:</strong> 파이프나 땅에 부딪히면 게임 오버!</p>
+    </div>
+    
+    <div class="game-info">
+        <div class="info-box">점수: <span id="score">0</span></div>
+        <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        
+        <div class="start-screen" id="startScreen">
+            <h2>🐦 플래피 버드</h2>
+            <p>스페이스바나 클릭으로 새를 조종하세요!</p>
+            <button onclick="startGame()">🎮 게임 시작</button>
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>💥 게임 오버!</h2>
+            <p>점수: <span id="finalScore">0</span></p>
+            <p id="newRecord" style="display: none; color: #e74c3c; font-weight: bold;">🎉 새로운 기록!</p>
+            <button onclick="resetGame()">다시 시작</button>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="startGame()">🎮 게임 시작</button>
+        <button onclick="pauseGame()">⏸️ 일시정지</button>
+        <button onclick="resetGame()">🔄 다시 시작</button>
+        <p style="margin-top: 15px; color: #666;">
+            💡 팁: 스페이스바를 리듬감 있게 눌러서 새를 조종하세요!
+        </p>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameStarted = false;
+        let score = 0;
+        let bestScore = localStorage.getItem('flappyBirdBestScore') || 0;
+
+        // 새 설정
+        const bird = {
+            x: 80,
+            y: canvas.height / 2,
+            width: 30,
+            height: 25,
+            velocityY: 0,
+            gravity: 0.5,
+            jumpPower: -8,
+            rotation: 0
+        };
+
+        // 파이프 설정
+        let pipes = [];
+        const pipeWidth = 60;
+        const pipeGap = 150;
+        const pipeSpeed = 2;
+        let pipeSpawnTimer = 0;
+        const pipeSpawnInterval = 120; // 2초
+
+        // 배경 설정
+        let backgroundX = 0;
+        const backgroundSpeed = 1;
+
+        // 파티클 시스템
+        let particles = [];
+
+        // 파티클 클래스
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.dx = (Math.random() - 0.5) * 8;
+                this.dy = (Math.random() - 0.5) * 8;
+                this.color = color;
+                this.life = 30;
+                this.maxLife = 30;
+                this.size = Math.random() * 4 + 2;
+            }
+            
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.dy += 0.2; // 중력
+                this.life--;
+                this.dx *= 0.98; // 공기 저항
+            }
+            
+            draw() {
+                const alpha = this.life / this.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1;
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // 파이프 클래스
+        class Pipe {
+            constructor(x) {
+                this.x = x;
+                this.topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
+                this.bottomY = this.topHeight + pipeGap;
+                this.passed = false;
+            }
+            
+            update() {
+                this.x -= pipeSpeed;
+            }
+            
+            draw() {
+                // 위쪽 파이프
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x, 0, pipeWidth, this.topHeight);
+                ctx.fillStyle = '#27ae60';
+                ctx.fillRect(this.x, this.topHeight - 20, pipeWidth, 20);
+                
+                // 아래쪽 파이프
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x, this.bottomY, pipeWidth, canvas.height - this.bottomY);
+                ctx.fillStyle = '#27ae60';
+                ctx.fillRect(this.x, this.bottomY, pipeWidth, 20);
+                
+                // 파이프 테두리
+                ctx.strokeStyle = '#1e8449';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, 0, pipeWidth, this.topHeight);
+                ctx.strokeRect(this.x, this.bottomY, pipeWidth, canvas.height - this.bottomY);
+            }
+            
+            checkCollision(bird) {
+                return bird.x < this.x + pipeWidth &&
+                       bird.x + bird.width > this.x &&
+                       (bird.y < this.topHeight || bird.y + bird.height > this.bottomY);
+            }
+            
+            checkScore(bird) {
+                if (!this.passed && bird.x > this.x + pipeWidth) {
+                    this.passed = true;
+                    return true;
+                }
+                return false;
+            }
+            
+            isOffScreen() {
+                return this.x + pipeWidth < 0;
+            }
+        }
+
+        // 배경 그리기
+        function drawBackground() {
+            // 하늘 그라데이션
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름 그리기
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 3; i++) {
+                const x = (backgroundX + i * 150) % (canvas.width + 100) - 50;
+                const y = 50 + i * 30;
+                drawCloud(x, y, 40 + i * 10);
+            }
+            
+            // 땅
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 60, canvas.width, 10);
+        }
+
+        // 구름 그리기
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.3, y, size * 0.7, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.6, y, size * 0.5, 0, Math.PI * 2);
+            ctx.arc(x - size * 0.3, y, size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 새 그리기
+        function drawBird() {
+            ctx.save();
+            ctx.translate(bird.x + bird.width/2, bird.y + bird.height/2);
+            ctx.rotate(bird.rotation);
+            
+            // 새 몸체
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(-bird.width/2, -bird.height/2, bird.width, bird.height);
+            
+            // 새 부리
+            ctx.fillStyle = '#FF8C00';
+            ctx.fillRect(bird.width/2 - 5, -3, 10, 6);
+            
+            // 새 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(bird.width/2 - 15, -bird.height/2 + 5, 6, 6);
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(bird.width/2 - 13, -bird.height/2 + 7, 2, 2);
+            
+            // 새 날개
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(-bird.width/2 + 5, -bird.height/2 + 8, 15, 8);
+            
+            ctx.restore();
+        }
+
+        // 새 업데이트
+        function updateBird() {
+            bird.velocityY += bird.gravity;
+            bird.y += bird.velocityY;
+            
+            // 회전 계산
+            bird.rotation = Math.min(Math.PI/4, bird.velocityY * 0.1);
+            
+            // 경계 확인
+            if (bird.y < 0) {
+                bird.y = 0;
+                bird.velocityY = 0;
+            }
+            if (bird.y > canvas.height - 50 - bird.height) {
+                gameOver();
+            }
+        }
+
+        // 새 점프
+        function jumpBird() {
+            if (gameRunning && !gamePaused) {
+                bird.velocityY = bird.jumpPower;
+                
+                // 점프 파티클
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new Particle(
+                        bird.x + bird.width/2,
+                        bird.y + bird.height,
+                        '#87CEEB'
+                    ));
+                }
+            }
+        }
+
+        // 파이프 생성
+        function spawnPipe() {
+            pipes.push(new Pipe(canvas.width));
+        }
+
+        // 게임 업데이트
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            // 배경 스크롤
+            backgroundX -= backgroundSpeed;
+            
+            // 새 업데이트
+            updateBird();
+            
+            // 파이프 스폰
+            pipeSpawnTimer++;
+            if (pipeSpawnTimer >= pipeSpawnInterval) {
+                spawnPipe();
+                pipeSpawnTimer = 0;
+            }
+            
+            // 파이프 업데이트
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                const pipe = pipes[i];
+                pipe.update();
+                
+                // 충돌 검사
+                if (pipe.checkCollision(bird)) {
+                    gameOver();
+                    return;
+                }
+                
+                // 점수 확인
+                if (pipe.checkScore(bird)) {
+                    score++;
+                    updateDisplay();
+                    
+                    // 점수 파티클
+                    for (let j = 0; j < 10; j++) {
+                        particles.push(new Particle(
+                            bird.x + bird.width/2,
+                            bird.y + bird.height/2,
+                            '#FFD700'
+                        ));
+                    }
+                }
+                
+                // 화면 밖 파이프 제거
+                if (pipe.isOffScreen()) {
+                    pipes.splice(i, 1);
+                }
+            }
+            
+            // 파티클 업데이트
+            particles.forEach(particle => particle.update());
+            particles = particles.filter(particle => !particle.isDead());
+        }
+
+        // 게임 그리기
+        function draw() {
+            drawBackground();
+            
+            // 파이프 그리기
+            pipes.forEach(pipe => pipe.draw());
+            
+            // 새 그리기
+            drawBird();
+            
+            // 파티클 그리기
+            particles.forEach(particle => particle.draw());
+            
+            // 점수 표시
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(score, canvas.width/2, 60);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.strokeText(score, canvas.width/2, 60);
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 디스플레이 업데이트
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('bestScore').textContent = bestScore;
+        }
+
+        // 게임 시작
+        function startGame() {
+            if (!gameStarted) {
+                gameRunning = true;
+                gameStarted = true;
+                gamePaused = false;
+                document.getElementById('startScreen').style.display = 'none';
+                document.getElementById('gameOver').style.display = 'none';
+            } else if (!gameRunning) {
+                resetGame();
+            }
+        }
+
+        // 게임 일시정지
+        function pauseGame() {
+            if (gameStarted && gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        // 게임 리셋
+        function resetGame() {
+            gameRunning = true;
+            gameStarted = true;
+            gamePaused = false;
+            score = 0;
+            
+            // 새 초기화
+            bird.x = 80;
+            bird.y = canvas.height / 2;
+            bird.velocityY = 0;
+            bird.rotation = 0;
+            
+            // 파이프 초기화
+            pipes = [];
+            pipeSpawnTimer = 0;
+            
+            // 파티클 초기화
+            particles = [];
+            
+            // 배경 초기화
+            backgroundX = 0;
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            updateDisplay();
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            
+            // 최고 기록 업데이트
+            let isNewRecord = false;
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('flappyBirdBestScore', bestScore);
+                isNewRecord = true;
+            }
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('newRecord').style.display = isNewRecord ? 'block' : 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            updateDisplay();
+            
+            // 폭발 파티클
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(
+                    bird.x + bird.width/2,
+                    bird.y + bird.height/2,
+                    '#ff6b6b'
+                ));
+            }
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!gameStarted) {
+                    startGame();
+                } else {
+                    jumpBird();
+                }
+            }
+        });
+
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!gameStarted) {
+                startGame();
+            } else {
+                jumpBird();
+            }
+        });
+
+        // 터치 이벤트
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameStarted) {
+                startGame();
+            } else {
+                jumpBird();
+            }
+        });
+
+        // 초기화
+        updateDisplay();
+        gameLoop();
+        
+        console.log('플래피 버드 게임이 로드되었습니다!');
+    </script>
+</body>
+</html>
