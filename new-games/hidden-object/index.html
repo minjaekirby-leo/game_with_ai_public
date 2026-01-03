@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 숨은 그림 찾기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2E8B57, #228B22);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #32CD32;
+            max-width: 1000px;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        canvas {
+            border: 3px solid #228B22;
+            border-radius: 10px;
+            background: #F5F5DC;
+            cursor: crosshair;
+        }
+        
+        .sidebar {
+            width: 200px;
+            background: rgba(50, 205, 50, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(50, 205, 50, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .objects-list {
+            text-align: left;
+        }
+        
+        .object-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .object-item.found {
+            background: rgba(0,255,0,0.3);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        
+        .hint-btn {
+            background: #FFD700;
+            color: #333;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .hint-btn:hover {
+            background: #FFA500;
+        }
+        
+        .hint-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .controls {
+            margin: 15px 0;
+        }
+        
+        .control-btn {
+            background: #32CD32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: #228B22;
+            transform: scale(1.05);
+        }
+        
+        .difficulty-selector {
+            margin: 10px 0;
+        }
+        
+        .difficulty-btn {
+            background: #4169E1;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .difficulty-btn.active {
+            background: #FF4500;
+        }
+        
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #32CD32, #228B22);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔍 숨은 그림 찾기</h1>
+        
+        <div class="ui">
+            <div class="stat">🎯 찾은 개수: <span id="foundCount">0</span>/<span id="totalCount">0</span></div>
+            <div class="stat">💡 힌트: <span id="hintsLeft">3</span>개</div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+        </div>
+        
+        <div class="timer" id="timer">⏰ 03:00</div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움 (5개)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">보통 (8개)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움 (12개)</button>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="startNewGame()">🎮 새 게임</button>
+            <button class="control-btn" onclick="pauseGame()">⏸️ 일시정지</button>
+            <button class="control-btn" onclick="showAllObjects()">👁️ 모든 물건 보기</button>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="700" height="500"></canvas>
+            
+            <div class="sidebar">
+                <h3>🎯 찾을 물건들</h3>
+                <div class="objects-list" id="objectsList">
+                    <!-- 물건 목록이 여기에 생성됩니다 -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="info">
+            <p>🎮 조작법: 숨어있는 물건들을 클릭해서 찾아보세요!</p>
+            <p>💡 팁: 힌트 버튼을 누르면 물건의 위치를 알려줍니다!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            difficulty: 'easy',
+            objects: [],
+            foundObjects: [],
+            hintsLeft: 3,
+            score: 0,
+            timeLeft: 180, // 3분
+            gameRunning: false,
+            isPaused: false,
+            timer: null
+        };
+        
+        // 물건 데이터베이스
+        const objectDatabase = [
+            { name: '🍎 사과', emoji: '🍎', size: 25, color: '#FF0000' },
+            { name: '⚽ 축구공', emoji: '⚽', size: 30, color: '#000000' },
+            { name: '🌟 별', emoji: '⭐', size: 20, color: '#FFD700' },
+            { name: '🎈 풍선', emoji: '🎈', size: 25, color: '#FF69B4' },
+            { name: '🍌 바나나', emoji: '🍌', size: 28, color: '#FFFF00' },
+            { name: '🎯 다트', emoji: '🎯', size: 22, color: '#FF0000' },
+            { name: '🎪 텐트', emoji: '🎪', size: 35, color: '#FF1493' },
+            { name: '🎨 팔레트', emoji: '🎨', size: 26, color: '#8A2BE2' },
+            { name: '🎭 가면', emoji: '🎭', size: 24, color: '#4169E1' },
+            { name: '🎪 서커스', emoji: '🎠', size: 32, color: '#FF6347' },
+            { name: '🎲 주사위', emoji: '🎲', size: 20, color: '#FFFFFF' },
+            { name: '🎸 기타', emoji: '🎸', size: 30, color: '#8B4513' },
+            { name: '🎺 트럼펫', emoji: '🎺', size: 28, color: '#FFD700' },
+            { name: '🎻 바이올린', emoji: '🎻', size: 26, color: '#8B4513' },
+            { name: '🎹 피아노', emoji: '🎹', size: 35, color: '#000000' }
+        ];
+        
+        // 난이도별 설정
+        const difficultySettings = {
+            easy: { objectCount: 5, timeLimit: 180, hintCount: 3 },
+            medium: { objectCount: 8, timeLimit: 240, hintCount: 2 },
+            hard: { objectCount: 12, timeLimit: 300, hintCount: 1 }
+        };
+        
+        // 난이도 설정
+        function setDifficulty(difficulty) {
+            gameState.difficulty = difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // 새 게임 시작
+        function startNewGame() {
+            const settings = difficultySettings[gameState.difficulty];
+            
+            gameState.objects = [];
+            gameState.foundObjects = [];
+            gameState.hintsLeft = settings.hintCount;
+            gameState.score = 0;
+            gameState.timeLeft = settings.timeLimit;
+            gameState.gameRunning = true;
+            gameState.isPaused = false;
+            
+            generateObjects(settings.objectCount);
+            createObjectsList();
+            startTimer();
+            updateUI();
+            render();
+        }
+        
+        // 물건들 생성
+        function generateObjects(count) {
+            const selectedObjects = [];
+            const availableObjects = [...objectDatabase];
+            
+            for (let i = 0; i < count; i++) {
+                const randomIndex = Math.floor(Math.random() * availableObjects.length);
+                const obj = availableObjects.splice(randomIndex, 1)[0];
+                
+                // 랜덤 위치 생성 (겹치지 않게)
+                let x, y, attempts = 0;
+                do {
+                    x = Math.random() * (canvas.width - obj.size * 2) + obj.size;
+                    y = Math.random() * (canvas.height - obj.size * 2) + obj.size;
+                    attempts++;
+                } while (attempts < 50 && isOverlapping(x, y, obj.size));
+                
+                selectedObjects.push({
+                    ...obj,
+                    x: x,
+                    y: y,
+                    found: false,
+                    id: i
+                });
+            }
+            
+            gameState.objects = selectedObjects;
+        }
+        
+        // 겹침 체크
+        function isOverlapping(x, y, size) {
+            return gameState.objects.some(obj => {
+                const distance = Math.sqrt((x - obj.x) ** 2 + (y - obj.y) ** 2);
+                return distance < (size + obj.size);
+            });
+        }
+        
+        // 물건 목록 생성
+        function createObjectsList() {
+            const list = document.getElementById('objectsList');
+            list.innerHTML = '';
+            
+            gameState.objects.forEach((obj, index) => {
+                const item = document.createElement('div');
+                item.className = 'object-item';
+                item.innerHTML = `
+                    <span>${obj.name}</span>
+                    <button class="hint-btn" onclick="useHint(${index})" ${gameState.hintsLeft <= 0 ? 'disabled' : ''}>
+                        💡
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        // 힌트 사용
+        function useHint(objectIndex) {
+            if (gameState.hintsLeft <= 0 || gameState.objects[objectIndex].found) return;
+            
+            gameState.hintsLeft--;
+            const obj = gameState.objects[objectIndex];
+            
+            // 힌트 원 그리기
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.size + 10, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 3초 후 힌트 제거
+            setTimeout(() => {
+                render();
+            }, 3000);
+            
+            updateUI();
+        }
+        
+        // 캔버스 클릭 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.gameRunning || gameState.isPaused) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 클릭한 위치에 물건이 있는지 확인
+            gameState.objects.forEach((obj, index) => {
+                if (!obj.found) {
+                    const distance = Math.sqrt((x - obj.x) ** 2 + (y - obj.y) ** 2);
+                    if (distance <= obj.size) {
+                        findObject(index);
+                    }
+                }
+            });
+        });
+        
+        // 물건 찾기
+        function findObject(index) {
+            const obj = gameState.objects[index];
+            obj.found = true;
+            gameState.foundObjects.push(obj);
+            gameState.score += 100;
+            
+            // 시각적 효과
+            createParticles(obj.x, obj.y);
+            
+            // 목록 업데이트
+            const listItems = document.querySelectorAll('.object-item');
+            listItems[index].classList.add('found');
+            
+            // 게임 완료 체크
+            if (gameState.foundObjects.length === gameState.objects.length) {
+                gameComplete();
+            }
+            
+            updateUI();
+            render();
+        }
+        
+        // 파티클 효과
+        function createParticles(x, y) {
+            const particles = [];
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`
+                });
+            }
+            
+            const animateParticles = () => {
+                ctx.save();
+                particles.forEach((particle, index) => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vx *= 0.95;
+                    particle.vy *= 0.95;
+                    particle.life--;
+                    
+                    ctx.globalAlpha = particle.life / 30;
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (particle.life <= 0) {
+                        particles.splice(index, 1);
+                    }
+                });
+                ctx.restore();
+                
+                if (particles.length > 0) {
+                    requestAnimationFrame(animateParticles);
+                }
+            };
+            
+            animateParticles();
+        }
+        
+        // 게임 완료
+        function gameComplete() {
+            gameState.gameRunning = false;
+            clearInterval(gameState.timer);
+            
+            const timeBonus = gameState.timeLeft * 10;
+            gameState.score += timeBonus;
+            
+            setTimeout(() => {
+                alert(`🎉 축하합니다! 모든 물건을 찾았어요!\n최종 점수: ${gameState.score}점\n시간 보너스: ${timeBonus}점`);
+            }, 500);
+        }
+        
+        // 게임 일시정지
+        function pauseGame() {
+            if (!gameState.gameRunning) return;
+            
+            gameState.isPaused = !gameState.isPaused;
+            
+            if (gameState.isPaused) {
+                clearInterval(gameState.timer);
+                event.target.textContent = '▶️ 계속하기';
+            } else {
+                startTimer();
+                event.target.textContent = '⏸️ 일시정지';
+            }
+        }
+        
+        // 모든 물건 보기 (치트)
+        function showAllObjects() {
+            if (confirm('모든 물건의 위치를 보시겠습니까? (점수가 절반으로 줄어듭니다)')) {
+                gameState.score = Math.floor(gameState.score / 2);
+                
+                ctx.save();
+                ctx.strokeStyle = '#FF0000';
+                ctx.lineWidth = 2;
+                gameState.objects.forEach(obj => {
+                    if (!obj.found) {
+                        ctx.beginPath();
+                        ctx.arc(obj.x, obj.y, obj.size + 5, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+                
+                setTimeout(() => {
+                    render();
+                }, 5000);
+                
+                updateUI();
+            }
+        }
+        
+        // 타이머 시작
+        function startTimer() {
+            gameState.timer = setInterval(() => {
+                if (gameState.gameRunning && !gameState.isPaused) {
+                    gameState.timeLeft--;
+                    
+                    if (gameState.timeLeft <= 0) {
+                        gameOver();
+                    }
+                    
+                    updateUI();
+                }
+            }, 1000);
+        }
+        
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            clearInterval(gameState.timer);
+            
+            setTimeout(() => {
+                alert(`⏰ 시간 종료!\n찾은 물건: ${gameState.foundObjects.length}/${gameState.objects.length}\n최종 점수: ${gameState.score}점`);
+            }, 500);
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.5, '#98FB98');
+            gradient.addColorStop(1, '#F0E68C');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 배경 장식
+            drawBackground();
+            
+            // 물건들 그리기
+            gameState.objects.forEach(obj => {
+                if (!obj.found) {
+                    ctx.font = `${obj.size}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(obj.emoji, obj.x, obj.y + obj.size/3);
+                }
+            });
+            
+            // 찾은 물건들은 반투명으로
+            ctx.globalAlpha = 0.3;
+            gameState.foundObjects.forEach(obj => {
+                ctx.font = `${obj.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(obj.emoji, obj.x, obj.y + obj.size/3);
+                
+                // 체크 마크
+                ctx.fillStyle = '#00FF00';
+                ctx.font = '20px Arial';
+                ctx.fillText('✓', obj.x + obj.size, obj.y - obj.size);
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // 배경 장식 그리기
+        function drawBackground() {
+            // 나무들
+            for (let i = 0; i < 5; i++) {
+                const x = (i + 1) * (canvas.width / 6);
+                const y = canvas.height - 50;
+                
+                // 나무 줄기
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(x - 5, y - 40, 10, 40);
+                
+                // 나무 잎
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(x, y - 40, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 구름들
+            for (let i = 0; i < 3; i++) {
+                const x = (i + 1) * (canvas.width / 4);
+                const y = 50;
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(x - 15, y, 15, 0, Math.PI * 2);
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 15, y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 꽃들
+            for (let i = 0; i < 8; i++) {
+                const x = Math.random() * canvas.width;
+                const y = canvas.height - Math.random() * 100 - 20;
+                
+                ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('foundCount').textContent = gameState.foundObjects.length;
+            document.getElementById('totalCount').textContent = gameState.objects.length;
+            document.getElementById('hintsLeft').textContent = gameState.hintsLeft;
+            document.getElementById('score').textContent = gameState.score;
+            
+            // 타이머
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            document.getElementById('timer').textContent = `⏰ ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 진행도 바
+            const progress = (gameState.foundObjects.length / Math.max(1, gameState.objects.length)) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            // 힌트 버튼 업데이트
+            document.querySelectorAll('.hint-btn').forEach((btn, index) => {
+                btn.disabled = gameState.hintsLeft <= 0 || gameState.objects[index]?.found;
+            });
+        }
+        
+        // 게임 시작
+        render();
+    </script>
+</body>
+</html>

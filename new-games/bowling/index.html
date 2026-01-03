@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>볼링 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #F5DEB3 0%, #DEB887 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎳 볼링 게임</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">프레임: <span id="frame">1</span>/10</div>
+            <div class="info-box">투구: <span id="throw">1</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="throwBall()" id="throwBtn">🎳 공 던지기</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 마우스로 방향 조절, 버튼으로 던지기</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let score = 0;
+        let frame = 1;
+        let throwNum = 1;
+        let pins = [];
+        let ball = null;
+        let mouseX = 400;
+        let power = 50;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+        });
+
+        function initializePins() {
+            pins = [];
+            const startX = 350;
+            const startY = 100;
+            const spacing = 30;
+            
+            // 10개 핀을 삼각형 모양으로 배치
+            let pinId = 0;
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col <= row; col++) {
+                    pins.push({
+                        id: pinId++,
+                        x: startX + (col - row/2) * spacing,
+                        y: startY + row * spacing,
+                        standing: true,
+                        wobble: 0
+                    });
+                }
+            }
+        }
+
+        function throwBall() {
+            if (!gameRunning || ball) return;
+            
+            const angle = (mouseX - 400) / 400 * Math.PI / 6; // 최대 30도
+            const speed = 8 + power / 10;
+            
+            ball = {
+                x: 400,
+                y: 550,
+                vx: Math.sin(angle) * speed,
+                vy: -speed,
+                radius: 15,
+                trail: []
+            };
+            
+            document.getElementById('throwBtn').disabled = true;
+        }
+
+        function updateBall() {
+            if (!ball) return;
+            
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+            
+            // 궤적 추가
+            ball.trail.push({x: ball.x, y: ball.y});
+            if (ball.trail.length > 20) {
+                ball.trail.shift();
+            }
+            
+            // 벽 충돌
+            if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) {
+                ball.vx *= -0.8;
+                ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
+            }
+            
+            // 핀과 충돌 검사
+            pins.forEach(pin => {
+                if (pin.standing) {
+                    const distance = Math.sqrt(Math.pow(ball.x - pin.x, 2) + Math.pow(ball.y - pin.y, 2));
+                    if (distance < ball.radius + 10) {
+                        pin.standing = false;
+                        pin.wobble = 30;
+                        
+                        // 공 튕기기
+                        const angle = Math.atan2(ball.y - pin.y, ball.x - pin.x);
+                        ball.vx = Math.cos(angle) * 3;
+                        ball.vy = Math.sin(angle) * 3;
+                    }
+                }
+            });
+            
+            // 공이 화면 밖으로 나가면 제거
+            if (ball.y < -50 || ball.y > canvas.height + 50) {
+                ball = null;
+                document.getElementById('throwBtn').disabled = false;
+                
+                setTimeout(() => {
+                    nextThrow();
+                }, 1000);
+            }
+        }
+
+        function nextThrow() {
+            const knockedPins = pins.filter(pin => !pin.standing).length;
+            
+            if (throwNum === 1) {
+                if (knockedPins === 10) {
+                    // 스트라이크
+                    score += 10 + getNextTwoThrows();
+                    nextFrame();
+                } else {
+                    throwNum = 2;
+                }
+            } else {
+                if (knockedPins === 10) {
+                    // 스페어
+                    score += 10 + getNextOneThrow();
+                } else {
+                    score += knockedPins;
+                }
+                nextFrame();
+            }
+            
+            updateDisplay();
+        }
+
+        function getNextTwoThrows() {
+            // 간단화를 위해 보너스 점수 계산 생략
+            return Math.floor(Math.random() * 20);
+        }
+
+        function getNextOneThrow() {
+            // 간단화를 위해 보너스 점수 계산 생략
+            return Math.floor(Math.random() * 10);
+        }
+
+        function nextFrame() {
+            frame++;
+            throwNum = 1;
+            
+            if (frame > 10) {
+                gameRunning = false;
+                alert(`게임 종료! 최종 점수: ${score}점`);
+                return;
+            }
+            
+            initializePins();
+        }
+
+        function drawLane() {
+            // 레인 바닥
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 레인 라인
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(350, 0);
+            ctx.lineTo(350, canvas.height);
+            ctx.moveTo(450, 0);
+            ctx.lineTo(450, canvas.height);
+            ctx.stroke();
+            
+            // 파울 라인
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(0, 500);
+            ctx.lineTo(canvas.width, 500);
+            ctx.stroke();
+        }
+
+        function drawPins() {
+            pins.forEach(pin => {
+                if (pin.standing) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 2;
+                    
+                    // 핀 몸체
+                    ctx.fillRect(pin.x - 8, pin.y - 20, 16, 40);
+                    ctx.strokeRect(pin.x - 8, pin.y - 20, 16, 40);
+                    
+                    // 핀 머리
+                    ctx.beginPath();
+                    ctx.arc(pin.x, pin.y - 20, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (pin.wobble > 0) {
+                    // 쓰러진 핀
+                    ctx.fillStyle = '#CCCCCC';
+                    ctx.fillRect(pin.x - 15, pin.y + 5, 30, 8);
+                    pin.wobble--;
+                }
+            });
+        }
+
+        function drawBall() {
+            if (!ball) return;
+            
+            // 궤적
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ball.trail.forEach((point, index) => {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.stroke();
+            
+            // 공
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 공 구멍
+            ctx.fillStyle = '#333333';
+            ctx.beginPath();
+            ctx.arc(ball.x - 5, ball.y - 5, 3, 0, Math.PI * 2);
+            ctx.arc(ball.x + 5, ball.y - 5, 3, 0, Math.PI * 2);
+            ctx.arc(ball.x, ball.y + 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawAimLine() {
+            if (ball) return;
+            
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(400, 550);
+            ctx.lineTo(mouseX, 100);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            
+            updateBall();
+        }
+
+        function draw() {
+            drawLane();
+            drawPins();
+            drawBall();
+            drawAimLine();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('frame').textContent = frame;
+            document.getElementById('throw').textContent = throwNum;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            frame = 1;
+            throwNum = 1;
+            ball = null;
+            
+            initializePins();
+            updateDisplay();
+            document.getElementById('throwBtn').disabled = false;
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            score = 0;
+            frame = 1;
+            throwNum = 1;
+            ball = null;
+            
+            updateDisplay();
+            document.getElementById('throwBtn').disabled = true;
+            
+            // 빈 화면
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

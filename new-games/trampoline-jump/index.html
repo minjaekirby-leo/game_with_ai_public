@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>트램펄린 점프</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤸‍♂️ 트램펄린 점프</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">높이: <span id="height">0</span>m</div>
+            <div class="info-box">콤보: <span id="combo">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 스페이스바 = 점프 타이밍, A/D = 회전</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let maxHeight = 0;
+        let combo = 0;
+
+        // 점프하는 사람
+        const jumper = {
+            x: 400,
+            y: 450,
+            width: 30,
+            height: 40,
+            velocityY: 0,
+            rotation: 0,
+            rotationSpeed: 0,
+            onTrampoline: true,
+            bounceHeight: 0
+        };
+
+        // 트램펄린
+        const trampoline = {
+            x: 300,
+            y: 500,
+            width: 200,
+            height: 20,
+            bounce: 0
+        };
+
+        let particles = [];
+        let keys = {};
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+            if (e.code === 'KeyA') {
+                jumper.rotationSpeed -= 0.2;
+            }
+            if (e.code === 'KeyD') {
+                jumper.rotationSpeed += 0.2;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        function jump() {
+            if (jumper.onTrampoline && gameRunning && !gamePaused) {
+                const power = 15 + Math.random() * 5;
+                jumper.velocityY = -power;
+                jumper.onTrampoline = false;
+                trampoline.bounce = 20;
+                
+                createJumpParticles();
+            }
+        }
+
+        function updateJumper() {
+            if (!jumper.onTrampoline) {
+                // 중력
+                jumper.velocityY += 0.5;
+                jumper.y += jumper.velocityY;
+                
+                // 회전
+                jumper.rotation += jumper.rotationSpeed;
+                jumper.rotationSpeed *= 0.98; // 공기 저항
+                
+                // 높이 계산
+                const currentHeight = Math.max(0, (500 - jumper.y) / 10);
+                if (currentHeight > maxHeight) {
+                    maxHeight = currentHeight;
+                }
+                
+                // 트램펄린 착지 체크
+                if (jumper.y >= 450 && 
+                    jumper.x > trampoline.x && 
+                    jumper.x < trampoline.x + trampoline.width) {
+                    
+                    jumper.y = 450;
+                    jumper.onTrampoline = true;
+                    
+                    // 착지 점수 계산
+                    const landingScore = calculateLandingScore();
+                    score += landingScore;
+                    
+                    if (landingScore > 50) {
+                        combo++;
+                    } else {
+                        combo = 0;
+                    }
+                    
+                    createLandingParticles();
+                    trampoline.bounce = 15;
+                }
+                
+                // 땅에 떨어지면 게임 오버
+                if (jumper.y > canvas.height) {
+                    gameOver();
+                }
+            }
+            
+            // 트램펄린 바운스 효과
+            if (trampoline.bounce > 0) {
+                trampoline.bounce--;
+            }
+        }
+
+        function calculateLandingScore() {
+            // 회전 수에 따른 점수
+            const rotations = Math.abs(jumper.rotation) / (Math.PI * 2);
+            let rotationScore = Math.floor(rotations) * 100;
+            
+            // 높이에 따른 점수
+            const heightScore = Math.floor(maxHeight) * 10;
+            
+            // 완벽한 착지 보너스 (회전이 정수배에 가까울 때)
+            const rotationRemainder = rotations % 1;
+            const perfectLanding = (rotationRemainder < 0.1 || rotationRemainder > 0.9);
+            const perfectBonus = perfectLanding ? 200 : 0;
+            
+            // 콤보 보너스
+            const comboBonus = combo * 50;
+            
+            const totalScore = rotationScore + heightScore + perfectBonus + comboBonus;
+            
+            // 점수 표시
+            showScorePopup(totalScore, perfectLanding);
+            
+            // 회전 초기화
+            jumper.rotation = 0;
+            maxHeight = 0;
+            
+            return totalScore;
+        }
+
+        function showScorePopup(points, perfect) {
+            const popup = {
+                x: jumper.x,
+                y: jumper.y - 50,
+                text: `+${points}`,
+                life: 60,
+                color: perfect ? '#FFD700' : '#FFFFFF'
+            };
+            
+            if (perfect) {
+                popup.text += ' PERFECT!';
+            }
+            
+            particles.push(popup);
+        }
+
+        function createJumpParticles() {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: trampoline.x + trampoline.width/2 + (Math.random() - 0.5) * 100,
+                    y: trampoline.y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -Math.random() * 3,
+                    life: 30,
+                    color: '#00b894',
+                    size: Math.random() * 4 + 2,
+                    type: 'particle'
+                });
+            }
+        }
+
+        function createLandingParticles() {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: jumper.x + (Math.random() - 0.5) * 60,
+                    y: jumper.y + 20,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: -Math.random() * 8,
+                    life: 40,
+                    color: '#f1c40f',
+                    size: Math.random() * 5 + 3,
+                    type: 'particle'
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                if (particle.type === 'particle') {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.2; // 중력
+                } else {
+                    // 점수 팝업
+                    particle.y -= 2;
+                }
+                
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawBackground() {
+            // 하늘
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 5; i++) {
+                const x = i * 150 + 50;
+                const y = 50 + i * 15;
+                drawCloud(x, y, 30);
+            }
+            
+            // 땅
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 520, canvas.width, 80);
+        }
+
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.4, y, size * 0.8, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.8, y, size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawTrampoline() {
+            // 트램펄린 다리
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(trampoline.x - 20, trampoline.y + 20, 20, 40);
+            ctx.fillRect(trampoline.x + trampoline.width, trampoline.y + 20, 20, 40);
+            
+            // 트램펄린 면 (바운스 효과)
+            const bounceOffset = trampoline.bounce;
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.moveTo(trampoline.x, trampoline.y + bounceOffset);
+            ctx.quadraticCurveTo(
+                trampoline.x + trampoline.width/2, 
+                trampoline.y + trampoline.height + bounceOffset * 2,
+                trampoline.x + trampoline.width, 
+                trampoline.y + bounceOffset
+            );
+            ctx.lineTo(trampoline.x + trampoline.width, trampoline.y + trampoline.height + bounceOffset);
+            ctx.lineTo(trampoline.x, trampoline.y + trampoline.height + bounceOffset);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 트램펄린 테두리
+            ctx.strokeStyle = '#34495e';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        function drawJumper() {
+            ctx.save();
+            ctx.translate(jumper.x, jumper.y);
+            ctx.rotate(jumper.rotation);
+            
+            // 몸
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(-15, -20, 30, 40);
+            
+            // 머리
+            ctx.fillStyle = '#f4d03f';
+            ctx.beginPath();
+            ctx.arc(0, -30, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 팔
+            ctx.fillStyle = '#d35400';
+            ctx.fillRect(-20, -10, 10, 20);
+            ctx.fillRect(10, -10, 10, 20);
+            
+            // 다리
+            ctx.fillStyle = '#2980b9';
+            ctx.fillRect(-10, 15, 8, 25);
+            ctx.fillRect(2, 15, 8, 25);
+            
+            ctx.restore();
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 60;
+                
+                if (particle.type === 'particle') {
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 점수 팝업
+                    ctx.fillStyle = particle.color;
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(particle.text, particle.x, particle.y);
+                }
+                
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawUI() {
+            // 높이 표시
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`현재 높이: ${Math.floor(maxHeight)}m`, 20, 30);
+            
+            // 회전 표시
+            const rotations = Math.abs(jumper.rotation) / (Math.PI * 2);
+            ctx.fillText(`회전: ${rotations.toFixed(1)}`, 20, 50);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            alert(`게임 오버! 최종 점수: ${score}점\n최고 높이: ${Math.floor(maxHeight)}m`);
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updateJumper();
+            updateParticles();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawTrampoline();
+            drawJumper();
+            drawParticles();
+            drawUI();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('height').textContent = Math.floor(maxHeight);
+            document.getElementById('combo').textContent = combo;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            score = 0;
+            maxHeight = 0;
+            combo = 0;
+            
+            jumper.x = 400;
+            jumper.y = 450;
+            jumper.velocityY = 0;
+            jumper.rotation = 0;
+            jumper.rotationSpeed = 0;
+            jumper.onTrampoline = true;
+            
+            trampoline.bounce = 0;
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

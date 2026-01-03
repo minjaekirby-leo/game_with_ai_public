@@ -78,6 +78,9 @@
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
     
+    <div id="secretMessage" style="display: none; color: #f39c12; font-size: 18px; margin: 10px;">
+        💖 비밀 암호가 활성화되었습니다! 무적 모드 ON! 💖
+    </div>
     <div class="game-over" id="gameOver" style="display: none;">
         게임 오버! "다시 시작" 버튼을 누르세요!
     </div>
@@ -100,6 +103,9 @@
         let gameRunning = false;
         let gameStarted = false;
         let score = 0;
+        let secretMode = false; // 비밀 모드 상태
+        let secretInput = ''; // 입력된 문자들을 저장
+        const secretPassword = '서민재사랑해'; // 비밀 암호
 
         // 뱀 초기 설정
         let snake = [{x: 10, y: 10}];
@@ -125,17 +131,25 @@
             // 뱀 머리 이동
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
             
-            // 벽 충돌 검사
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+            // 벽 충돌 검사 (비밀 모드에서는 벽 통과)
+            if (!secretMode && (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount)) {
                 gameOver();
                 return;
+            } else if (secretMode) {
+                // 비밀 모드에서는 벽을 통과해서 반대편으로 나옴
+                if (head.x < 0) head.x = tileCount - 1;
+                if (head.x >= tileCount) head.x = 0;
+                if (head.y < 0) head.y = tileCount - 1;
+                if (head.y >= tileCount) head.y = 0;
             }
             
-            // 자기 몸 충돌 검사
-            for (let segment of snake) {
-                if (head.x === segment.x && head.y === segment.y) {
-                    gameOver();
-                    return;
+            // 자기 몸 충돌 검사 (비밀 모드에서는 무시)
+            if (!secretMode) {
+                for (let segment of snake) {
+                    if (head.x === segment.x && head.y === segment.y) {
+                        gameOver();
+                        return;
+                    }
                 }
             }
             
@@ -143,7 +157,7 @@
             
             // 사과 먹었는지 확인
             if (head.x === appleX && head.y === appleY) {
-                score += 10;
+                score += secretMode ? 50 : 10; // 비밀 모드에서는 5배 점수
                 document.getElementById('score').textContent = '점수: ' + score;
                 generateApple();
             } else {
@@ -153,23 +167,23 @@
 
         function draw() {
             // 배경 그리기
-            ctx.fillStyle = '#27ae60';
+            ctx.fillStyle = secretMode ? '#1a1a2e' : '#27ae60'; // 비밀 모드에서는 어두운 배경
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 뱀 그리기
-            ctx.fillStyle = '#2c3e50';
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#2c3e50'; // 비밀 모드에서는 빨간색
             for (let segment of snake) {
                 ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
             }
             
             // 뱀 머리 다르게 그리기
             if (snake.length > 0) {
-                ctx.fillStyle = '#34495e';
+                ctx.fillStyle = secretMode ? '#ff1744' : '#34495e'; // 비밀 모드에서는 더 진한 빨간색
                 ctx.fillRect(snake[0].x * gridSize, snake[0].y * gridSize, gridSize - 2, gridSize - 2);
             }
             
             // 사과 그리기
-            ctx.fillStyle = '#e74c3c';
+            ctx.fillStyle = secretMode ? '#ffd700' : '#e74c3c'; // 비밀 모드에서는 금색
             ctx.fillRect(appleX * gridSize, appleY * gridSize, gridSize - 2, gridSize - 2);
         }
 
@@ -214,8 +228,11 @@
             score = 0;
             gameRunning = false;
             gameStarted = false;
+            secretMode = false; // 비밀 모드 초기화
+            secretInput = ''; // 비밀 입력 초기화
             document.getElementById('score').textContent = '점수: 0';
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('secretMessage').style.display = 'none';
             document.getElementById('startBtn').textContent = '🎮 게임 시작';
             generateApple();
             draw(); // 초기 화면 그리기
@@ -223,6 +240,23 @@
 
         // 키보드 입력 처리
         document.addEventListener('keydown', (e) => {
+            // 비밀 암호 입력 처리
+            if (e.key.length === 1) { // 일반 문자 키인 경우
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    if (secretMode) {
+                        document.getElementById('secretMessage').textContent = '💖 비밀 암호 활성화! 무적 모드 ON! 💖';
+                    }
+                    secretInput = ''; // 암호 입력 초기화
+                }
+            }
+            
             // 게임이 시작되지 않았으면 방향키로 시작
             if (!gameStarted && (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
                 startGame();

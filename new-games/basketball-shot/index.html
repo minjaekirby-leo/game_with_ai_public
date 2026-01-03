@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>농구 슛</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #74b9ff 0%, #00b894 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff7675, #fd79a8);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏀 농구 슛</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">성공: <span id="success">0</span></div>
+            <div class="info-box">시도: <span id="attempts">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="shoot()" id="shootBtn">🏀 슛!</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 마우스로 각도 조절, 버튼으로 슛</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let score = 0;
+        let successShots = 0;
+        let attempts = 0;
+        let mouseX = 400;
+        let mouseY = 300;
+        let ball = null;
+        let particles = [];
+
+        // 농구대
+        const hoop = {
+            x: 650,
+            y: 200,
+            width: 80,
+            height: 10
+        };
+
+        // 플레이어
+        const player = {
+            x: 100,
+            y: 450,
+            width: 40,
+            height: 60
+        };
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        function shoot() {
+            if (!gameRunning || ball) return;
+            
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            const distance = Math.sqrt(Math.pow(mouseX - player.x, 2) + Math.pow(mouseY - player.y, 2));
+            const power = Math.min(20, distance / 20);
+            
+            ball = {
+                x: player.x + 20,
+                y: player.y,
+                vx: Math.cos(angle) * power,
+                vy: Math.sin(angle) * power,
+                radius: 15,
+                trail: [],
+                bounces: 0
+            };
+            
+            attempts++;
+            document.getElementById('shootBtn').disabled = true;
+        }
+
+        function updateBall() {
+            if (!ball) return;
+            
+            // 중력
+            ball.vy += 0.4;
+            
+            // 위치 업데이트
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+            
+            // 궤적 추가
+            ball.trail.push({x: ball.x, y: ball.y});
+            if (ball.trail.length > 15) {
+                ball.trail.shift();
+            }
+            
+            // 골대와 충돌 검사
+            if (ball.x > hoop.x && ball.x < hoop.x + hoop.width &&
+                ball.y > hoop.y && ball.y < hoop.y + hoop.height + 20 &&
+                ball.vy > 0) {
+                
+                // 골 성공!
+                score += 100;
+                successShots++;
+                createSuccessParticles();
+                
+                ball = null;
+                document.getElementById('shootBtn').disabled = false;
+                return;
+            }
+            
+            // 벽 충돌
+            if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) {
+                ball.vx *= -0.7;
+                ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
+                ball.bounces++;
+            }
+            
+            // 바닥 충돌
+            if (ball.y > canvas.height - ball.radius) {
+                ball.vy *= -0.6;
+                ball.vx *= 0.8;
+                ball.y = canvas.height - ball.radius;
+                ball.bounces++;
+                
+                if (ball.bounces > 3 || Math.abs(ball.vy) < 2) {
+                    ball = null;
+                    document.getElementById('shootBtn').disabled = false;
+                }
+            }
+        }
+
+        function createSuccessParticles() {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: hoop.x + hoop.width/2,
+                    y: hoop.y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: -Math.random() * 8,
+                    life: 60,
+                    color: '#FFD700',
+                    size: Math.random() * 6 + 3
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.2;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawBackground() {
+            // 하늘
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#74b9ff');
+            gradient.addColorStop(1, '#00b894');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 코트
+            ctx.fillStyle = '#e17055';
+            ctx.fillRect(0, 500, canvas.width, 100);
+            
+            // 코트 라인
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(200, 500, 100, 0, Math.PI, true);
+            ctx.stroke();
+        }
+
+        function drawHoop() {
+            // 백보드
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(hoop.x + 60, hoop.y - 80, 10, 100);
+            
+            // 림
+            ctx.strokeStyle = '#ff7675';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(hoop.x + hoop.width/2, hoop.y, hoop.width/2, 0, Math.PI);
+            ctx.stroke();
+            
+            // 네트
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const x = hoop.x + 10 + i * 8;
+                ctx.beginPath();
+                ctx.moveTo(x, hoop.y);
+                ctx.lineTo(x - 5, hoop.y + 30);
+                ctx.stroke();
+            }
+        }
+
+        function drawPlayer() {
+            // 몸
+            ctx.fillStyle = '#0984e3';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // 머리
+            ctx.fillStyle = '#fdcb6e';
+            ctx.beginPath();
+            ctx.arc(player.x + 20, player.y - 10, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 팔 (슛 자세)
+            ctx.strokeStyle = '#0984e3';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(player.x + 30, player.y + 20);
+            ctx.lineTo(player.x + 50, player.y - 10);
+            ctx.stroke();
+        }
+
+        function drawBall() {
+            if (!ball) return;
+            
+            // 궤적
+            ctx.strokeStyle = 'rgba(255, 118, 117, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ball.trail.forEach((point, index) => {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.stroke();
+            
+            // 공
+            ctx.fillStyle = '#ff7675';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 공 라인
+            ctx.strokeStyle = '#2d3436';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 0.8, 0, Math.PI * 2);
+            ctx.moveTo(ball.x - ball.radius, ball.y);
+            ctx.lineTo(ball.x + ball.radius, ball.y);
+            ctx.moveTo(ball.x, ball.y - ball.radius);
+            ctx.lineTo(ball.x, ball.y + ball.radius);
+            ctx.stroke();
+        }
+
+        function drawAimLine() {
+            if (ball) return;
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(player.x + 20, player.y);
+            ctx.lineTo(mouseX, mouseY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 60;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            
+            updateBall();
+            updateParticles();
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawHoop();
+            drawPlayer();
+            drawBall();
+            drawAimLine();
+            drawParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('success').textContent = successShots;
+            document.getElementById('attempts').textContent = attempts;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            document.getElementById('shootBtn').disabled = false;
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            score = 0;
+            successShots = 0;
+            attempts = 0;
+            ball = null;
+            particles = [];
+            
+            updateDisplay();
+            document.getElementById('shootBtn').disabled = true;
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

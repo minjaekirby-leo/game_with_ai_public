@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 자동차 주차 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2C3E50, #3498DB);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #3498DB;
+        }
+        
+        canvas {
+            border: 3px solid #2980B9;
+            border-radius: 10px;
+            background: #34495E;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(52, 152, 219, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .level-selector {
+            margin: 10px 0;
+        }
+        
+        .level-btn {
+            background: #E74C3C;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .level-btn.active {
+            background: #C0392B;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+        }
+        
+        .parking-status {
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .parking-status.success {
+            color: #27AE60;
+        }
+        
+        .parking-status.fail {
+            color: #E74C3C;
+        }
+        
+        .restart-btn {
+            background: #27AE60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        
+        .restart-btn:hover {
+            background: #229954;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🚗 자동차 주차 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">🎯 레벨: <span id="currentLevel">1</span></div>
+            <div class="stat">💥 충돌: <span id="crashes">0</span></div>
+            <div class="stat">⏱️ 시간: <span id="timer">00:00</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+        </div>
+        
+        <div class="level-selector">
+            <button class="level-btn active" onclick="selectLevel(1)">레벨 1</button>
+            <button class="level-btn" onclick="selectLevel(2)">레벨 2</button>
+            <button class="level-btn" onclick="selectLevel(3)">레벨 3</button>
+            <button class="level-btn" onclick="selectLevel(4)">레벨 4</button>
+        </div>
+        
+        <div class="parking-status" id="parkingStatus">주차 공간에 자동차를 주차하세요!</div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <button class="restart-btn" onclick="restartLevel()">🔄 다시 시작</button>
+        
+        <div class="controls">
+            <p>🎮 조작법: 화살표 키로 자동차를 조종하세요!</p>
+            <p>🚗 ↑↓: 전진/후진, ←→: 좌회전/우회전</p>
+            <p>💡 팁: 천천히 조심스럽게 주차하세요! 벽에 부딪히면 안 돼요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            currentLevel: 1,
+            crashes: 0,
+            score: 0,
+            startTime: Date.now(),
+            gameRunning: true,
+            levelCompleted: false
+        };
+        
+        // 자동차
+        const car = {
+            x: 100,
+            y: 500,
+            width: 40,
+            height: 20,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 3,
+            turnSpeed: 0.05,
+            friction: 0.95
+        };
+        
+        // 키 입력
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.key] = true);
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+        
+        // 레벨 데이터
+        const levels = {
+            1: {
+                obstacles: [
+                    { x: 0, y: 0, width: 800, height: 20 }, // 상단 벽
+                    { x: 0, y: 580, width: 800, height: 20 }, // 하단 벽
+                    { x: 0, y: 0, width: 20, height: 600 }, // 좌측 벽
+                    { x: 780, y: 0, width: 20, height: 600 }, // 우측 벽
+                ],
+                parkingSpot: { x: 650, y: 450, width: 100, height: 60 },
+                startPos: { x: 100, y: 500, angle: 0 }
+            },
+            2: {
+                obstacles: [
+                    { x: 0, y: 0, width: 800, height: 20 },
+                    { x: 0, y: 580, width: 800, height: 20 },
+                    { x: 0, y: 0, width: 20, height: 600 },
+                    { x: 780, y: 0, width: 20, height: 600 },
+                    { x: 300, y: 200, width: 200, height: 20 }, // 중간 장애물
+                    { x: 400, y: 350, width: 20, height: 150 }
+                ],
+                parkingSpot: { x: 600, y: 100, width: 100, height: 60 },
+                startPos: { x: 100, y: 500, angle: 0 }
+            },
+            3: {
+                obstacles: [
+                    { x: 0, y: 0, width: 800, height: 20 },
+                    { x: 0, y: 580, width: 800, height: 20 },
+                    { x: 0, y: 0, width: 20, height: 600 },
+                    { x: 780, y: 0, width: 20, height: 600 },
+                    { x: 200, y: 150, width: 20, height: 200 },
+                    { x: 400, y: 250, width: 20, height: 200 },
+                    { x: 600, y: 100, width: 20, height: 200 }
+                ],
+                parkingSpot: { x: 50, y: 50, width: 100, height: 60 },
+                startPos: { x: 700, y: 500, angle: Math.PI }
+            },
+            4: {
+                obstacles: [
+                    { x: 0, y: 0, width: 800, height: 20 },
+                    { x: 0, y: 580, width: 800, height: 20 },
+                    { x: 0, y: 0, width: 20, height: 600 },
+                    { x: 780, y: 0, width: 20, height: 600 },
+                    { x: 150, y: 100, width: 100, height: 20 },
+                    { x: 350, y: 200, width: 100, height: 20 },
+                    { x: 550, y: 300, width: 100, height: 20 },
+                    { x: 250, y: 400, width: 300, height: 20 }
+                ],
+                parkingSpot: { x: 350, y: 50, width: 100, height: 60 },
+                startPos: { x: 100, y: 300, angle: Math.PI / 2 }
+            }
+        };
+        
+        // 레벨 선택
+        function selectLevel(level) {
+            gameState.currentLevel = level;
+            document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadLevel();
+        }
+        
+        // 레벨 로드
+        function loadLevel() {
+            const level = levels[gameState.currentLevel];
+            car.x = level.startPos.x;
+            car.y = level.startPos.y;
+            car.angle = level.startPos.angle;
+            car.speed = 0;
+            gameState.crashes = 0;
+            gameState.startTime = Date.now();
+            gameState.levelCompleted = false;
+            gameState.gameRunning = true;
+            
+            document.getElementById('parkingStatus').textContent = '주차 공간에 자동차를 주차하세요!';
+            document.getElementById('parkingStatus').className = 'parking-status';
+        }
+        
+        // 레벨 재시작
+        function restartLevel() {
+            loadLevel();
+        }
+        
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // 자동차 모서리 계산
+        function getCarCorners() {
+            const cos = Math.cos(car.angle);
+            const sin = Math.sin(car.angle);
+            const halfWidth = car.width / 2;
+            const halfHeight = car.height / 2;
+            
+            return [
+                {
+                    x: car.x + cos * (-halfWidth) - sin * (-halfHeight),
+                    y: car.y + sin * (-halfWidth) + cos * (-halfHeight)
+                },
+                {
+                    x: car.x + cos * (halfWidth) - sin * (-halfHeight),
+                    y: car.y + sin * (halfWidth) + cos * (-halfHeight)
+                },
+                {
+                    x: car.x + cos * (halfWidth) - sin * (halfHeight),
+                    y: car.y + sin * (halfWidth) + cos * (halfHeight)
+                },
+                {
+                    x: car.x + cos * (-halfWidth) - sin * (halfHeight),
+                    y: car.y + sin * (-halfWidth) + cos * (halfHeight)
+                }
+            ];
+        }
+        
+        // 점이 사각형 안에 있는지 확인
+        function pointInRect(point, rect) {
+            return point.x >= rect.x && point.x <= rect.x + rect.width &&
+                   point.y >= rect.y && point.y <= rect.y + rect.height;
+        }
+        
+        // 업데이트
+        function update() {
+            if (!gameState.gameRunning || gameState.levelCompleted) return;
+            
+            const level = levels[gameState.currentLevel];
+            
+            // 자동차 조작
+            if (keys['ArrowUp']) {
+                car.speed = Math.min(car.speed + 0.2, car.maxSpeed);
+            } else if (keys['ArrowDown']) {
+                car.speed = Math.max(car.speed - 0.2, -car.maxSpeed);
+            } else {
+                car.speed *= car.friction;
+            }
+            
+            if (keys['ArrowLeft']) {
+                car.angle -= car.turnSpeed * Math.abs(car.speed);
+            }
+            if (keys['ArrowRight']) {
+                car.angle += car.turnSpeed * Math.abs(car.speed);
+            }
+            
+            // 자동차 이동
+            car.x += Math.cos(car.angle) * car.speed;
+            car.y += Math.sin(car.angle) * car.speed;
+            
+            // 충돌 감지
+            const carCorners = getCarCorners();
+            let collision = false;
+            
+            level.obstacles.forEach(obstacle => {
+                carCorners.forEach(corner => {
+                    if (pointInRect(corner, obstacle)) {
+                        collision = true;
+                    }
+                });
+            });
+            
+            if (collision) {
+                // 충돌 시 자동차를 이전 위치로 되돌리기
+                car.x -= Math.cos(car.angle) * car.speed;
+                car.y -= Math.sin(car.angle) * car.speed;
+                car.speed = 0;
+                gameState.crashes++;
+            }
+            
+            // 주차 완료 체크
+            const parkingSpot = level.parkingSpot;
+            let inParkingSpot = true;
+            
+            carCorners.forEach(corner => {
+                if (!pointInRect(corner, parkingSpot)) {
+                    inParkingSpot = false;
+                }
+            });
+            
+            if (inParkingSpot && Math.abs(car.speed) < 0.1) {
+                gameState.levelCompleted = true;
+                const timeBonus = Math.max(0, 30 - Math.floor((Date.now() - gameState.startTime) / 1000));
+                const crashPenalty = gameState.crashes * 10;
+                gameState.score += Math.max(0, 100 + timeBonus - crashPenalty);
+                
+                document.getElementById('parkingStatus').textContent = '🎉 주차 완료!';
+                document.getElementById('parkingStatus').className = 'parking-status success';
+                
+                setTimeout(() => {
+                    if (gameState.currentLevel < 4) {
+                        if (confirm('다음 레벨로 진행하시겠습니까?')) {
+                            selectLevel(gameState.currentLevel + 1);
+                        }
+                    } else {
+                        alert(`모든 레벨 완료!\n최종 점수: ${gameState.score}점`);
+                    }
+                }, 1000);
+            }
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 도로 표시
+            ctx.fillStyle = '#34495E';
+            ctx.fillRect(20, 20, canvas.width - 40, canvas.height - 40);
+            
+            // 도로 선
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 10]);
+            
+            // 가로선
+            for (let y = 100; y < canvas.height; y += 100) {
+                ctx.beginPath();
+                ctx.moveTo(20, y);
+                ctx.lineTo(canvas.width - 20, y);
+                ctx.stroke();
+            }
+            
+            // 세로선
+            for (let x = 100; x < canvas.width; x += 100) {
+                ctx.beginPath();
+                ctx.moveTo(x, 20);
+                ctx.lineTo(x, canvas.height - 20);
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
+            
+            const level = levels[gameState.currentLevel];
+            
+            // 장애물
+            ctx.fillStyle = '#7F8C8D';
+            level.obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+            
+            // 주차 공간
+            const parkingSpot = level.parkingSpot;
+            ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+            ctx.fillRect(parkingSpot.x, parkingSpot.y, parkingSpot.width, parkingSpot.height);
+            
+            ctx.strokeStyle = '#27AE60';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(parkingSpot.x, parkingSpot.y, parkingSpot.width, parkingSpot.height);
+            
+            // 주차 표시
+            ctx.fillStyle = '#27AE60';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🅿️', parkingSpot.x + parkingSpot.width / 2, parkingSpot.y + parkingSpot.height / 2 + 5);
+            
+            // 자동차
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+            
+            // 자동차 그림자
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(-car.width / 2 + 2, -car.height / 2 + 2, car.width, car.height);
+            
+            // 자동차 몸체
+            ctx.fillStyle = '#E74C3C';
+            ctx.fillRect(-car.width / 2, -car.height / 2, car.width, car.height);
+            
+            // 자동차 창문
+            ctx.fillStyle = '#3498DB';
+            ctx.fillRect(-car.width / 2 + 5, -car.height / 2 + 3, car.width - 10, car.height - 6);
+            
+            // 자동차 방향 표시
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(car.width / 2 - 3, -2, 6, 4);
+            
+            ctx.restore();
+            
+            // 자동차 궤적 (속도에 따라)
+            if (Math.abs(car.speed) > 0.1) {
+                ctx.strokeStyle = 'rgba(231, 76, 60, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(car.x, car.y, 30, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('currentLevel').textContent = gameState.currentLevel;
+            document.getElementById('crashes').textContent = gameState.crashes;
+            document.getElementById('score').textContent = gameState.score;
+            
+            // 타이머
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        loadLevel();
+        gameLoop();
+    </script>
+</body>
+</html>

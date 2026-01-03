@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>단어 찾기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 1000px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .grid-container {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            gap: 2px;
+            width: 450px;
+            height: 450px;
+        }
+        
+        .grid-cell {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            color: #333;
+            user-select: none;
+        }
+        
+        .grid-cell:hover {
+            background: #e3f2fd;
+        }
+        
+        .grid-cell.selected {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .grid-cell.found {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .word-list {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            width: 200px;
+        }
+        
+        .word-item {
+            background: rgba(255, 255, 255, 0.3);
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .word-item.found {
+            background: #4caf50;
+            text-decoration: line-through;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 단어 찾기</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">찾은 단어: <span id="foundWords">0</span>/<span id="totalWords">10</span></div>
+            <div class="info-box">시간: <span id="time">00:00</span></div>
+            <div class="info-box">점수: <span id="score">0</span></div>
+        </div>
+        
+        <div class="game-area">
+            <div class="grid-container">
+                <div class="word-grid" id="wordGrid"></div>
+            </div>
+            
+            <div class="word-list" id="wordList">
+                <h3>찾을 단어들</h3>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="newGame()">🎮 새 게임</button>
+            <button onclick="showHint()">💡 힌트</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+        </div>
+    </div>
+
+    <script>
+        let gameRunning = false;
+        let gamePaused = false;
+        let startTime = 0;
+        let gameTimer = null;
+        let score = 0;
+        
+        const GRID_SIZE = 15;
+        let grid = [];
+        let words = [];
+        let foundWords = [];
+        let selectedCells = [];
+        let isSelecting = false;
+        
+        // 단어 목록
+        const wordList = [
+            '사과', '바나나', '딸기', '포도', '수박', '참외', '복숭아', '자두', '감', '배',
+            '고양이', '강아지', '토끼', '햄스터', '새', '물고기', '거북이', '앵무새',
+            '축구', '농구', '야구', '테니스', '배구', '탁구', '수영', '달리기',
+            '학교', '집', '공원', '병원', '마트', '도서관', '영화관', '놀이터',
+            '봄', '여름', '가을', '겨울', '비', '눈', '바람', '구름'
+        ];
+
+        function initializeGrid() {
+            grid = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = '';
+                }
+            }
+        }
+
+        function selectRandomWords() {
+            words = [];
+            const shuffled = [...wordList].sort(() => Math.random() - 0.5);
+            words = shuffled.slice(0, 10);
+            foundWords = [];
+        }
+
+        function placeWordsInGrid() {
+            words.forEach(word => {
+                let placed = false;
+                let attempts = 0;
+                
+                while (!placed && attempts < 100) {
+                    const direction = Math.floor(Math.random() * 8); // 8방향
+                    const startRow = Math.floor(Math.random() * GRID_SIZE);
+                    const startCol = Math.floor(Math.random() * GRID_SIZE);
+                    
+                    if (canPlaceWord(word, startRow, startCol, direction)) {
+                        placeWord(word, startRow, startCol, direction);
+                        placed = true;
+                    }
+                    attempts++;
+                }
+            });
+        }
+
+        function canPlaceWord(word, row, col, direction) {
+            const directions = [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1],           [0, 1],
+                [1, -1],  [1, 0],  [1, 1]
+            ];
+            
+            const [dRow, dCol] = directions[direction];
+            
+            for (let i = 0; i < word.length; i++) {
+                const newRow = row + i * dRow;
+                const newCol = col + i * dCol;
+                
+                if (newRow < 0 || newRow >= GRID_SIZE || newCol < 0 || newCol >= GRID_SIZE) {
+                    return false;
+                }
+                
+                if (grid[newRow][newCol] !== '' && grid[newRow][newCol] !== word[i]) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        function placeWord(word, row, col, direction) {
+            const directions = [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1],           [0, 1],
+                [1, -1],  [1, 0],  [1, 1]
+            ];
+            
+            const [dRow, dCol] = directions[direction];
+            
+            for (let i = 0; i < word.length; i++) {
+                const newRow = row + i * dRow;
+                const newCol = col + i * dCol;
+                grid[newRow][newCol] = word[i];
+            }
+        }
+
+        function fillEmptyCells() {
+            const koreanChars = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ가나다라마바사아자차카타파하';
+            
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i][j] === '') {
+                        grid[i][j] = koreanChars[Math.floor(Math.random() * koreanChars.length)];
+                    }
+                }
+            }
+        }
+
+        function renderGrid() {
+            const gridElement = document.getElementById('wordGrid');
+            gridElement.innerHTML = '';
+            
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.textContent = grid[i][j];
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    cell.addEventListener('mousedown', startSelection);
+                    cell.addEventListener('mouseenter', continueSelection);
+                    cell.addEventListener('mouseup', endSelection);
+                    
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        function renderWordList() {
+            const wordListElement = document.getElementById('wordList');
+            wordListElement.innerHTML = '<h3>찾을 단어들</h3>';
+            
+            words.forEach(word => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.textContent = word;
+                
+                if (foundWords.includes(word)) {
+                    wordItem.classList.add('found');
+                }
+                
+                wordListElement.appendChild(wordItem);
+            });
+        }
+
+        function startSelection(e) {
+            if (!gameRunning || gamePaused) return;
+            
+            isSelecting = true;
+            selectedCells = [];
+            clearSelection();
+            
+            const row = parseInt(e.target.dataset.row);
+            const col = parseInt(e.target.dataset.col);
+            
+            selectedCells.push({row, col});
+            e.target.classList.add('selected');
+        }
+
+        function continueSelection(e) {
+            if (!isSelecting) return;
+            
+            const row = parseInt(e.target.dataset.row);
+            const col = parseInt(e.target.dataset.col);
+            
+            // 직선상에 있는지 확인
+            if (selectedCells.length > 0) {
+                const firstCell = selectedCells[0];
+                const isValidDirection = isInLine(firstCell.row, firstCell.col, row, col);
+                
+                if (isValidDirection) {
+                    clearSelection();
+                    selectedCells = getLineCells(firstCell.row, firstCell.col, row, col);
+                    selectedCells.forEach(cell => {
+                        const cellElement = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                        cellElement.classList.add('selected');
+                    });
+                }
+            }
+        }
+
+        function endSelection() {
+            if (!isSelecting) return;
+            
+            isSelecting = false;
+            checkSelectedWord();
+        }
+
+        function isInLine(row1, col1, row2, col2) {
+            const dRow = row2 - row1;
+            const dCol = col2 - col1;
+            
+            // 같은 행, 열, 또는 대각선인지 확인
+            return dRow === 0 || dCol === 0 || Math.abs(dRow) === Math.abs(dCol);
+        }
+
+        function getLineCells(row1, col1, row2, col2) {
+            const cells = [];
+            const dRow = row2 - row1;
+            const dCol = col2 - col1;
+            const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
+            
+            const stepRow = steps === 0 ? 0 : dRow / steps;
+            const stepCol = steps === 0 ? 0 : dCol / steps;
+            
+            for (let i = 0; i <= steps; i++) {
+                cells.push({
+                    row: row1 + Math.round(i * stepRow),
+                    col: col1 + Math.round(i * stepCol)
+                });
+            }
+            
+            return cells;
+        }
+
+        function checkSelectedWord() {
+            if (selectedCells.length < 2) {
+                clearSelection();
+                return;
+            }
+            
+            const selectedWord = selectedCells.map(cell => grid[cell.row][cell.col]).join('');
+            const reversedWord = selectedWord.split('').reverse().join('');
+            
+            let foundWord = null;
+            if (words.includes(selectedWord) && !foundWords.includes(selectedWord)) {
+                foundWord = selectedWord;
+            } else if (words.includes(reversedWord) && !foundWords.includes(reversedWord)) {
+                foundWord = reversedWord;
+            }
+            
+            if (foundWord) {
+                foundWords.push(foundWord);
+                score += foundWord.length * 10;
+                
+                // 찾은 단어 셀들을 영구적으로 표시
+                selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    cellElement.classList.remove('selected');
+                    cellElement.classList.add('found');
+                });
+                
+                renderWordList();
+                updateDisplay();
+                checkGameComplete();
+            } else {
+                clearSelection();
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.grid-cell.selected').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+        }
+
+        function showHint() {
+            if (!gameRunning || gamePaused) return;
+            
+            // 아직 찾지 못한 단어 중 하나를 랜덤하게 선택
+            const remainingWords = words.filter(word => !foundWords.includes(word));
+            if (remainingWords.length === 0) return;
+            
+            const hintWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
+            
+            // 해당 단어의 첫 글자들을 잠깐 하이라이트
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i][j] === hintWord[0]) {
+                        const cell = document.querySelector(`[data-row="${i}"][data-col="${j}"]`);
+                        cell.style.background = '#FFD700';
+                        setTimeout(() => {
+                            if (!cell.classList.contains('found')) {
+                                cell.style.background = 'white';
+                            }
+                        }, 2000);
+                    }
+                }
+            }
+            
+            score = Math.max(0, score - 20); // 힌트 사용 페널티
+            updateDisplay();
+        }
+
+        function checkGameComplete() {
+            if (foundWords.length === words.length) {
+                gameRunning = false;
+                clearInterval(gameTimer);
+                
+                const timeBonus = Math.max(0, 300 - Math.floor((Date.now() - startTime) / 1000)) * 5;
+                score += timeBonus;
+                
+                setTimeout(() => {
+                    alert(`🎉 모든 단어를 찾았습니다!\n최종 점수: ${score}점\n시간 보너스: ${timeBonus}점`);
+                }, 500);
+            }
+        }
+
+        function updateTimer() {
+            if (!gameRunning || gamePaused) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('foundWords').textContent = foundWords.length;
+            document.getElementById('totalWords').textContent = words.length;
+            document.getElementById('score').textContent = score;
+        }
+
+        function newGame() {
+            gameRunning = true;
+            gamePaused = false;
+            startTime = Date.now();
+            score = 0;
+            
+            initializeGrid();
+            selectRandomWords();
+            placeWordsInGrid();
+            fillEmptyCells();
+            
+            renderGrid();
+            renderWordList();
+            
+            // 타이머 시작
+            clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            updateDisplay();
+            document.getElementById('time').textContent = '00:00';
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        // 마우스 이벤트 방지 (드래그 방지)
+        document.addEventListener('selectstart', e => e.preventDefault());
+
+        // 초기화
+        newGame();
+    </script>
+</body>
+</html>

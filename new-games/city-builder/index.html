@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>도시 건설 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #90EE90;
+            cursor: pointer;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 250px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .building-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .building-btn {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .building-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .building-btn.selected {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        .building-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏙️ 도시 건설</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>건물을 선택하고 맵에 클릭해서 도시를 건설하세요!</p>
+        <p>주민들이 행복하도록 균형있게 건설하세요!</p>
+        <p>돈을 관리하면서 도시를 발전시켜보세요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">💰 돈: $<span id="money">1000</span></div>
+            <div class="info-item">👥 인구: <span id="population">0</span></div>
+            <div class="info-item">😊 행복도: <span id="happiness">50</span>%</div>
+            
+            <div class="stats-grid">
+                <div>🏠 주택: <span id="houses">0</span></div>
+                <div>🏢 상점: <span id="shops">0</span></div>
+                <div>🏭 공장: <span id="factories">0</span></div>
+                <div>🌳 공원: <span id="parks">0</span></div>
+            </div>
+            
+            <div class="building-buttons">
+                <button class="building-btn" onclick="selectBuilding('house')">🏠 주택 ($100)</button>
+                <button class="building-btn" onclick="selectBuilding('shop')">🏢 상점 ($200)</button>
+                <button class="building-btn" onclick="selectBuilding('factory')">🏭 공장 ($300)</button>
+                <button class="building-btn" onclick="selectBuilding('park')">🌳 공원 ($150)</button>
+                <button class="building-btn" onclick="selectBuilding('road')">🛣️ 도로 ($50)</button>
+                <button class="building-btn" onclick="selectBuilding('demolish')">💥 철거 (무료)</button>
+            </div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>무한 자금 모드 ON! 💖
+            </div>
+            
+            <button onclick="resetGame()">새 도시</button>
+            <button onclick="saveCity()">도시 저장</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let money = 1000;
+        let population = 0;
+        let happiness = 50;
+        let selectedBuilding = null;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 그리드 설정
+        const gridSize = 40;
+        const gridWidth = canvas.width / gridSize;
+        const gridHeight = canvas.height / gridSize;
+        
+        // 도시 그리드
+        let cityGrid = [];
+        
+        // 건물 타입들
+        const buildingTypes = {
+            house: { cost: 100, emoji: '🏠', income: 20, population: 4, happiness: 0 },
+            shop: { cost: 200, emoji: '🏢', income: 50, population: 0, happiness: 10 },
+            factory: { cost: 300, emoji: '🏭', income: 100, population: 0, happiness: -20 },
+            park: { cost: 150, emoji: '🌳', income: 0, population: 0, happiness: 30 },
+            road: { cost: 50, emoji: '🛣️', income: 0, population: 0, happiness: 5 }
+        };
+        
+        // 건물 카운트
+        let buildingCounts = {
+            house: 0,
+            shop: 0,
+            factory: 0,
+            park: 0,
+            road: 0
+        };
+        
+        // 파티클 시스템
+        let particles = [];
+        
+        // 그리드 초기화
+        function initializeGrid() {
+            cityGrid = [];
+            for (let y = 0; y < gridHeight; y++) {
+                cityGrid[y] = [];
+                for (let x = 0; x < gridWidth; x++) {
+                    cityGrid[y][x] = null;
+                }
+            }
+        }
+        
+        // 파티클 효과
+        function createBuildParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x * gridSize + gridSize/2,
+                    y: y * gridSize + gridSize/2,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: Math.random() * -4 - 2,
+                    life: 30,
+                    color: secretMode ? '#ffd700' : '#2ecc71'
+                });
+            }
+        }
+        
+        function createMoneyParticles(x, y) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: x * gridSize + gridSize/2,
+                    y: y * gridSize + gridSize/2,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * -3 - 1,
+                    life: 40,
+                    color: '#ffd700',
+                    text: '$'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        initializeGrid();
+        
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!selectedBuilding) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const gridX = Math.floor(mouseX / gridSize);
+            const gridY = Math.floor(mouseY / gridSize);
+            
+            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+                if (selectedBuilding === 'demolish') {
+                    demolishBuilding(gridX, gridY);
+                } else {
+                    buildBuilding(gridX, gridY, selectedBuilding);
+                }
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                    
+                    if (secretMode) {
+                        money = 999999; // 무한 자금
+                        updateDisplay();
+                    }
+                }
+            }
+        });
+        
+        function selectBuilding(type) {
+            selectedBuilding = selectedBuilding === type ? null : type;
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            if (selectedBuilding) {
+                event.target.classList.add('selected');
+            }
+        }
+        
+        function buildBuilding(x, y, type) {
+            // 이미 건물이 있는지 확인
+            if (cityGrid[y][x] !== null) return;
+            
+            const building = buildingTypes[type];
+            if (!building) return;
+            
+            // 돈 확인
+            if (!secretMode && money < building.cost) return;
+            
+            // 건물 건설
+            cityGrid[y][x] = type;
+            if (!secretMode) money -= building.cost;
+            buildingCounts[type]++;
+            
+            // 효과
+            createBuildParticles(x, y);
+            
+            updateStats();
+            updateDisplay();
+        }
+        
+        function demolishBuilding(x, y) {
+            const buildingType = cityGrid[y][x];
+            if (buildingType === null) return;
+            
+            // 건물 철거
+            cityGrid[y][x] = null;
+            buildingCounts[buildingType]--;
+            
+            // 일부 비용 환불
+            const refund = Math.floor(buildingTypes[buildingType].cost * 0.5);
+            money += refund;
+            
+            updateStats();
+            updateDisplay();
+        }
+        
+        function updateStats() {
+            // 인구 계산
+            population = 0;
+            happiness = 50; // 기본 행복도
+            
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const buildingType = cityGrid[y][x];
+                    if (buildingType && buildingTypes[buildingType]) {
+                        const building = buildingTypes[buildingType];
+                        population += building.population;
+                        happiness += building.happiness;
+                    }
+                }
+            }
+            
+            // 행복도 제한
+            happiness = Math.max(0, Math.min(100, happiness));
+            
+            // 수입 계산 (매 초마다)
+            if (Date.now() % 1000 < 50) { // 대략 1초마다
+                let income = 0;
+                for (let y = 0; y < gridHeight; y++) {
+                    for (let x = 0; x < gridWidth; x++) {
+                        const buildingType = cityGrid[y][x];
+                        if (buildingType && buildingTypes[buildingType]) {
+                            income += buildingTypes[buildingType].income;
+                            
+                            // 수입 파티클
+                            if (buildingTypes[buildingType].income > 0 && Math.random() < 0.1) {
+                                createMoneyParticles(x, y);
+                            }
+                        }
+                    }
+                }
+                
+                // 행복도에 따른 수입 보너스
+                const happinessMultiplier = happiness / 100;
+                income = Math.floor(income * happinessMultiplier);
+                
+                if (secretMode) income *= 2; // 비밀 모드에서는 2배 수입
+                
+                money += income;
+            }
+        }
+        
+        function updateDisplay() {
+            document.getElementById('money').textContent = money;
+            document.getElementById('population').textContent = population;
+            document.getElementById('happiness').textContent = Math.floor(happiness);
+            
+            document.getElementById('houses').textContent = buildingCounts.house;
+            document.getElementById('shops').textContent = buildingCounts.shop;
+            document.getElementById('factories').textContent = buildingCounts.factory;
+            document.getElementById('parks').textContent = buildingCounts.park;
+            
+            // 건물 버튼 활성화/비활성화
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                const buildingType = btn.onclick.toString().match(/'(\w+)'/);
+                if (buildingType && buildingType[1] !== 'demolish') {
+                    const cost = buildingTypes[buildingType[1]]?.cost || 0;
+                    btn.disabled = !secretMode && money < cost;
+                }
+            });
+        }
+        
+        function resetGame() {
+            money = 1000;
+            population = 0;
+            happiness = 50;
+            selectedBuilding = null;
+            
+            buildingCounts = {
+                house: 0,
+                shop: 0,
+                factory: 0,
+                park: 0,
+                road: 0
+            };
+            
+            initializeGrid();
+            particles = [];
+            
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateDisplay();
+        }
+        
+        function saveCity() {
+            const cityData = {
+                grid: cityGrid,
+                money: money,
+                population: population,
+                happiness: happiness,
+                buildingCounts: buildingCounts
+            };
+            
+            localStorage.setItem('cityBuilderSave', JSON.stringify(cityData));
+            alert('도시가 저장되었습니다!');
+        }
+        
+        function loadCity() {
+            const savedData = localStorage.getItem('cityBuilderSave');
+            if (savedData) {
+                const cityData = JSON.parse(savedData);
+                cityGrid = cityData.grid;
+                money = cityData.money;
+                population = cityData.population;
+                happiness = cityData.happiness;
+                buildingCounts = cityData.buildingCounts;
+                
+                updateDisplay();
+            }
+        }
+        
+        function draw() {
+            // 배경 그리기
+            ctx.fillStyle = secretMode ? '#1a1a2e' : '#90EE90';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 그리드 선 그리기
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 건물들 그리기
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const buildingType = cityGrid[y][x];
+                    if (buildingType && buildingTypes[buildingType]) {
+                        const building = buildingTypes[buildingType];
+                        
+                        // 건물 배경
+                        if (buildingType === 'road') {
+                            ctx.fillStyle = secretMode ? '#ffd700' : '#696969';
+                        } else {
+                            ctx.fillStyle = secretMode ? '#ff6b6b' : 'rgba(255, 255, 255, 0.8)';
+                        }
+                        ctx.fillRect(x * gridSize + 2, y * gridSize + 2, gridSize - 4, gridSize - 4);
+                        
+                        // 건물 이모지
+                        ctx.font = '24px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(
+                            building.emoji,
+                            x * gridSize + gridSize/2,
+                            y * gridSize + gridSize/2 + 8
+                        );
+                    }
+                }
+            }
+            
+            // 선택된 건물 미리보기
+            if (selectedBuilding && selectedBuilding !== 'demolish') {
+                const mousePos = getMouseGridPosition();
+                if (mousePos && cityGrid[mousePos.y][mousePos.x] === null) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fillRect(
+                        mousePos.x * gridSize + 2,
+                        mousePos.y * gridSize + 2,
+                        gridSize - 4,
+                        gridSize - 4
+                    );
+                    
+                    const building = buildingTypes[selectedBuilding];
+                    ctx.font = '24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        building.emoji,
+                        mousePos.x * gridSize + gridSize/2,
+                        mousePos.y * gridSize + gridSize/2 + 8
+                    );
+                }
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                
+                if (p.text) {
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(p.text, p.x, p.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+            
+            // 행복도 표시
+            const happinessColor = happiness > 70 ? '#2ecc71' : happiness > 40 ? '#f39c12' : '#e74c3c';
+            ctx.fillStyle = happinessColor;
+            ctx.fillRect(10, 10, (happiness / 100) * 200, 10);
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 200, 10);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`행복도: ${Math.floor(happiness)}%`, 10, 35);
+        }
+        
+        function getMouseGridPosition() {
+            // 마우스 위치를 그리드 좌표로 변환하는 함수
+            // 실제 구현에서는 마우스 이벤트에서 계산
+            return null;
+        }
+        
+        function gameLoop() {
+            updateStats();
+            updateParticles();
+            draw();
+            updateDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        loadCity(); // 저장된 도시 로드 시도
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

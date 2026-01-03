@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DNA 퍼즐 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: helix 4s ease-in-out infinite;
+        }
+        
+        @keyframes helix {
+            0%, 100% { transform: rotateY(0deg); }
+            50% { transform: rotateY(10deg); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #0c0c0c 0%, #1a1a2e 100%);
+            cursor: pointer;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 250px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .base-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .base-btn {
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .base-btn.A { background: linear-gradient(45deg, #ff6b6b, #ee5a52); }
+        .base-btn.T { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
+        .base-btn.G { background: linear-gradient(45deg, #45b7d1, #3742fa); }
+        .base-btn.C { background: linear-gradient(45deg, #96ceb4, #2ecc71); }
+        
+        .base-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .base-btn.selected {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .dna-info {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        
+        .target-sequence {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 DNA 퍼즐</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>DNA 염기(A, T, G, C)를 조합해서 목표 서열을 만드세요!</p>
+        <p>A-T, G-C가 서로 결합한다는 것을 기억하세요!</p>
+        <p>올바른 유전자 서열을 완성하면 새로운 생명체가 탄생해요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="600" height="700"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">레벨: <span id="level">1</span></div>
+            <div class="info-item">완성도: <span id="completion">0</span>%</div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div class="target-sequence" id="targetSequence">
+                목표: ATGC
+            </div>
+            
+            <div class="base-buttons">
+                <button class="base-btn A" onclick="selectBase('A')">A<br><small>아데닌</small></button>
+                <button class="base-btn T" onclick="selectBase('T')">T<br><small>티민</small></button>
+                <button class="base-btn G" onclick="selectBase('G')">G<br><small>구아닌</small></button>
+                <button class="base-btn C" onclick="selectBase('C')">C<br><small>시토신</small></button>
+            </div>
+            
+            <div class="dna-info">
+                <strong>DNA 염기 결합 규칙:</strong><br>
+                A ↔ T (아데닌-티민)<br>
+                G ↔ C (구아닌-시토신)
+            </div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>완벽한 유전자 모드 ON! 💖
+            </div>
+            
+            <button onclick="checkSequence()">서열 확인</button>
+            <button onclick="nextLevel()">다음 레벨</button>
+            <button onclick="resetGame()">새 게임</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let score = 0;
+        let level = 1;
+        let bestScore = localStorage.getItem('dnaPuzzleBestScore') || 0;
+        let selectedBase = null;
+        let completion = 0;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // DNA 설정
+        let dnaStrands = {
+            left: [],   // 왼쪽 가닥
+            right: []   // 오른쪽 가닥
+        };
+        
+        let targetSequence = '';
+        let currentSequence = '';
+        
+        // 염기 색상
+        const baseColors = {
+            A: '#ff6b6b',
+            T: '#4ecdc4', 
+            G: '#45b7d1',
+            C: '#96ceb4'
+        };
+        
+        // 염기 결합 규칙
+        const basePairs = {
+            A: 'T',
+            T: 'A',
+            G: 'C',
+            C: 'G'
+        };
+        
+        // 파티클 시스템
+        let particles = [];
+        
+        // 목표 서열 생성
+        function generateTargetSequence() {
+            const bases = ['A', 'T', 'G', 'C'];
+            const length = Math.min(4 + level, 12);
+            targetSequence = '';
+            
+            for (let i = 0; i < length; i++) {
+                targetSequence += bases[Math.floor(Math.random() * bases.length)];
+            }
+            
+            document.getElementById('targetSequence').textContent = `목표: ${targetSequence}`;
+            
+            // DNA 가닥 초기화
+            dnaStrands.left = new Array(length).fill(null);
+            dnaStrands.right = new Array(length).fill(null);
+            currentSequence = '';
+        }
+        
+        // 파티클 효과
+        function createConnectionParticles(x, y) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 30,
+                    color: secretMode ? '#ffd700' : '#00ff00'
+                });
+            }
+        }
+        
+        function createHelixParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: Math.random() * -6 - 2,
+                    life: 40,
+                    color: secretMode ? '#ff6b6b' : '#ffd700',
+                    type: 'helix'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        generateTargetSequence();
+        
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!selectedBase) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // DNA 가닥 위치 계산
+            const strandHeight = 50;
+            const startY = 100;
+            const leftX = 150;
+            const rightX = 450;
+            
+            for (let i = 0; i < dnaStrands.left.length; i++) {
+                const y = startY + i * strandHeight;
+                
+                // 왼쪽 가닥 클릭 확인
+                if (mouseX >= leftX - 30 && mouseX <= leftX + 30 && 
+                    mouseY >= y - 20 && mouseY <= y + 20) {
+                    
+                    if (dnaStrands.left[i] === null) {
+                        dnaStrands.left[i] = selectedBase;
+                        
+                        // 자동으로 오른쪽에 상보적 염기 배치 (비밀 모드에서)
+                        if (secretMode) {
+                            dnaStrands.right[i] = basePairs[selectedBase];
+                        }
+                        
+                        createConnectionParticles(leftX, y);
+                        updateCurrentSequence();
+                    }
+                }
+                
+                // 오른쪽 가닥 클릭 확인
+                if (mouseX >= rightX - 30 && mouseX <= rightX + 30 && 
+                    mouseY >= y - 20 && mouseY <= y + 20) {
+                    
+                    if (dnaStrands.right[i] === null) {
+                        dnaStrands.right[i] = selectedBase;
+                        createConnectionParticles(rightX, y);
+                        updateCurrentSequence();
+                    }
+                }
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        function selectBase(base) {
+            selectedBase = selectedBase === base ? null : base;
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.base-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            if (selectedBase) {
+                event.target.classList.add('selected');
+            }
+        }
+        
+        function updateCurrentSequence() {
+            currentSequence = '';
+            for (let base of dnaStrands.left) {
+                currentSequence += base || '_';
+            }
+            
+            // 완성도 계산
+            let matches = 0;
+            for (let i = 0; i < targetSequence.length; i++) {
+                if (dnaStrands.left[i] === targetSequence[i]) {
+                    matches++;
+                }
+            }
+            
+            completion = Math.floor((matches / targetSequence.length) * 100);
+            document.getElementById('completion').textContent = completion;
+        }
+        
+        function checkSequence() {
+            let isCorrect = true;
+            let hasValidPairs = true;
+            
+            // 목표 서열 확인
+            for (let i = 0; i < targetSequence.length; i++) {
+                if (dnaStrands.left[i] !== targetSequence[i]) {
+                    isCorrect = false;
+                }
+            }
+            
+            // 염기 결합 규칙 확인
+            for (let i = 0; i < dnaStrands.left.length; i++) {
+                const leftBase = dnaStrands.left[i];
+                const rightBase = dnaStrands.right[i];
+                
+                if (leftBase && rightBase) {
+                    if (basePairs[leftBase] !== rightBase) {
+                        hasValidPairs = false;
+                    }
+                }
+            }
+            
+            if (isCorrect && (hasValidPairs || secretMode)) {
+                // 성공!
+                const bonus = secretMode ? level * 200 : level * 100;
+                score += bonus;
+                
+                // 성공 파티클
+                for (let i = 0; i < dnaStrands.left.length; i++) {
+                    const y = 100 + i * 50;
+                    createHelixParticles(300, y);
+                }
+                
+                alert(`레벨 ${level} 완료! 보너스: ${bonus}점`);
+                nextLevel();
+            } else {
+                let message = '아직 완성되지 않았어요!\n';
+                if (!isCorrect) message += '- 목표 서열과 다릅니다.\n';
+                if (!hasValidPairs && !secretMode) message += '- 염기 결합 규칙을 확인하세요.';
+                alert(message);
+            }
+            
+            updateDisplay();
+        }
+        
+        function nextLevel() {
+            level++;
+            generateTargetSequence();
+            selectedBase = null;
+            
+            document.querySelectorAll('.base-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateDisplay();
+        }
+        
+        function resetGame() {
+            score = 0;
+            level = 1;
+            completion = 0;
+            selectedBase = null;
+            
+            generateTargetSequence();
+            particles = [];
+            
+            document.querySelectorAll('.base-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('completion').textContent = completion;
+            
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('dnaPuzzleBestScore', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+        }
+        
+        function draw() {
+            // 배경 그리기
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, secretMode ? '#1a1a2e' : '#0c0c0c');
+            gradient.addColorStop(1, secretMode ? '#16213e' : '#1a1a2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 별들 그리기
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 37) % canvas.width;
+                const y = (i * 23) % canvas.height;
+                const alpha = Math.sin(Date.now() * 0.001 + i) * 0.5 + 0.5;
+                
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // DNA 가닥 그리기
+            const strandHeight = 50;
+            const startY = 100;
+            const leftX = 150;
+            const rightX = 450;
+            
+            // 백본 그리기
+            ctx.strokeStyle = secretMode ? '#ffd700' : '#666';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(leftX, startY - 30);
+            ctx.lineTo(leftX, startY + dnaStrands.left.length * strandHeight);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(rightX, startY - 30);
+            ctx.lineTo(rightX, startY + dnaStrands.right.length * strandHeight);
+            ctx.stroke();
+            
+            // 염기들 그리기
+            for (let i = 0; i < dnaStrands.left.length; i++) {
+                const y = startY + i * strandHeight;
+                
+                // 왼쪽 염기
+                if (dnaStrands.left[i]) {
+                    ctx.fillStyle = baseColors[dnaStrands.left[i]];
+                    ctx.beginPath();
+                    ctx.arc(leftX, y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(dnaStrands.left[i], leftX, y + 5);
+                } else {
+                    // 빈 슬롯
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(leftX, y, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // 오른쪽 염기
+                if (dnaStrands.right[i]) {
+                    ctx.fillStyle = baseColors[dnaStrands.right[i]];
+                    ctx.beginPath();
+                    ctx.arc(rightX, y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(dnaStrands.right[i], rightX, y + 5);
+                } else {
+                    // 빈 슬롯
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(rightX, y, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // 수소 결합 그리기
+                if (dnaStrands.left[i] && dnaStrands.right[i]) {
+                    const leftBase = dnaStrands.left[i];
+                    const rightBase = dnaStrands.right[i];
+                    const isValidPair = basePairs[leftBase] === rightBase;
+                    
+                    ctx.strokeStyle = isValidPair ? (secretMode ? '#ffd700' : '#00ff00') : '#ff6b6b';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash(isValidPair ? [] : [5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(leftX + 20, y);
+                    ctx.lineTo(rightX - 20, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // 결합 점들
+                    const bondCount = (leftBase === 'A' || leftBase === 'T') ? 2 : 3;
+                    for (let j = 0; j < bondCount; j++) {
+                        const bondX = leftX + 30 + j * 20;
+                        ctx.fillStyle = isValidPair ? (secretMode ? '#ffd700' : '#00ff00') : '#ff6b6b';
+                        ctx.beginPath();
+                        ctx.arc(bondX, y, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // 목표 서열 표시
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(targetSequence[i], 50, y + 5);
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                
+                if (p.type === 'helix') {
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🧬', p.x, p.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+            
+            // 현재 서열 표시
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`현재: ${currentSequence}`, canvas.width/2, 50);
+            
+            // 진행도 바
+            const progressWidth = 400;
+            const progressHeight = 20;
+            const progressX = (canvas.width - progressWidth) / 2;
+            const progressY = canvas.height - 50;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(progressX, progressY, progressWidth, progressHeight);
+            
+            ctx.fillStyle = secretMode ? '#ffd700' : '#4ecdc4';
+            ctx.fillRect(progressX, progressY, (completion / 100) * progressWidth, progressHeight);
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(progressX, progressY, progressWidth, progressHeight);
+        }
+        
+        function gameLoop() {
+            updateParticles();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

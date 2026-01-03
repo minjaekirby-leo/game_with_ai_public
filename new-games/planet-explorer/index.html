@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 행성 탐험</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0F0F23, #1A1A2E);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #4A90E2;
+        }
+        
+        canvas {
+            border: 3px solid #2E86AB;
+            border-radius: 10px;
+            background: #000011;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(74, 144, 226, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .ship-status {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: rgba(46, 134, 171, 0.6);
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        
+        .upgrade-panel {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .upgrade-btn {
+            background: #27AE60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .upgrade-btn:hover {
+            background: #229954;
+            transform: scale(1.05);
+        }
+        
+        .upgrade-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🌍 행성 탐험 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">⛽ 연료: <span id="fuel">100</span></div>
+            <div class="stat">💎 자원: <span id="resources">0</span></div>
+            <div class="stat">🌟 점수: <span id="score">0</span></div>
+            <div class="stat">🪐 발견: <span id="planetsFound">0</span></div>
+        </div>
+        
+        <div class="ship-status">
+            <div class="status-item">🚀 엔진: <span id="engineLevel">1</span>단계</div>
+            <div class="status-item">🛡️ 보호막: <span id="shieldLevel">1</span>단계</div>
+            <div class="status-item">⛏️ 채굴기: <span id="drillLevel">1</span>단계</div>
+        </div>
+        
+        <div class="upgrade-panel">
+            <button class="upgrade-btn" onclick="upgrade('engine')" id="engineBtn">🚀 엔진 업그레이드 (50💎)</button>
+            <button class="upgrade-btn" onclick="upgrade('shield')" id="shieldBtn">🛡️ 보호막 업그레이드 (30💎)</button>
+            <button class="upgrade-btn" onclick="upgrade('drill')" id="drillBtn">⛏️ 채굴기 업그레이드 (40💎)</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: WASD로 우주선 조종, 스페이스바로 부스터 사용</p>
+            <p>🌍 목표: 행성들을 탐험하고 자원을 수집하세요!</p>
+            <p>💡 팁: 중력을 이용해서 연료를 절약하고, 업그레이드로 성능을 향상시키세요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            fuel: 100,
+            resources: 0,
+            score: 0,
+            planetsFound: 0,
+            engineLevel: 1,
+            shieldLevel: 1,
+            drillLevel: 1
+        };
+        
+        // 우주선
+        const ship = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            size: 15,
+            thrust: 0.2,
+            maxSpeed: 8,
+            fuel: 100
+        };
+        
+        // 게임 객체들
+        let planets = [];
+        let stars = [];
+        let particles = [];
+        let resources = [];
+        
+        // 키 입력
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        
+        // 별들 생성
+        function createStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 0.5,
+                    brightness: Math.random()
+                });
+            }
+        }
+        
+        // 행성 생성
+        function createPlanet() {
+            const planetTypes = [
+                { color: '#FF6B6B', size: 40, gravity: 0.8, resources: 'iron' },
+                { color: '#4ECDC4', size: 60, gravity: 1.2, resources: 'crystal' },
+                { color: '#45B7D1', size: 35, gravity: 0.6, resources: 'water' },
+                { color: '#96CEB4', size: 50, gravity: 1.0, resources: 'energy' },
+                { color: '#FFEAA7', size: 80, gravity: 2.0, resources: 'gold' }
+            ];
+            
+            const type = planetTypes[Math.floor(Math.random() * planetTypes.length)];
+            
+            planets.push({
+                x: Math.random() * (canvas.width - 200) + 100,
+                y: Math.random() * (canvas.height - 200) + 100,
+                ...type,
+                discovered: false,
+                resourceAmount: Math.floor(Math.random() * 50) + 20,
+                atmosphere: Math.random() > 0.5
+            });
+        }
+        
+        // 자원 생성
+        function createResource(x, y, type) {
+            const resourceColors = {
+                iron: '#8B4513',
+                crystal: '#9370DB',
+                water: '#4169E1',
+                energy: '#FFD700',
+                gold: '#FF8C00'
+            };
+            
+            resources.push({
+                x: x + (Math.random() - 0.5) * 60,
+                y: y + (Math.random() - 0.5) * 60,
+                type: type,
+                color: resourceColors[type],
+                value: Math.floor(Math.random() * 10) + 5,
+                life: 300
+            });
+        }
+        
+        // 업그레이드
+        function upgrade(type) {
+            const costs = {
+                engine: 50 * gameState.engineLevel,
+                shield: 30 * gameState.shieldLevel,
+                drill: 40 * gameState.drillLevel
+            };
+            
+            if (gameState.resources >= costs[type]) {
+                gameState.resources -= costs[type];
+                gameState[type + 'Level']++;
+                updateUI();
+            } else {
+                alert('자원이 부족합니다!');
+            }
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 3 + 1
+                });
+            }
+        }
+        
+        // 중력 계산
+        function applyGravity() {
+            planets.forEach(planet => {
+                const dx = planet.x - ship.x;
+                const dy = planet.y - ship.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < planet.size + 100) {
+                    const force = planet.gravity / (distance * distance) * 1000;
+                    ship.vx += (dx / distance) * force;
+                    ship.vy += (dy / distance) * force;
+                }
+            });
+        }
+        
+        // 충돌 감지
+        function checkCollisions() {
+            planets.forEach(planet => {
+                const dx = planet.x - ship.x;
+                const dy = planet.y - ship.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 행성 발견
+                if (distance < planet.size + 50 && !planet.discovered) {
+                    planet.discovered = true;
+                    gameState.planetsFound++;
+                    gameState.score += 100;
+                    
+                    // 자원 생성
+                    for (let i = 0; i < planet.resourceAmount; i++) {
+                        createResource(planet.x, planet.y, planet.resources);
+                    }
+                    
+                    createParticles(planet.x, planet.y, planet.color, 15);
+                }
+                
+                // 행성 충돌
+                if (distance < planet.size + ship.size) {
+                    const damage = 10 / gameState.shieldLevel;
+                    gameState.fuel = Math.max(0, gameState.fuel - damage);
+                    
+                    // 반발력
+                    const pushForce = 2;
+                    ship.vx -= (dx / distance) * pushForce;
+                    ship.vy -= (dy / distance) * pushForce;
+                    
+                    createParticles(ship.x, ship.y, '#FF0000');
+                }
+            });
+            
+            // 자원 수집
+            resources.forEach((resource, index) => {
+                const dx = resource.x - ship.x;
+                const dy = resource.y - ship.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 20) {
+                    gameState.resources += resource.value * gameState.drillLevel;
+                    gameState.score += resource.value * 5;
+                    resources.splice(index, 1);
+                    createParticles(resource.x, resource.y, resource.color);
+                }
+            });
+        }
+        
+        // 업데이트
+        function update() {
+            // 우주선 조작
+            const thrustPower = ship.thrust * gameState.engineLevel;
+            
+            if (keys['w'] || keys['ㅈ']) {
+                ship.vx += Math.cos(ship.angle) * thrustPower;
+                ship.vy += Math.sin(ship.angle) * thrustPower;
+                gameState.fuel = Math.max(0, gameState.fuel - 0.1);
+                
+                // 추진 파티클
+                createParticles(
+                    ship.x - Math.cos(ship.angle) * 20,
+                    ship.y - Math.sin(ship.angle) * 20,
+                    '#FF4500', 2
+                );
+            }
+            
+            if (keys['a'] || keys['ㅁ']) ship.angle -= 0.1;
+            if (keys['d'] || keys['ㅇ']) ship.angle += 0.1;
+            
+            // 부스터
+            if (keys[' '] && gameState.fuel > 5) {
+                ship.vx += Math.cos(ship.angle) * thrustPower * 2;
+                ship.vy += Math.sin(ship.angle) * thrustPower * 2;
+                gameState.fuel -= 1;
+                createParticles(ship.x, ship.y, '#00FFFF', 5);
+            }
+            
+            // 중력 적용
+            applyGravity();
+            
+            // 속도 제한
+            const speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
+            if (speed > ship.maxSpeed) {
+                ship.vx = (ship.vx / speed) * ship.maxSpeed;
+                ship.vy = (ship.vy / speed) * ship.maxSpeed;
+            }
+            
+            // 우주선 이동
+            ship.x += ship.vx;
+            ship.y += ship.vy;
+            
+            // 화면 경계 처리 (랩어라운드)
+            if (ship.x < 0) ship.x = canvas.width;
+            if (ship.x > canvas.width) ship.x = 0;
+            if (ship.y < 0) ship.y = canvas.height;
+            if (ship.y > canvas.height) ship.y = 0;
+            
+            // 마찰력
+            ship.vx *= 0.99;
+            ship.vy *= 0.99;
+            
+            // 충돌 체크
+            checkCollisions();
+            
+            // 새 행성 생성
+            if (Math.random() < 0.005 && planets.length < 8) {
+                createPlanet();
+            }
+            
+            // 자원 수명 감소
+            resources.forEach((resource, index) => {
+                resource.life--;
+                if (resource.life <= 0) {
+                    resources.splice(index, 1);
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            // 연료 자동 회복 (매우 느리게)
+            if (gameState.fuel < 100) {
+                gameState.fuel += 0.01;
+            }
+            
+            // 게임 오버 체크
+            if (gameState.fuel <= 0) {
+                alert(`게임 오버!\n발견한 행성: ${gameState.planetsFound}개\n최종 점수: ${gameState.score}점`);
+                location.reload();
+            }
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 우주 배경
+            ctx.fillStyle = '#000011';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 별들
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + star.brightness * 0.7})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 행성들
+            planets.forEach(planet => {
+                // 행성 대기권 (있는 경우)
+                if (planet.atmosphere) {
+                    ctx.fillStyle = `rgba(135, 206, 235, 0.2)`;
+                    ctx.beginPath();
+                    ctx.arc(planet.x, planet.y, planet.size + 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 행성 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(planet.x + 3, planet.y + 3, planet.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 행성 몸체
+                ctx.fillStyle = planet.color;
+                ctx.beginPath();
+                ctx.arc(planet.x, planet.y, planet.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 행성 하이라이트
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(planet.x - planet.size * 0.3, planet.y - planet.size * 0.3, planet.size * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 발견되지 않은 행성 표시
+                if (!planet.discovered) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(planet.x, planet.y, planet.size + 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // 중력장 표시
+                ctx.strokeStyle = `rgba(255, 255, 255, 0.1)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(planet.x, planet.y, planet.size + 50, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // 자원들
+            resources.forEach(resource => {
+                const alpha = resource.life / 300;
+                ctx.globalAlpha = alpha;
+                
+                ctx.fillStyle = resource.color;
+                ctx.beginPath();
+                ctx.arc(resource.x, resource.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 자원 반짝임
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(resource.x, resource.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 우주선
+            ctx.save();
+            ctx.translate(ship.x, ship.y);
+            ctx.rotate(ship.angle);
+            
+            // 우주선 몸체
+            ctx.fillStyle = '#4ECDC4';
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(-10, -8);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(-10, 8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 우주선 창문
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath();
+            ctx.arc(5, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 보호막 표시
+            if (gameState.shieldLevel > 1) {
+                ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, ship.size + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 미니맵
+            drawMinimap();
+        }
+        
+        // 미니맵 그리기
+        function drawMinimap() {
+            const mapSize = 120;
+            const mapX = canvas.width - mapSize - 10;
+            const mapY = 10;
+            
+            // 미니맵 배경
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(mapX, mapY, mapSize, mapSize);
+            ctx.strokeStyle = '#4ECDC4';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(mapX, mapY, mapSize, mapSize);
+            
+            // 행성들
+            planets.forEach(planet => {
+                const x = mapX + (planet.x / canvas.width) * mapSize;
+                const y = mapY + (planet.y / canvas.height) * mapSize;
+                const size = Math.max(2, (planet.size / 80) * 8);
+                
+                ctx.fillStyle = planet.discovered ? planet.color : 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 우주선
+            const shipX = mapX + (ship.x / canvas.width) * mapSize;
+            const shipY = mapY + (ship.y / canvas.height) * mapSize;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(shipX, shipY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('fuel').textContent = Math.round(gameState.fuel);
+            document.getElementById('resources').textContent = gameState.resources;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('planetsFound').textContent = gameState.planetsFound;
+            document.getElementById('engineLevel').textContent = gameState.engineLevel;
+            document.getElementById('shieldLevel').textContent = gameState.shieldLevel;
+            document.getElementById('drillLevel').textContent = gameState.drillLevel;
+            
+            // 업그레이드 버튼 상태
+            const engineCost = 50 * gameState.engineLevel;
+            const shieldCost = 30 * gameState.shieldLevel;
+            const drillCost = 40 * gameState.drillLevel;
+            
+            document.getElementById('engineBtn').textContent = `🚀 엔진 업그레이드 (${engineCost}💎)`;
+            document.getElementById('shieldBtn').textContent = `🛡️ 보호막 업그레이드 (${shieldCost}💎)`;
+            document.getElementById('drillBtn').textContent = `⛏️ 채굴기 업그레이드 (${drillCost}💎)`;
+            
+            document.getElementById('engineBtn').disabled = gameState.resources < engineCost;
+            document.getElementById('shieldBtn').disabled = gameState.resources < shieldCost;
+            document.getElementById('drillBtn').disabled = gameState.resources < drillCost;
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        createStars();
+        for (let i = 0; i < 5; i++) {
+            createPlanet();
+        }
+        gameLoop();
+    </script>
+</body>
+</html>

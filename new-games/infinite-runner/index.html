@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>무한 러너</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏃‍♂️ 무한 러너</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">거리: <span id="distance">0</span>m</div>
+            <div class="info-box">속도: <span id="speed">5</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 스페이스바 = 점프, ↓ = 슬라이딩</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let distance = 0;
+        let gameSpeed = 5;
+
+        // 플레이어
+        const player = {
+            x: 100,
+            y: 300,
+            width: 40,
+            height: 60,
+            velocityY: 0,
+            jumping: false,
+            sliding: false,
+            slideTimer: 0
+        };
+
+        // 장애물과 코인
+        let obstacles = [];
+        let coins = [];
+        let particles = [];
+
+        // 키 입력
+        let keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+            if (e.code === 'ArrowDown') {
+                slide();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        function jump() {
+            if (!player.jumping && gameRunning && !gamePaused) {
+                player.velocityY = -15;
+                player.jumping = true;
+            }
+        }
+
+        function slide() {
+            if (!player.sliding && gameRunning && !gamePaused) {
+                player.sliding = true;
+                player.slideTimer = 30;
+            }
+        }
+
+        function spawnObstacle() {
+            if (Math.random() < 0.02) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: 340,
+                    width: 30,
+                    height: 60,
+                    type: 'cactus'
+                });
+            }
+        }
+
+        function spawnCoin() {
+            if (Math.random() < 0.01) {
+                coins.push({
+                    x: canvas.width,
+                    y: 200 + Math.random() * 100,
+                    width: 20,
+                    height: 20,
+                    collected: false
+                });
+            }
+        }
+
+        function updatePlayer() {
+            // 중력
+            if (player.jumping) {
+                player.velocityY += 0.8;
+                player.y += player.velocityY;
+                
+                if (player.y >= 300) {
+                    player.y = 300;
+                    player.jumping = false;
+                    player.velocityY = 0;
+                }
+            }
+
+            // 슬라이딩
+            if (player.sliding) {
+                player.slideTimer--;
+                if (player.slideTimer <= 0) {
+                    player.sliding = false;
+                }
+            }
+        }
+
+        function updateObstacles() {
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= gameSpeed;
+                
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                }
+                
+                // 충돌 검사
+                if (checkCollision(player, obstacle)) {
+                    gameOver();
+                }
+            });
+        }
+
+        function updateCoins() {
+            coins.forEach((coin, index) => {
+                coin.x -= gameSpeed;
+                
+                if (coin.x + coin.width < 0) {
+                    coins.splice(index, 1);
+                }
+                
+                // 수집 검사
+                if (!coin.collected && checkCollision(player, coin)) {
+                    coin.collected = true;
+                    score += 50;
+                    
+                    // 파티클 효과
+                    for (let i = 0; i < 5; i++) {
+                        particles.push({
+                            x: coin.x,
+                            y: coin.y,
+                            vx: (Math.random() - 0.5) * 4,
+                            vy: (Math.random() - 0.5) * 4,
+                            life: 30,
+                            color: '#FFD700'
+                        });
+                    }
+                    
+                    coins.splice(index, 1);
+                }
+            });
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = '#4169E1';
+            
+            if (player.sliding) {
+                ctx.fillRect(player.x, player.y + 30, player.width + 20, player.height - 30);
+            } else {
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+            
+            // 얼굴
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(player.x + 5, player.y + 5, 30, 20);
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 10, player.y + 10, 3, 3);
+            ctx.fillRect(player.x + 20, player.y + 10, 3, 3);
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                
+                // 가시
+                ctx.fillStyle = '#8B4513';
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(obstacle.x + 5 + i * 8, obstacle.y + 10, 5, 15);
+                }
+            });
+        }
+
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + 10, coin.y + 10, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + 10, coin.y + 10, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 30;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x, particle.y, 3, 3);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBackground() {
+            // 하늘
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#90EE90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 땅
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 380, canvas.width, 20);
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updatePlayer();
+            spawnObstacle();
+            spawnCoin();
+            updateObstacles();
+            updateCoins();
+            updateParticles();
+            
+            distance += gameSpeed * 0.1;
+            
+            // 속도 증가
+            if (distance > 0 && distance % 100 === 0) {
+                gameSpeed += 0.1;
+            }
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawObstacles();
+            drawCoins();
+            drawPlayer();
+            drawParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('distance').textContent = Math.floor(distance);
+            document.getElementById('speed').textContent = gameSpeed.toFixed(1);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            score = 0;
+            distance = 0;
+            gameSpeed = 5;
+            
+            player.y = 300;
+            player.velocityY = 0;
+            player.jumping = false;
+            player.sliding = false;
+            
+            obstacles = [];
+            coins = [];
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            alert(`게임 오버! 최종 점수: ${Math.floor(score)}, 거리: ${Math.floor(distance)}m`);
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

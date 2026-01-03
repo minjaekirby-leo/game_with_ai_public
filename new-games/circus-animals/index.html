@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 동물 쇼</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #74b9ff 0%, #00b894 100%);
+        }
+        
+        .animal-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .animal-btn {
+            background: linear-gradient(45deg, #fd79a8, #fdcb6e);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .animal-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e17055, #d63031);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 동물 쇼</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">관객 만족도: <span id="satisfaction">50</span>%</div>
+            <div class="info-box">공연 점수: <span id="score">0</span></div>
+            <div class="info-box">시간: <span id="time">60</span>초</div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="animal-controls">
+            <button class="animal-btn" onclick="commandAnimal('lion', 'jump')">🦁 사자 점프</button>
+            <button class="animal-btn" onclick="commandAnimal('elephant', 'stand')">🐘 코끼리 서기</button>
+            <button class="animal-btn" onclick="commandAnimal('monkey', 'flip')">🐵 원숭이 재주넘기</button>
+            <button class="animal-btn" onclick="commandAnimal('lion', 'roar')">🦁 사자 포효</button>
+            <button class="animal-btn" onclick="commandAnimal('elephant', 'dance')">🐘 코끼리 춤</button>
+            <button class="animal-btn" onclick="commandAnimal('monkey', 'swing')">🐵 원숭이 그네</button>
+        </div>
+        
+        <div class="controls">
+            <button onclick="startShow()">🎮 쇼 시작</button>
+            <button onclick="resetShow()">🔄 다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let showRunning = false;
+        let satisfaction = 50;
+        let score = 0;
+        let timeLeft = 60;
+        let gameTimer = null;
+
+        // 동물들
+        const animals = {
+            lion: {
+                x: 150,
+                y: 350,
+                width: 80,
+                height: 60,
+                action: 'idle',
+                actionTimer: 0,
+                emoji: '🦁'
+            },
+            elephant: {
+                x: 350,
+                y: 320,
+                width: 100,
+                height: 90,
+                action: 'idle',
+                actionTimer: 0,
+                emoji: '🐘'
+            },
+            monkey: {
+                x: 550,
+                y: 370,
+                width: 60,
+                height: 50,
+                action: 'idle',
+                actionTimer: 0,
+                emoji: '🐵'
+            }
+        };
+
+        let audience = [];
+        let particles = [];
+
+        function initializeAudience() {
+            audience = [];
+            for (let i = 0; i < 15; i++) {
+                audience.push({
+                    x: 50 + i * 45,
+                    y: 450,
+                    mood: 0.5,
+                    clapping: false,
+                    clapTimer: 0
+                });
+            }
+        }
+
+        function commandAnimal(animalType, action) {
+            if (!showRunning) return;
+            
+            const animal = animals[animalType];
+            if (animal.action !== 'idle') return; // 이미 행동 중
+            
+            animal.action = action;
+            animal.actionTimer = 120; // 2초
+            
+            // 성공률 계산
+            const success = Math.random() > 0.2; // 80% 성공률
+            
+            if (success) {
+                const points = calculatePoints(animalType, action);
+                score += points;
+                satisfaction = Math.min(100, satisfaction + 5);
+                
+                // 관객 반응
+                audience.forEach(person => {
+                    person.clapping = true;
+                    person.clapTimer = 60;
+                    person.mood = Math.min(1, person.mood + 0.1);
+                });
+                
+                createSuccessParticles(animal.x, animal.y);
+            } else {
+                satisfaction = Math.max(0, satisfaction - 3);
+                audience.forEach(person => {
+                    person.mood = Math.max(0, person.mood - 0.05);
+                });
+            }
+        }
+
+        function calculatePoints(animalType, action) {
+            const basePoints = {
+                'lion': { 'jump': 100, 'roar': 80 },
+                'elephant': { 'stand': 120, 'dance': 150 },
+                'monkey': { 'flip': 90, 'swing': 110 }
+            };
+            
+            return basePoints[animalType][action] || 50;
+        }
+
+        function updateAnimals() {
+            Object.values(animals).forEach(animal => {
+                if (animal.actionTimer > 0) {
+                    animal.actionTimer--;
+                    if (animal.actionTimer <= 0) {
+                        animal.action = 'idle';
+                    }
+                }
+            });
+        }
+
+        function updateAudience() {
+            audience.forEach(person => {
+                if (person.clapping && person.clapTimer > 0) {
+                    person.clapTimer--;
+                    if (person.clapTimer <= 0) {
+                        person.clapping = false;
+                    }
+                }
+                
+                // 시간이 지나면서 만족도 천천히 감소
+                if (Math.random() < 0.002) {
+                    person.mood = Math.max(0, person.mood - 0.01);
+                }
+            });
+        }
+
+        function createSuccessParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x + Math.random() * 80,
+                    y: y + Math.random() * 60,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: -Math.random() * 8,
+                    life: 60,
+                    color: '#FFD700',
+                    size: Math.random() * 5 + 3
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.2;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawBackground() {
+            // 서커스 텐트 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#74b9ff');
+            gradient.addColorStop(1, '#00b894');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 무대
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 400, canvas.width, 100);
+            
+            // 스포트라이트
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(200, 100, 150, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(400, 100, 150, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(600, 100, 150, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawAnimals() {
+            Object.entries(animals).forEach(([type, animal]) => {
+                ctx.save();
+                
+                // 행동에 따른 위치 조정
+                let offsetY = 0;
+                let offsetX = 0;
+                
+                switch(animal.action) {
+                    case 'jump':
+                        offsetY = -Math.sin(animal.actionTimer * 0.2) * 30;
+                        break;
+                    case 'stand':
+                        offsetY = -20;
+                        break;
+                    case 'flip':
+                        ctx.translate(animal.x + animal.width/2, animal.y + animal.height/2);
+                        ctx.rotate(animal.actionTimer * 0.1);
+                        ctx.translate(-animal.width/2, -animal.height/2);
+                        break;
+                    case 'dance':
+                        offsetX = Math.sin(animal.actionTimer * 0.3) * 10;
+                        break;
+                    case 'swing':
+                        offsetX = Math.sin(animal.actionTimer * 0.2) * 20;
+                        break;
+                }
+                
+                // 동물 그리기
+                ctx.font = `${animal.width}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    animal.emoji, 
+                    animal.x + animal.width/2 + offsetX, 
+                    animal.y + animal.height + offsetY
+                );
+                
+                // 행동 표시
+                if (animal.action !== 'idle') {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(
+                        animal.action.toUpperCase() + '!',
+                        animal.x + animal.width/2,
+                        animal.y - 10
+                    );
+                }
+                
+                ctx.restore();
+            });
+        }
+
+        function drawAudience() {
+            audience.forEach(person => {
+                // 관객 몸
+                const moodColor = person.mood > 0.7 ? '#27ae60' : 
+                                person.mood > 0.3 ? '#f39c12' : '#e74c3c';
+                ctx.fillStyle = moodColor;
+                ctx.fillRect(person.x - 8, person.y - 20, 16, 20);
+                
+                // 머리
+                ctx.fillStyle = '#f4d03f';
+                ctx.beginPath();
+                ctx.arc(person.x, person.y - 25, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 박수 중일 때
+                if (person.clapping) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('👏', person.x, person.y - 35);
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 60;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function updateTimer() {
+            if (!showRunning) return;
+            
+            timeLeft--;
+            if (timeLeft <= 0) {
+                endShow();
+            }
+        }
+
+        function endShow() {
+            showRunning = false;
+            clearInterval(gameTimer);
+            
+            let result = '';
+            if (satisfaction >= 80) {
+                result = '🎉 대성공! 관객들이 열광했습니다!';
+            } else if (satisfaction >= 60) {
+                result = '👏 성공! 좋은 공연이었습니다!';
+            } else if (satisfaction >= 40) {
+                result = '😐 보통... 더 연습이 필요해요.';
+            } else {
+                result = '😞 실패... 관객들이 실망했습니다.';
+            }
+            
+            alert(`${result}\n최종 점수: ${score}점\n관객 만족도: ${satisfaction}%`);
+        }
+
+        function update() {
+            if (!showRunning) return;
+            
+            updateAnimals();
+            updateAudience();
+            updateParticles();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawAnimals();
+            drawAudience();
+            drawParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('satisfaction').textContent = Math.floor(satisfaction);
+            document.getElementById('score').textContent = score;
+            document.getElementById('time').textContent = timeLeft;
+        }
+
+        function startShow() {
+            showRunning = true;
+            satisfaction = 50;
+            score = 0;
+            timeLeft = 60;
+            
+            // 동물들 초기화
+            Object.values(animals).forEach(animal => {
+                animal.action = 'idle';
+                animal.actionTimer = 0;
+            });
+            
+            initializeAudience();
+            particles = [];
+            
+            // 타이머 시작
+            clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            updateDisplay();
+        }
+
+        function resetShow() {
+            showRunning = false;
+            clearInterval(gameTimer);
+            satisfaction = 50;
+            score = 0;
+            timeLeft = 60;
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetShow();
+        gameLoop();
+    </script>
+</body>
+</html>

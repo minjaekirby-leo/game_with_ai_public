@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎣 낚시 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB, #4682B4);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #4682B4;
+        }
+        
+        canvas {
+            border: 3px solid #2F4F4F;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #87CEEB 0%, #4682B4 30%, #191970 100%);
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(70, 130, 180, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .power-meter {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border: 2px solid #4682B4;
+            border-radius: 10px;
+            margin: 10px auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .power-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
+        .fishing-status {
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎣 낚시 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">🐟 잡은 물고기: <span id="fishCaught">0</span></div>
+            <div class="stat">💰 점수: <span id="score">0</span></div>
+            <div class="stat">⏰ 시간: <span id="timeLeft">60</span>초</div>
+        </div>
+        
+        <div class="fishing-status" id="fishingStatus">스페이스바를 눌러 낚시를 시작하세요!</div>
+        
+        <div class="power-meter">
+            <div class="power-fill" id="powerFill"></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: 스페이스바를 눌러 낚시 시작, 물고기가 물면 스페이스바로 당기기!</p>
+            <p>💡 팁: 파워 게이지가 초록색일 때 놓으면 더 멀리 던질 수 있어요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            fishCaught: 0,
+            score: 0,
+            timeLeft: 60,
+            gameRunning: true,
+            fishingState: 'ready', // ready, casting, waiting, hooked, reeling
+            power: 0,
+            powerDirection: 1
+        };
+        
+        // 낚시꾼
+        const fisherman = {
+            x: 100,
+            y: 200,
+            size: 40
+        };
+        
+        // 낚시줄과 미끼
+        const fishingLine = {
+            x: fisherman.x + 30,
+            y: fisherman.y + 20,
+            targetX: 400,
+            targetY: 400,
+            hookX: 400,
+            hookY: 400,
+            isInWater: false
+        };
+        
+        // 물고기들
+        let fishes = [];
+        let particles = [];
+        
+        // 물고기 종류
+        const fishTypes = [
+            { name: '작은 물고기', size: 15, speed: 2, points: 10, color: '#FFD700', rarity: 0.6 },
+            { name: '중간 물고기', size: 25, speed: 1.5, points: 25, color: '#FF6347', rarity: 0.3 },
+            { name: '큰 물고기', size: 35, speed: 1, points: 50, color: '#4169E1', rarity: 0.08 },
+            { name: '전설의 물고기', size: 45, speed: 0.8, points: 100, color: '#FF1493', rarity: 0.02 }
+        ];
+        
+        // 키 입력
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ') {
+                e.preventDefault();
+                handleSpaceBar();
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+        
+        // 스페이스바 처리
+        function handleSpaceBar() {
+            switch(gameState.fishingState) {
+                case 'ready':
+                    startCasting();
+                    break;
+                case 'casting':
+                    cast();
+                    break;
+                case 'hooked':
+                    startReeling();
+                    break;
+                case 'reeling':
+                    reel();
+                    break;
+            }
+        }
+        
+        // 캐스팅 시작
+        function startCasting() {
+            gameState.fishingState = 'casting';
+            gameState.power = 0;
+            gameState.powerDirection = 1;
+            document.getElementById('fishingStatus').textContent = '파워를 조절하고 스페이스바로 던지세요!';
+        }
+        
+        // 캐스팅
+        function cast() {
+            const distance = 200 + (gameState.power / 100) * 400;
+            const angle = -Math.PI / 4;
+            
+            fishingLine.targetX = fisherman.x + Math.cos(angle) * distance;
+            fishingLine.targetY = fisherman.y + Math.sin(angle) * distance;
+            
+            // 물 영역 체크
+            if (fishingLine.targetY > 300) {
+                fishingLine.isInWater = true;
+                gameState.fishingState = 'waiting';
+                document.getElementById('fishingStatus').textContent = '물고기를 기다리는 중...';
+                
+                // 물고기가 물 확률 계산
+                setTimeout(() => {
+                    if (gameState.fishingState === 'waiting' && Math.random() < 0.7) {
+                        hookFish();
+                    } else if (gameState.fishingState === 'waiting') {
+                        document.getElementById('fishingStatus').textContent = '물고기가 안 물었어요. 다시 시도하세요!';
+                        gameState.fishingState = 'ready';
+                    }
+                }, 2000 + Math.random() * 3000);
+            } else {
+                document.getElementById('fishingStatus').textContent = '물에 닿지 않았어요. 다시 시도하세요!';
+                gameState.fishingState = 'ready';
+            }
+            
+            gameState.power = 0;
+        }
+        
+        // 물고기가 미끼를 물음
+        function hookFish() {
+            // 랜덤 물고기 선택
+            const rand = Math.random();
+            let selectedFish = fishTypes[0];
+            
+            for (let fish of fishTypes) {
+                if (rand < fish.rarity) {
+                    selectedFish = fish;
+                    break;
+                }
+            }
+            
+            gameState.hookedFish = selectedFish;
+            gameState.fishingState = 'hooked';
+            document.getElementById('fishingStatus').textContent = `${selectedFish.name}이(가) 물었어요! 스페이스바로 당기세요!`;
+            
+            // 물고기 생성
+            fishes.push({
+                x: fishingLine.targetX,
+                y: fishingLine.targetY,
+                ...selectedFish,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                struggle: 0
+            });
+        }
+        
+        // 릴링 시작
+        function startReeling() {
+            gameState.fishingState = 'reeling';
+            gameState.reelingProgress = 0;
+            document.getElementById('fishingStatus').textContent = '스페이스바를 연타해서 물고기를 끌어올리세요!';
+        }
+        
+        // 릴링
+        function reel() {
+            if (gameState.fishingState === 'reeling') {
+                gameState.reelingProgress += 10;
+                
+                if (gameState.reelingProgress >= 100) {
+                    catchFish();
+                }
+            }
+        }
+        
+        // 물고기 잡기 성공
+        function catchFish() {
+            const fish = gameState.hookedFish;
+            gameState.fishCaught++;
+            gameState.score += fish.points;
+            gameState.fishingState = 'ready';
+            
+            document.getElementById('fishingStatus').textContent = `${fish.name}을(를) 잡았어요! +${fish.points}점`;
+            
+            // 파티클 효과
+            createParticles(fishingLine.targetX, fishingLine.targetY, fish.color);
+            
+            // 물고기 제거
+            fishes = fishes.filter(f => f !== gameState.hookedFish);
+            
+            setTimeout(() => {
+                if (gameState.fishingState === 'ready') {
+                    document.getElementById('fishingStatus').textContent = '스페이스바를 눌러 낚시를 시작하세요!';
+                }
+            }, 2000);
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 6 + 2
+                });
+            }
+        }
+        
+        // 업데이트
+        function update() {
+            if (!gameState.gameRunning) return;
+            
+            // 파워 게이지 업데이트
+            if (gameState.fishingState === 'casting') {
+                gameState.power += gameState.powerDirection * 2;
+                if (gameState.power >= 100) {
+                    gameState.power = 100;
+                    gameState.powerDirection = -1;
+                } else if (gameState.power <= 0) {
+                    gameState.power = 0;
+                    gameState.powerDirection = 1;
+                }
+            }
+            
+            // 낚시줄 위치 업데이트
+            if (gameState.fishingState !== 'ready') {
+                const dx = fishingLine.targetX - fishingLine.hookX;
+                const dy = fishingLine.targetY - fishingLine.hookY;
+                fishingLine.hookX += dx * 0.1;
+                fishingLine.hookY += dy * 0.1;
+            } else {
+                fishingLine.hookX = fisherman.x + 30;
+                fishingLine.hookY = fisherman.y + 20;
+            }
+            
+            // 물고기 업데이트
+            fishes.forEach((fish, index) => {
+                fish.x += fish.vx;
+                fish.y += fish.vy;
+                
+                // 경계 체크
+                if (fish.x < 0 || fish.x > canvas.width) fish.vx *= -1;
+                if (fish.y < 300 || fish.y > canvas.height) fish.vy *= -1;
+                
+                // 투쟁
+                if (gameState.fishingState === 'reeling' && fish === gameState.hookedFish) {
+                    fish.struggle += 0.5;
+                    fish.vx = Math.sin(fish.struggle) * 3;
+                    fish.vy = Math.cos(fish.struggle) * 2;
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경 (하늘과 물)
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, 300);
+            
+            ctx.fillStyle = '#4682B4';
+            ctx.fillRect(0, 300, canvas.width, canvas.height - 300);
+            
+            // 물결 효과
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, 320 + i * 20);
+                for (let x = 0; x < canvas.width; x += 20) {
+                    ctx.lineTo(x, 320 + i * 20 + Math.sin((x + Date.now() * 0.002) * 0.02) * 5);
+                }
+                ctx.stroke();
+            }
+            
+            // 낚시꾼
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(fisherman.x, fisherman.y, fisherman.size, fisherman.size);
+            
+            // 낚시꾼 얼굴
+            ctx.fillStyle = '#FDBCB4';
+            ctx.fillRect(fisherman.x + 5, fisherman.y + 5, 20, 20);
+            
+            // 낚시대
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(fisherman.x + 30, fisherman.y + 10);
+            ctx.lineTo(fisherman.x + 60, fisherman.y - 20);
+            ctx.stroke();
+            
+            // 낚시줄
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(fisherman.x + 60, fisherman.y - 20);
+            ctx.lineTo(fishingLine.hookX, fishingLine.hookY);
+            ctx.stroke();
+            
+            // 미끼/바늘
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(fishingLine.hookX, fishingLine.hookY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 물고기들
+            fishes.forEach(fish => {
+                ctx.fillStyle = fish.color;
+                ctx.beginPath();
+                ctx.ellipse(fish.x, fish.y, fish.size, fish.size * 0.7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 물고기 눈
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(fish.x + fish.size * 0.3, fish.y - fish.size * 0.2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 물고기 꼬리
+                ctx.fillStyle = fish.color;
+                ctx.beginPath();
+                ctx.moveTo(fish.x - fish.size, fish.y);
+                ctx.lineTo(fish.x - fish.size * 1.5, fish.y - fish.size * 0.5);
+                ctx.lineTo(fish.x - fish.size * 1.5, fish.y + fish.size * 0.5);
+                ctx.closePath();
+                ctx.fill();
+            });
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 릴링 진행도
+            if (gameState.fishingState === 'reeling') {
+                const progress = gameState.reelingProgress || 0;
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(canvas.width - 120, 20, 100, 20);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(canvas.width - 120, 20, progress, 20);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px Arial';
+                ctx.fillText('릴링 진행도', canvas.width - 115, 15);
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('fishCaught').textContent = gameState.fishCaught;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('timeLeft').textContent = Math.max(0, gameState.timeLeft);
+            
+            // 파워 게이지
+            document.getElementById('powerFill').style.width = gameState.power + '%';
+        }
+        
+        // 타이머
+        setInterval(() => {
+            if (gameState.gameRunning && gameState.timeLeft > 0) {
+                gameState.timeLeft--;
+                if (gameState.timeLeft <= 0) {
+                    gameState.gameRunning = false;
+                    alert(`게임 종료! 잡은 물고기: ${gameState.fishCaught}마리, 최종 점수: ${gameState.score}점`);
+                }
+            }
+        }, 1000);
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>레트로 아케이드</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+            color: #00ff00;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #00ff00; }
+            to { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00; }
+        }
+        
+        .game-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        canvas {
+            border: 2px solid #00ff00;
+            background: #000000;
+            image-rendering: pixelated;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #000000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #000000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .info-box {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .game-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .game-btn {
+            background: #000000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .game-btn:hover {
+            background: #00ff00;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕹️ RETRO ARCADE</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">SCORE: <span id="score">0</span></div>
+            <div class="info-box">LIVES: <span id="lives">3</span></div>
+            <div class="info-box">LEVEL: <span id="level">1</span></div>
+        </div>
+        
+        <div class="game-select" id="gameSelect">
+            <button class="game-btn" onclick="startGame('invaders')">SPACE INVADERS</button>
+            <button class="game-btn" onclick="startGame('asteroids')">ASTEROIDS</button>
+            <button class="game-btn" onclick="startGame('pong')">PONG</button>
+            <button class="game-btn" onclick="startGame('breakout')">BREAKOUT</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600" style="display: none;"></canvas>
+        
+        <div class="controls">
+            <button onclick="pauseGame()">PAUSE</button>
+            <button onclick="resetGame()">RESET</button>
+            <button onclick="backToMenu()">MENU</button>
+        </div>
+        
+        <p style="font-family: 'Courier New', monospace;">
+            CONTROLS: ARROW KEYS = MOVE, SPACE = SHOOT/ACTION
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = false;
+        let gamePaused = false;
+        let currentGame = null;
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        
+        // 게임 객체들
+        let player = {};
+        let enemies = [];
+        let bullets = [];
+        let particles = [];
+        
+        let keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (currentGame === 'invaders' || currentGame === 'asteroids') {
+                    shoot();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        
+        function startGame(gameType) {
+            currentGame = gameType;
+            gameRunning = true;
+            gamePaused = false;
+            score = 0;
+            lives = 3;
+            level = 1;
+            
+            document.getElementById('gameSelect').style.display = 'none';
+            canvas.style.display = 'block';
+            
+            initializeGame(gameType);
+            updateDisplay();
+        }
+        
+        function initializeGame(gameType) {
+            enemies = [];
+            bullets = [];
+            particles = [];
+            
+            switch(gameType) {
+                case 'invaders':
+                    initSpaceInvaders();
+                    break;
+                case 'asteroids':
+                    initAsteroids();
+                    break;
+                case 'pong':
+                    initPong();
+                    break;
+                case 'breakout':
+                    initBreakout();
+                    break;
+            }
+        }
+        
+        function initSpaceInvaders() {
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height - 50,
+                width: 30,
+                height: 20,
+                speed: 5
+            };
+            
+            // 적 생성
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 10; col++) {
+                    enemies.push({
+                        x: 100 + col * 60,
+                        y: 50 + row * 40,
+                        width: 30,
+                        height: 20,
+                        speed: 1,
+                        direction: 1
+                    });
+                }
+            }
+        }
+        
+        function initAsteroids() {
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                width: 20,
+                height: 20,
+                angle: 0,
+                vx: 0,
+                vy: 0,
+                speed: 0.2
+            };
+            
+            // 소행성 생성
+            for (let i = 0; i < 5; i++) {
+                enemies.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 30 + Math.random() * 20,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    rotation: 0,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2
+                });
+            }
+        }
+        
+        function initPong() {
+            player = {
+                x: 50,
+                y: canvas.height / 2 - 50,
+                width: 20,
+                height: 100,
+                speed: 6
+            };
+            
+            enemies.push({
+                x: canvas.width - 70,
+                y: canvas.height / 2 - 50,
+                width: 20,
+                height: 100,
+                speed: 4
+            });
+            
+            // 공
+            bullets.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: 5,
+                vy: 3,
+                size: 10
+            });
+        }
+        
+        function initBreakout() {
+            player = {
+                x: canvas.width / 2 - 50,
+                y: canvas.height - 30,
+                width: 100,
+                height: 20,
+                speed: 8
+            };
+            
+            // 벽돌 생성
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 10; col++) {
+                    enemies.push({
+                        x: 80 + col * 64,
+                        y: 50 + row * 25,
+                        width: 60,
+                        height: 20,
+                        color: `hsl(${row * 60}, 100%, 50%)`
+                    });
+                }
+            }
+            
+            // 공
+            bullets.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: 4,
+                vy: -4,
+                size: 10
+            });
+        }
+        
+        function shoot() {
+            if (currentGame === 'invaders') {
+                bullets.push({
+                    x: player.x + player.width / 2,
+                    y: player.y,
+                    vy: -8,
+                    width: 3,
+                    height: 10
+                });
+            } else if (currentGame === 'asteroids') {
+                bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(player.angle) * 8,
+                    vy: Math.sin(player.angle) * 8,
+                    life: 60,
+                    size: 3
+                });
+            }
+        }
+        
+        function updateGame() {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(currentGame) {
+                case 'invaders':
+                    updateSpaceInvaders();
+                    break;
+                case 'asteroids':
+                    updateAsteroids();
+                    break;
+                case 'pong':
+                    updatePong();
+                    break;
+                case 'breakout':
+                    updateBreakout();
+                    break;
+            }
+            
+            updateParticles();
+        }
+        
+        function updateSpaceInvaders() {
+            // 플레이어 이동
+            if (keys['ArrowLeft'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+            
+            // 적 이동
+            let moveDown = false;
+            enemies.forEach(enemy => {
+                enemy.x += enemy.speed * enemy.direction;
+                if (enemy.x <= 0 || enemy.x >= canvas.width - enemy.width) {
+                    moveDown = true;
+                }
+            });
+            
+            if (moveDown) {
+                enemies.forEach(enemy => {
+                    enemy.y += 20;
+                    enemy.direction *= -1;
+                });
+            }
+            
+            // 총알 업데이트
+            bullets.forEach((bullet, index) => {
+                bullet.y += bullet.vy;
+                if (bullet.y < 0) {
+                    bullets.splice(index, 1);
+                }
+            });
+            
+            // 충돌 검사
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width &&
+                        bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
+                        enemies.splice(eIndex, 1);
+                        bullets.splice(bIndex, 1);
+                        score += 10;
+                        createExplosion(enemy.x, enemy.y);
+                    }
+                });
+            });
+        }
+        
+        function updateAsteroids() {
+            // 플레이어 회전
+            if (keys['ArrowLeft']) {
+                player.angle -= 0.2;
+            }
+            if (keys['ArrowRight']) {
+                player.angle += 0.2;
+            }
+            
+            // 플레이어 추진
+            if (keys['ArrowUp']) {
+                player.vx += Math.cos(player.angle) * player.speed;
+                player.vy += Math.sin(player.angle) * player.speed;
+            }
+            
+            // 플레이어 이동
+            player.x += player.vx;
+            player.y += player.vy;
+            player.vx *= 0.99;
+            player.vy *= 0.99;
+            
+            // 화면 경계 처리
+            if (player.x < 0) player.x = canvas.width;
+            if (player.x > canvas.width) player.x = 0;
+            if (player.y < 0) player.y = canvas.height;
+            if (player.y > canvas.height) player.y = 0;
+            
+            // 소행성 업데이트
+            enemies.forEach(asteroid => {
+                asteroid.x += asteroid.vx;
+                asteroid.y += asteroid.vy;
+                asteroid.rotation += asteroid.rotationSpeed;
+                
+                // 화면 경계 처리
+                if (asteroid.x < 0) asteroid.x = canvas.width;
+                if (asteroid.x > canvas.width) asteroid.x = 0;
+                if (asteroid.y < 0) asteroid.y = canvas.height;
+                if (asteroid.y > canvas.height) asteroid.y = 0;
+            });
+            
+            // 총알 업데이트
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                bullet.life--;
+                
+                if (bullet.life <= 0) {
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+        
+        function updatePong() {
+            // 플레이어 이동
+            if (keys['ArrowUp'] && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (keys['ArrowDown'] && player.y < canvas.height - player.height) {
+                player.y += player.speed;
+            }
+            
+            // AI 패들
+            const ball = bullets[0];
+            if (ball) {
+                const aiPaddle = enemies[0];
+                const paddleCenter = aiPaddle.y + aiPaddle.height / 2;
+                
+                if (ball.y < paddleCenter - 10) {
+                    aiPaddle.y -= aiPaddle.speed;
+                } else if (ball.y > paddleCenter + 10) {
+                    aiPaddle.y += aiPaddle.speed;
+                }
+                
+                // 공 이동
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                
+                // 벽 충돌
+                if (ball.y <= 0 || ball.y >= canvas.height) {
+                    ball.vy *= -1;
+                }
+                
+                // 패들 충돌
+                if ((ball.x <= player.x + player.width && ball.y >= player.y && ball.y <= player.y + player.height) ||
+                    (ball.x >= aiPaddle.x && ball.y >= aiPaddle.y && ball.y <= aiPaddle.y + aiPaddle.height)) {
+                    ball.vx *= -1;
+                }
+                
+                // 점수
+                if (ball.x < 0) {
+                    score++;
+                    ball.x = canvas.width / 2;
+                    ball.y = canvas.height / 2;
+                    ball.vx = 5;
+                } else if (ball.x > canvas.width) {
+                    lives--;
+                    ball.x = canvas.width / 2;
+                    ball.y = canvas.height / 2;
+                    ball.vx = -5;
+                }
+            }
+        }
+        
+        function updateBreakout() {
+            // 플레이어 이동
+            if (keys['ArrowLeft'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+            
+            const ball = bullets[0];
+            if (ball) {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                
+                // 벽 충돌
+                if (ball.x <= 0 || ball.x >= canvas.width) {
+                    ball.vx *= -1;
+                }
+                if (ball.y <= 0) {
+                    ball.vy *= -1;
+                }
+                
+                // 패들 충돌
+                if (ball.x >= player.x && ball.x <= player.x + player.width &&
+                    ball.y >= player.y && ball.y <= player.y + player.height) {
+                    ball.vy = -Math.abs(ball.vy);
+                }
+                
+                // 벽돌 충돌
+                enemies.forEach((brick, index) => {
+                    if (ball.x >= brick.x && ball.x <= brick.x + brick.width &&
+                        ball.y >= brick.y && ball.y <= brick.y + brick.height) {
+                        enemies.splice(index, 1);
+                        ball.vy *= -1;
+                        score += 10;
+                        createExplosion(brick.x, brick.y);
+                    }
+                });
+                
+                // 공이 바닥에 떨어지면
+                if (ball.y > canvas.height) {
+                    lives--;
+                    ball.x = canvas.width / 2;
+                    ball.y = canvas.height / 2;
+                    ball.vx = 4;
+                    ball.vy = -4;
+                }
+            }
+        }
+        
+        function createExplosion(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        
+        function drawGame() {
+            // 화면 지우기
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            switch(currentGame) {
+                case 'invaders':
+                    drawSpaceInvaders();
+                    break;
+                case 'asteroids':
+                    drawAsteroids();
+                    break;
+                case 'pong':
+                    drawPong();
+                    break;
+                case 'breakout':
+                    drawBreakout();
+                    break;
+            }
+            
+            drawParticles();
+        }
+        
+        function drawSpaceInvaders() {
+            // 플레이어
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // 적들
+            ctx.fillStyle = '#ff0000';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+            
+            // 총알
+            ctx.fillStyle = '#ffff00';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+        
+        function drawAsteroids() {
+            // 플레이어
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(-10, -5);
+            ctx.lineTo(-10, 5);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+            
+            // 소행성
+            ctx.strokeStyle = '#ffffff';
+            enemies.forEach(asteroid => {
+                ctx.save();
+                ctx.translate(asteroid.x, asteroid.y);
+                ctx.rotate(asteroid.rotation);
+                ctx.beginPath();
+                ctx.arc(0, 0, asteroid.size, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+            
+            // 총알
+            ctx.fillStyle = '#ffff00';
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        function drawPong() {
+            // 플레이어 패들
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // AI 패들
+            ctx.fillStyle = '#ff0000';
+            enemies.forEach(paddle => {
+                ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            });
+            
+            // 공
+            ctx.fillStyle = '#ffffff';
+            bullets.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 중앙선
+            ctx.strokeStyle = '#ffffff';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function drawBreakout() {
+            // 플레이어 패들
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // 벽돌
+            enemies.forEach(brick => {
+                ctx.fillStyle = brick.color || '#ff0000';
+                ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+            });
+            
+            // 공
+            ctx.fillStyle = '#ffffff';
+            bullets.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        function drawParticles() {
+            ctx.fillStyle = '#ffff00';
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 30;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+        
+        function gameLoop() {
+            updateGame();
+            if (currentGame) {
+                drawGame();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('level').textContent = level;
+        }
+        
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+        
+        function resetGame() {
+            if (currentGame) {
+                initializeGame(currentGame);
+                score = 0;
+                lives = 3;
+                level = 1;
+                updateDisplay();
+            }
+        }
+        
+        function backToMenu() {
+            gameRunning = false;
+            currentGame = null;
+            document.getElementById('gameSelect').style.display = 'grid';
+            canvas.style.display = 'none';
+        }
+        
+        // 초기화
+        gameLoop();
+    </script>
+</body>
+</html>

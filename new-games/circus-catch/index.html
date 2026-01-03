@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎪 서커스 공 받기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #FF1493;
+        }
+        
+        canvas {
+            border: 3px solid #FF69B4;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #87CEEB 0%, #FFE4B5 100%);
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(255, 105, 180, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .power-ups {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .power-up-btn {
+            background: #9370DB;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .power-up-btn:hover {
+            background: #8A2BE2;
+            transform: scale(1.05);
+        }
+        
+        .power-up-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎪 서커스 공 받기</h1>
+        
+        <div class="ui">
+            <div class="stat">🎪 받은 공: <span id="caught">0</span></div>
+            <div class="stat">💥 놓친 공: <span id="missed">0</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">❤️ 생명: <span id="lives">3</span></div>
+        </div>
+        
+        <div class="power-ups">
+            <button class="power-up-btn" onclick="usePowerUp('bigBasket')" id="bigBasketBtn">🧺 큰 바구니</button>
+            <button class="power-up-btn" onclick="usePowerUp('slowBalls')" id="slowBallsBtn">⏰ 느린 공</button>
+            <button class="power-up-btn" onclick="usePowerUp('magnet')" id="magnetBtn">🧲 자석</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: 마우스로 바구니를 움직여서 떨어지는 공을 받으세요!</p>
+            <p>💡 팁: 빨간 공은 피하고, 금색 공은 보너스 점수를 줍니다!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            caught: 0,
+            missed: 0,
+            score: 0,
+            lives: 3,
+            gameRunning: true,
+            bigBasket: false,
+            slowBalls: false,
+            magnet: false
+        };
+        
+        // 바구니
+        const basket = {
+            x: canvas.width / 2 - 50,
+            y: canvas.height - 60,
+            width: 100,
+            height: 40,
+            speed: 8
+        };
+        
+        // 게임 객체들
+        let balls = [];
+        let particles = [];
+        let powerUpItems = [];
+        
+        // 파워업 쿨다운
+        const powerUps = {
+            bigBasket: { cooldown: 0, maxCooldown: 600 },
+            slowBalls: { cooldown: 0, maxCooldown: 900 },
+            magnet: { cooldown: 0, maxCooldown: 1200 }
+        };
+        
+        // 공 종류
+        const ballTypes = [
+            { color: '#FF6B6B', points: 10, type: 'normal' },
+            { color: '#4ECDC4', points: 15, type: 'normal' },
+            { color: '#45B7D1', points: 12, type: 'normal' },
+            { color: '#96CEB4', points: 18, type: 'normal' },
+            { color: '#FFEAA7', points: 25, type: 'bonus' },
+            { color: '#FFD700', points: 50, type: 'golden' },
+            { color: '#FF0000', points: -20, type: 'danger' }
+        ];
+        
+        // 마우스 이벤트
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            basket.x = mouseX - basket.width / 2;
+            
+            // 바구니 경계 체크
+            basket.x = Math.max(0, Math.min(canvas.width - basket.width, basket.x));
+        });
+        
+        // 공 생성
+        function createBall() {
+            const ballType = ballTypes[Math.floor(Math.random() * ballTypes.length)];
+            const size = ballType.type === 'golden' ? 25 : 
+                        ballType.type === 'danger' ? 20 : 
+                        Math.random() * 10 + 15;
+            
+            balls.push({
+                x: Math.random() * (canvas.width - size * 2) + size,
+                y: -size,
+                size: size,
+                speed: gameState.slowBalls ? 
+                    Math.random() * 2 + 1 : 
+                    Math.random() * 4 + 2,
+                bounce: Math.random() * 0.8 + 0.2,
+                ...ballType
+            });
+        }
+        
+        // 파워업 아이템 생성
+        function createPowerUpItem() {
+            const powerUpTypes = ['bigBasket', 'slowBalls', 'magnet'];
+            const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            
+            powerUpItems.push({
+                x: Math.random() * (canvas.width - 30) + 15,
+                y: -15,
+                size: 15,
+                speed: 3,
+                type: type,
+                rotation: 0
+            });
+        }
+        
+        // 파워업 사용
+        function usePowerUp(type) {
+            if (powerUps[type].cooldown > 0) return;
+            
+            switch(type) {
+                case 'bigBasket':
+                    gameState.bigBasket = true;
+                    basket.width = 150;
+                    setTimeout(() => {
+                        gameState.bigBasket = false;
+                        basket.width = 100;
+                    }, 8000);
+                    powerUps.bigBasket.cooldown = powerUps.bigBasket.maxCooldown;
+                    break;
+                    
+                case 'slowBalls':
+                    gameState.slowBalls = true;
+                    setTimeout(() => gameState.slowBalls = false, 10000);
+                    powerUps.slowBalls.cooldown = powerUps.slowBalls.maxCooldown;
+                    break;
+                    
+                case 'magnet':
+                    gameState.magnet = true;
+                    setTimeout(() => gameState.magnet = false, 6000);
+                    powerUps.magnet.cooldown = powerUps.magnet.maxCooldown;
+                    break;
+            }
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // 업데이트
+        function update() {
+            if (!gameState.gameRunning) return;
+            
+            // 공 생성
+            if (Math.random() < 0.02) {
+                createBall();
+            }
+            
+            // 파워업 아이템 생성
+            if (Math.random() < 0.005) {
+                createPowerUpItem();
+            }
+            
+            // 공 업데이트
+            balls.forEach((ball, index) => {
+                ball.y += ball.speed;
+                
+                // 자석 효과
+                if (gameState.magnet && ball.type !== 'danger') {
+                    const dx = (basket.x + basket.width / 2) - ball.x;
+                    const dy = basket.y - ball.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 150) {
+                        ball.x += dx * 0.02;
+                        ball.y += dy * 0.02;
+                    }
+                }
+                
+                // 바구니와 충돌 체크
+                if (checkCollision(
+                    { x: ball.x - ball.size, y: ball.y - ball.size, width: ball.size * 2, height: ball.size * 2 },
+                    basket
+                )) {
+                    gameState.score += ball.points;
+                    if (ball.points > 0) {
+                        gameState.caught++;
+                    } else {
+                        gameState.lives--;
+                    }
+                    
+                    createParticles(ball.x, ball.y, ball.color);
+                    balls.splice(index, 1);
+                    return;
+                }
+                
+                // 바닥에 떨어진 공
+                if (ball.y > canvas.height + ball.size) {
+                    if (ball.type !== 'danger') {
+                        gameState.missed++;
+                        gameState.lives--;
+                    }
+                    balls.splice(index, 1);
+                }
+            });
+            
+            // 파워업 아이템 업데이트
+            powerUpItems.forEach((item, index) => {
+                item.y += item.speed;
+                item.rotation += 0.1;
+                
+                // 바구니와 충돌 체크
+                if (checkCollision(
+                    { x: item.x - item.size, y: item.y - item.size, width: item.size * 2, height: item.size * 2 },
+                    basket
+                )) {
+                    usePowerUp(item.type);
+                    createParticles(item.x, item.y, '#FFD700');
+                    powerUpItems.splice(index, 1);
+                    return;
+                }
+                
+                // 화면 밖으로 나간 아이템
+                if (item.y > canvas.height + item.size) {
+                    powerUpItems.splice(index, 1);
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            // 파워업 쿨다운
+            Object.keys(powerUps).forEach(key => {
+                if (powerUps[key].cooldown > 0) {
+                    powerUps[key].cooldown--;
+                }
+            });
+            
+            // 게임 오버 체크
+            if (gameState.lives <= 0) {
+                gameState.gameRunning = false;
+                setTimeout(() => {
+                    alert(`게임 오버!\n받은 공: ${gameState.caught}개\n최종 점수: ${gameState.score}점`);
+                }, 500);
+            }
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#FFE4B5');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 서커스 텐트 배경
+            ctx.fillStyle = '#FF6B6B';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 50);
+            ctx.lineTo(canvas.width / 2 - 100, 150);
+            ctx.lineTo(canvas.width / 2 + 100, 150);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 텐트 줄무늬
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 50);
+                ctx.lineTo(canvas.width / 2 - 80 + i * 40, 150);
+                ctx.lineTo(canvas.width / 2 - 60 + i * 40, 150);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // 바구니
+            ctx.fillStyle = gameState.bigBasket ? '#FFD700' : '#8B4513';
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+            
+            // 바구니 테두리
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(basket.x, basket.y, basket.width, basket.height);
+            
+            // 자석 효과 표시
+            if (gameState.magnet) {
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(basket.x + basket.width / 2, basket.y + basket.height / 2, 150, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // 공들
+            balls.forEach(ball => {
+                // 공 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.arc(ball.x + 3, ball.y + 3, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 공 몸체
+                ctx.fillStyle = ball.color;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 공 하이라이트
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(ball.x - ball.size * 0.3, ball.y - ball.size * 0.3, ball.size * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 특수 공 표시
+                if (ball.type === 'golden') {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y, ball.size + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (ball.type === 'danger') {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('💀', ball.x, ball.y + 5);
+                }
+            });
+            
+            // 파워업 아이템들
+            powerUpItems.forEach(item => {
+                ctx.save();
+                ctx.translate(item.x, item.y);
+                ctx.rotate(item.rotation);
+                
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, item.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                
+                const icons = {
+                    bigBasket: '🧺',
+                    slowBalls: '⏰',
+                    magnet: '🧲'
+                };
+                ctx.fillText(icons[item.type], 0, 4);
+                
+                ctx.restore();
+            });
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 효과 표시
+            if (gameState.slowBalls) {
+                ctx.fillStyle = 'rgba(0, 100, 255, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('caught').textContent = gameState.caught;
+            document.getElementById('missed').textContent = gameState.missed;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lives').textContent = gameState.lives;
+            
+            // 파워업 버튼 상태
+            document.getElementById('bigBasketBtn').disabled = powerUps.bigBasket.cooldown > 0;
+            document.getElementById('slowBallsBtn').disabled = powerUps.slowBalls.cooldown > 0;
+            document.getElementById('magnetBtn').disabled = powerUps.magnet.cooldown > 0;
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

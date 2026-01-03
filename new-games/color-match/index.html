@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌈 색깔 맞추기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 20px;
+            border: 3px solid #9370DB;
+            max-width: 600px;
+        }
+        
+        .ui {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(147, 112, 219, 0.8);
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 5px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .question-area {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .color-word {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+        
+        .instruction {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        
+        .answer-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .answer-btn {
+            padding: 20px;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .answer-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .answer-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .feedback {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 15px 0;
+            min-height: 30px;
+        }
+        
+        .feedback.correct {
+            color: #00FF7F;
+        }
+        
+        .feedback.wrong {
+            color: #FF6B6B;
+        }
+        
+        .streak-indicator {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: #4169E1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            background: #FF4500;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
+        }
+        
+        .controls {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🌈 색깔 맞추기 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">✅ 정답: <span id="correct">0</span></div>
+            <div class="stat">❌ 오답: <span id="wrong">0</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">⏰ 시간: <span id="timeLeft">60</span>초</div>
+        </div>
+        
+        <div class="streak-indicator">
+            🔥 연속 정답: <span id="streak">0</span>개
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">보통</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움</button>
+        </div>
+        
+        <div class="question-area">
+            <div class="instruction" id="instruction">다음 글자의 색깔을 맞춰보세요!</div>
+            <div class="color-word" id="colorWord">빨강</div>
+        </div>
+        
+        <div class="answer-buttons" id="answerButtons">
+            <!-- 답 버튼들이 여기에 생성됩니다 -->
+        </div>
+        
+        <div class="feedback" id="feedback"></div>
+        
+        <div class="controls">
+            <p>🎮 조작법: 화면에 표시된 글자의 실제 색깔을 맞춰보세요!</p>
+            <p>🧠 스트룹 효과: 글자의 의미와 색깔이 다를 때 뇌가 혼란스러워해요!</p>
+            <p>💡 팁: 글자를 읽지 말고 색깔만 보세요!</p>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            correct: 0,
+            wrong: 0,
+            score: 0,
+            streak: 0,
+            timeLeft: 60,
+            difficulty: 'easy',
+            gameRunning: true,
+            currentQuestion: null
+        };
+        
+        // 색깔 데이터
+        const colors = {
+            '빨강': '#FF0000',
+            '파랑': '#0000FF',
+            '초록': '#00FF00',
+            '노랑': '#FFFF00',
+            '보라': '#800080',
+            '주황': '#FFA500',
+            '분홍': '#FF69B4',
+            '하늘': '#87CEEB',
+            '갈색': '#8B4513',
+            '검정': '#000000'
+        };
+        
+        const colorNames = Object.keys(colors);
+        
+        // 난이도별 설정
+        const difficultySettings = {
+            easy: { 
+                timeLimit: 60, 
+                pointsPerCorrect: 10,
+                matchProbability: 0.5 // 50% 확률로 글자와 색깔이 일치
+            },
+            medium: { 
+                timeLimit: 45, 
+                pointsPerCorrect: 15,
+                matchProbability: 0.3 // 30% 확률로 일치
+            },
+            hard: { 
+                timeLimit: 30, 
+                pointsPerCorrect: 25,
+                matchProbability: 0.1 // 10% 확률로 일치
+            }
+        };
+        
+        // 난이도 설정
+        function setDifficulty(difficulty) {
+            gameState.difficulty = difficulty;
+            gameState.timeLeft = difficultySettings[difficulty].timeLimit;
+            
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            generateQuestion();
+        }
+        
+        // 새 문제 생성
+        function generateQuestion() {
+            const settings = difficultySettings[gameState.difficulty];
+            
+            // 랜덤 글자 선택
+            const wordName = colorNames[Math.floor(Math.random() * colorNames.length)];
+            
+            // 색깔 결정 (난이도에 따라 일치 확률 조정)
+            let colorName;
+            if (Math.random() < settings.matchProbability) {
+                colorName = wordName; // 글자와 색깔 일치
+            } else {
+                do {
+                    colorName = colorNames[Math.floor(Math.random() * colorNames.length)];
+                } while (colorName === wordName); // 글자와 색깔 불일치
+            }
+            
+            gameState.currentQuestion = {
+                word: wordName,
+                color: colorName,
+                correctAnswer: colorName
+            };
+            
+            // 화면에 표시
+            const colorWordElement = document.getElementById('colorWord');
+            colorWordElement.textContent = wordName;
+            colorWordElement.style.color = colors[colorName];
+            
+            // 답 버튼 생성
+            generateAnswerButtons();
+            
+            // 지시사항 업데이트
+            const instructions = [
+                '다음 글자의 색깔을 맞춰보세요!',
+                '글자를 읽지 말고 색깔만 보세요!',
+                '이 글자는 무슨 색인가요?',
+                '실제 색깔을 선택하세요!'
+            ];
+            document.getElementById('instruction').textContent = 
+                instructions[Math.floor(Math.random() * instructions.length)];
+        }
+        
+        // 답 버튼 생성
+        function generateAnswerButtons() {
+            const buttonsContainer = document.getElementById('answerButtons');
+            buttonsContainer.innerHTML = '';
+            
+            // 정답과 3개의 오답 생성
+            const answers = [gameState.currentQuestion.correctAnswer];
+            
+            while (answers.length < 4) {
+                const randomColor = colorNames[Math.floor(Math.random() * colorNames.length)];
+                if (!answers.includes(randomColor)) {
+                    answers.push(randomColor);
+                }
+            }
+            
+            // 배열 섞기
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+            
+            // 버튼 생성
+            answers.forEach(colorName => {
+                const button = document.createElement('button');
+                button.className = 'answer-btn';
+                button.textContent = colorName;
+                button.style.backgroundColor = colors[colorName];
+                
+                // 검정색일 때는 흰 글자, 나머지는 검정 글자
+                if (colorName === '검정') {
+                    button.style.color = 'white';
+                } else {
+                    button.style.color = 'white';
+                }
+                
+                button.onclick = () => checkAnswer(colorName);
+                buttonsContainer.appendChild(button);
+            });
+        }
+        
+        // 답 확인
+        function checkAnswer(selectedColor) {
+            const isCorrect = selectedColor === gameState.currentQuestion.correctAnswer;
+            
+            if (isCorrect) {
+                gameState.correct++;
+                gameState.streak++;
+                
+                const basePoints = difficultySettings[gameState.difficulty].pointsPerCorrect;
+                const streakBonus = Math.floor(gameState.streak / 5) * 5;
+                const points = basePoints + streakBonus;
+                gameState.score += points;
+                
+                document.getElementById('feedback').textContent = `🎉 정답! +${points}점`;
+                document.getElementById('feedback').className = 'feedback correct';
+            } else {
+                gameState.wrong++;
+                gameState.streak = 0;
+                
+                document.getElementById('feedback').textContent = `❌ 틀렸습니다! 정답: ${gameState.currentQuestion.correctAnswer}`;
+                document.getElementById('feedback').className = 'feedback wrong';
+            }
+            
+            // 버튼 비활성화
+            document.querySelectorAll('.answer-btn').forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === gameState.currentQuestion.correctAnswer) {
+                    btn.style.border = '3px solid #00FF00';
+                } else if (btn.textContent === selectedColor && !isCorrect) {
+                    btn.style.border = '3px solid #FF0000';
+                }
+            });
+            
+            updateUI();
+            
+            // 1.5초 후 다음 문제
+            setTimeout(() => {
+                if (gameState.gameRunning) {
+                    generateQuestion();
+                    document.getElementById('feedback').textContent = '';
+                    document.getElementById('feedback').className = 'feedback';
+                }
+            }, 1500);
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('correct').textContent = gameState.correct;
+            document.getElementById('wrong').textContent = gameState.wrong;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('timeLeft').textContent = gameState.timeLeft;
+            document.getElementById('streak').textContent = gameState.streak;
+        }
+        
+        // 키보드 이벤트 (1,2,3,4 키로 답 선택)
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '1' && e.key <= '4' && gameState.gameRunning) {
+                const buttons = document.querySelectorAll('.answer-btn');
+                const index = parseInt(e.key) - 1;
+                if (buttons[index] && !buttons[index].disabled) {
+                    buttons[index].click();
+                }
+            }
+        });
+        
+        // 타이머
+        setInterval(() => {
+            if (gameState.gameRunning && gameState.timeLeft > 0) {
+                gameState.timeLeft--;
+                updateUI();
+                
+                if (gameState.timeLeft <= 0) {
+                    gameState.gameRunning = false;
+                    
+                    const accuracy = gameState.correct + gameState.wrong > 0 
+                        ? Math.round((gameState.correct / (gameState.correct + gameState.wrong)) * 100) 
+                        : 0;
+                    
+                    setTimeout(() => {
+                        alert(`⏰ 시간 종료!\n정답: ${gameState.correct}개\n오답: ${gameState.wrong}개\n정확도: ${accuracy}%\n최종 점수: ${gameState.score}점`);
+                    }, 500);
+                }
+            }
+        }, 1000);
+        
+        // 게임 시작
+        generateQuestion();
+        updateUI();
+    </script>
+</body>
+</html>

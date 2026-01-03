@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏰 성 건설 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #D2691E;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        canvas {
+            border: 3px solid #8B4513;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%);
+        }
+        
+        .sidebar {
+            width: 200px;
+            background: rgba(139, 69, 19, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(210, 105, 30, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .block-selector {
+            margin-bottom: 20px;
+        }
+        
+        .block-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: #8B4513;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .block-btn:hover {
+            background: #A0522D;
+        }
+        
+        .block-btn.selected {
+            background: #D2691E;
+            box-shadow: 0 0 10px rgba(210, 105, 30, 0.5);
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .stability-meter {
+            margin: 15px 0;
+        }
+        
+        .stability-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .stability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #E74C3C, #F39C12, #27AE60);
+            transition: width 0.3s;
+        }
+        
+        .action-buttons {
+            margin: 15px 0;
+        }
+        
+        .action-btn {
+            background: #27AE60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px 0;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🏰 성 건설 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">🧱 블록: <span id="blockCount">50</span>개</div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">🏗️ 높이: <span id="height">0</span>m</div>
+            <div class="stat">⚖️ 안정성: <span id="stability">100</span>%</div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="600" height="500"></canvas>
+            
+            <div class="sidebar">
+                <h3>🧱 블록 선택</h3>
+                <div class="block-selector">
+                    <button class="block-btn selected" onclick="selectBlock('stone')">🪨 돌 블록 (안정)</button>
+                    <button class="block-btn" onclick="selectBlock('wood')">🪵 나무 블록 (가벼움)</button>
+                    <button class="block-btn" onclick="selectBlock('metal')">⚙️ 철 블록 (튼튼함)</button>
+                    <button class="block-btn" onclick="selectBlock('glass')">🔷 유리 블록 (투명)</button>
+                </div>
+                
+                <div class="stability-meter">
+                    <h4>⚖️ 구조 안정성</h4>
+                    <div class="stability-bar">
+                        <div class="stability-fill" id="stabilityFill" style="width: 100%;"></div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="clearCastle()">🗑️ 모두 지우기</button>
+                    <button class="action-btn" onclick="saveCastle()">💾 성 저장하기</button>
+                    <button class="action-btn" onclick="testStability()">🧪 안정성 테스트</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <p>🎮 조작법: 블록을 선택하고 캔버스에 클릭해서 성을 건설하세요!</p>
+            <p>💡 팁: 아래쪽에 무거운 블록을, 위쪽에 가벼운 블록을 놓으면 안정적이에요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            blockCount: 50,
+            score: 0,
+            height: 0,
+            stability: 100,
+            selectedBlock: 'stone'
+        };
+        
+        // 블록들
+        let blocks = [];
+        let particles = [];
+        
+        // 블록 타입 정의
+        const blockTypes = {
+            stone: { 
+                color: '#696969', 
+                weight: 3, 
+                stability: 1.0, 
+                cost: 1,
+                name: '돌 블록'
+            },
+            wood: { 
+                color: '#8B4513', 
+                weight: 1, 
+                stability: 0.7, 
+                cost: 1,
+                name: '나무 블록'
+            },
+            metal: { 
+                color: '#708090', 
+                weight: 5, 
+                stability: 1.5, 
+                cost: 2,
+                name: '철 블록'
+            },
+            glass: { 
+                color: '#87CEEB', 
+                weight: 2, 
+                stability: 0.3, 
+                cost: 1,
+                name: '유리 블록'
+            }
+        };
+        
+        const blockSize = 30;
+        
+        // 블록 선택
+        function selectBlock(type) {
+            gameState.selectedBlock = type;
+            document.querySelectorAll('.block-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+        
+        // 캔버스 클릭 이벤트
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            placeBlock(x, y);
+        });
+        
+        // 블록 배치
+        function placeBlock(x, y) {
+            const blockType = blockTypes[gameState.selectedBlock];
+            
+            if (gameState.blockCount < blockType.cost) {
+                alert('블록이 부족합니다!');
+                return;
+            }
+            
+            // 그리드에 맞춰 위치 조정
+            const gridX = Math.floor(x / blockSize) * blockSize;
+            const gridY = Math.floor(y / blockSize) * blockSize;
+            
+            // 겹치는 블록 체크
+            const overlapping = blocks.some(block => 
+                block.x === gridX && block.y === gridY
+            );
+            
+            if (overlapping) {
+                return;
+            }
+            
+            // 새 블록 생성
+            const newBlock = {
+                x: gridX,
+                y: gridY,
+                type: gameState.selectedBlock,
+                ...blockType,
+                id: Date.now()
+            };
+            
+            blocks.push(newBlock);
+            gameState.blockCount -= blockType.cost;
+            
+            // 물리 시뮬레이션 적용
+            applyPhysics();
+            calculateStability();
+            updateScore();
+            updateUI();
+        }
+        
+        // 물리 시뮬레이션
+        function applyPhysics() {
+            let changed = true;
+            
+            while (changed) {
+                changed = false;
+                
+                blocks.forEach(block => {
+                    // 바닥에 닿았는지 확인
+                    if (block.y >= canvas.height - blockSize) {
+                        return;
+                    }
+                    
+                    // 아래에 지지하는 블록이 있는지 확인
+                    const supportingBlocks = blocks.filter(otherBlock => 
+                        otherBlock !== block &&
+                        otherBlock.y === block.y + blockSize &&
+                        Math.abs(otherBlock.x - block.x) < blockSize
+                    );
+                    
+                    if (supportingBlocks.length === 0) {
+                        // 떨어뜨리기
+                        block.y += blockSize;
+                        changed = true;
+                        createParticles(block.x + blockSize/2, block.y + blockSize/2, block.color);
+                    }
+                });
+            }
+        }
+        
+        // 안정성 계산
+        function calculateStability() {
+            if (blocks.length === 0) {
+                gameState.stability = 100;
+                return;
+            }
+            
+            let totalStability = 0;
+            let totalWeight = 0;
+            
+            blocks.forEach(block => {
+                // 지지 점수 계산
+                const supportScore = calculateSupportScore(block);
+                const weightFactor = block.weight;
+                
+                totalStability += block.stability * supportScore;
+                totalWeight += weightFactor;
+            });
+            
+            gameState.stability = Math.max(0, Math.min(100, 
+                (totalStability / Math.max(1, totalWeight)) * 50
+            ));
+            
+            // 안정성이 너무 낮으면 붕괴
+            if (gameState.stability < 10 && blocks.length > 5) {
+                collapse();
+            }
+        }
+        
+        // 지지 점수 계산
+        function calculateSupportScore(block) {
+            // 바닥에 있으면 완전 지지
+            if (block.y >= canvas.height - blockSize) {
+                return 2.0;
+            }
+            
+            // 아래 블록들 확인
+            const supportingBlocks = blocks.filter(otherBlock => 
+                otherBlock.y === block.y + blockSize &&
+                Math.abs(otherBlock.x - block.x) < blockSize * 1.5
+            );
+            
+            if (supportingBlocks.length === 0) return 0;
+            if (supportingBlocks.length === 1) return 0.5;
+            return 1.0;
+        }
+        
+        // 붕괴 효과
+        function collapse() {
+            // 불안정한 블록들 제거
+            const unstableBlocks = blocks.filter(() => Math.random() < 0.3);
+            
+            unstableBlocks.forEach(block => {
+                createParticles(block.x + blockSize/2, block.y + blockSize/2, block.color, 15);
+                blocks = blocks.filter(b => b.id !== block.id);
+            });
+            
+            gameState.score = Math.max(0, gameState.score - 50);
+            
+            setTimeout(() => {
+                applyPhysics();
+                calculateStability();
+                updateUI();
+            }, 500);
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        // 점수 업데이트
+        function updateScore() {
+            // 높이 계산
+            const minY = blocks.length > 0 ? Math.min(...blocks.map(b => b.y)) : canvas.height;
+            gameState.height = Math.max(0, Math.floor((canvas.height - minY) / blockSize));
+            
+            // 점수 계산
+            gameState.score = blocks.length * 10 + gameState.height * 5;
+        }
+        
+        // 성 지우기
+        function clearCastle() {
+            if (confirm('정말로 성을 모두 지우시겠습니까?')) {
+                blocks = [];
+                gameState.blockCount = 50;
+                gameState.score = 0;
+                gameState.height = 0;
+                gameState.stability = 100;
+                updateUI();
+            }
+        }
+        
+        // 성 저장
+        function saveCastle() {
+            const castleData = {
+                blocks: blocks,
+                score: gameState.score,
+                height: gameState.height
+            };
+            localStorage.setItem('savedCastle', JSON.stringify(castleData));
+            alert('성이 저장되었습니다!');
+        }
+        
+        // 안정성 테스트
+        function testStability() {
+            // 지진 효과 시뮬레이션
+            blocks.forEach(block => {
+                block.x += (Math.random() - 0.5) * 10;
+                block.y += (Math.random() - 0.5) * 5;
+                
+                // 그리드에 맞춰 다시 조정
+                block.x = Math.round(block.x / blockSize) * blockSize;
+                block.y = Math.round(block.y / blockSize) * blockSize;
+            });
+            
+            applyPhysics();
+            calculateStability();
+            
+            alert(`안정성 테스트 완료!\n현재 안정성: ${Math.round(gameState.stability)}%`);
+        }
+        
+        // 업데이트
+        function update() {
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy += 0.2; // 중력
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#90EE90');
+            gradient.addColorStop(1, '#228B22');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름들
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 3; i++) {
+                const x = i * 200 + 50;
+                const y = 50 + i * 20;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.arc(x + 20, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 40, y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 그리드 그리기
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < canvas.width; x += blockSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += blockSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 블록들 그리기
+            blocks.forEach(block => {
+                // 블록 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(block.x + 2, block.y + 2, blockSize, blockSize);
+                
+                // 블록 몸체
+                ctx.fillStyle = block.color;
+                ctx.fillRect(block.x, block.y, blockSize, blockSize);
+                
+                // 블록 테두리
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(block.x, block.y, blockSize, blockSize);
+                
+                // 블록 하이라이트
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(block.x + 2, block.y + 2, blockSize - 4, 4);
+                
+                // 유리 블록 투명 효과
+                if (block.type === 'glass') {
+                    ctx.fillStyle = 'rgba(135, 206, 235, 0.5)';
+                    ctx.fillRect(block.x, block.y, blockSize, blockSize);
+                }
+            });
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 선택된 블록 미리보기 (마우스 위치)
+            // 이 부분은 마우스 이벤트로 구현 가능
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('blockCount').textContent = gameState.blockCount;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('height').textContent = gameState.height;
+            document.getElementById('stability').textContent = Math.round(gameState.stability);
+            
+            // 안정성 바
+            document.getElementById('stabilityFill').style.width = gameState.stability + '%';
+        }
+        
+        // 저장된 성 로드
+        function loadSavedCastle() {
+            const saved = localStorage.getItem('savedCastle');
+            if (saved) {
+                const castleData = JSON.parse(saved);
+                blocks = castleData.blocks || [];
+                calculateStability();
+                updateScore();
+                updateUI();
+            }
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        loadSavedCastle();
+        gameLoop();
+    </script>
+</body>
+</html>

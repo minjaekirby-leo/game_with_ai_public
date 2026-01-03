@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>색칠하기 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            color: #e91e63;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 1000px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        canvas {
+            border: 5px solid #e91e63;
+            border-radius: 15px;
+            background: white;
+            cursor: crosshair;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.selected {
+            border-width: 5px;
+            transform: scale(1.2);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e91e63, #ad1457);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .template-btn {
+            background: white;
+            border: 3px solid #e91e63;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .template-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 색칠하기 게임</h1>
+    
+    <div class="game-container">
+        <div class="templates">
+            <button class="template-btn" onclick="loadTemplate('cat')">🐱 고양이</button>
+            <button class="template-btn" onclick="loadTemplate('flower')">🌸 꽃</button>
+            <button class="template-btn" onclick="loadTemplate('car')">🚗 자동차</button>
+            <button class="template-btn" onclick="loadTemplate('house')">🏠 집</button>
+        </div>
+        
+        <canvas id="coloringCanvas" width="600" height="500"></canvas>
+        
+        <div class="color-palette" id="colorPalette"></div>
+        
+        <div class="controls">
+            <button onclick="clearCanvas()">🗑️ 지우기</button>
+            <button onclick="saveImage()">💾 저장</button>
+            <button onclick="changeBrushSize()">🖌️ 브러시 크기</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('coloringCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isDrawing = false;
+        let currentColor = '#ff0000';
+        let brushSize = 10;
+        
+        const colors = [
+            '#ff0000', '#00ff00', '#0000ff', '#ffff00',
+            '#ff00ff', '#00ffff', '#ffa500', '#800080',
+            '#ffc0cb', '#8b4513', '#000000', '#ffffff',
+            '#808080', '#90ee90', '#ffb6c1', '#dda0dd'
+        ];
+        
+        // 색상 팔레트 생성
+        function createColorPalette() {
+            const palette = document.getElementById('colorPalette');
+            palette.innerHTML = '';
+            
+            colors.forEach(color => {
+                const colorBtn = document.createElement('div');
+                colorBtn.className = 'color-btn';
+                colorBtn.style.backgroundColor = color;
+                colorBtn.onclick = () => selectColor(color, colorBtn);
+                palette.appendChild(colorBtn);
+            });
+            
+            // 첫 번째 색상 선택
+            palette.firstChild.classList.add('selected');
+        }
+        
+        function selectColor(color, element) {
+            currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+        
+        // 템플릿 로드
+        function loadTemplate(type) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            switch(type) {
+                case 'cat':
+                    drawCatTemplate();
+                    break;
+                case 'flower':
+                    drawFlowerTemplate();
+                    break;
+                case 'car':
+                    drawCarTemplate();
+                    break;
+                case 'house':
+                    drawHouseTemplate();
+                    break;
+            }
+        }
+        
+        function drawCatTemplate() {
+            // 고양이 머리
+            ctx.beginPath();
+            ctx.arc(300, 200, 80, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 귀
+            ctx.beginPath();
+            ctx.moveTo(250, 150);
+            ctx.lineTo(270, 100);
+            ctx.lineTo(290, 150);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(310, 150);
+            ctx.lineTo(330, 100);
+            ctx.lineTo(350, 150);
+            ctx.stroke();
+            
+            // 눈
+            ctx.beginPath();
+            ctx.arc(280, 180, 10, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(320, 180, 10, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 코
+            ctx.beginPath();
+            ctx.moveTo(300, 200);
+            ctx.lineTo(290, 210);
+            ctx.lineTo(310, 210);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // 입
+            ctx.beginPath();
+            ctx.arc(300, 220, 15, 0, Math.PI);
+            ctx.stroke();
+            
+            // 몸
+            ctx.beginPath();
+            ctx.ellipse(300, 320, 60, 80, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 꼬리
+            ctx.beginPath();
+            ctx.arc(380, 300, 40, Math.PI, Math.PI * 1.5);
+            ctx.stroke();
+        }
+        
+        function drawFlowerTemplate() {
+            // 꽃잎들
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI * 2) / 6;
+                const x = 300 + Math.cos(angle) * 40;
+                const y = 200 + Math.sin(angle) * 40;
+                
+                ctx.beginPath();
+                ctx.ellipse(x, y, 25, 15, angle, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // 꽃 중심
+            ctx.beginPath();
+            ctx.arc(300, 200, 20, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 줄기
+            ctx.beginPath();
+            ctx.moveTo(300, 220);
+            ctx.lineTo(300, 400);
+            ctx.stroke();
+            
+            // 잎사귀
+            ctx.beginPath();
+            ctx.ellipse(280, 300, 20, 10, -Math.PI/4, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.ellipse(320, 350, 20, 10, Math.PI/4, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        function drawCarTemplate() {
+            // 차체
+            ctx.beginPath();
+            ctx.roundRect(150, 250, 300, 100, 20);
+            ctx.stroke();
+            
+            // 지붕
+            ctx.beginPath();
+            ctx.roundRect(200, 200, 200, 60, 15);
+            ctx.stroke();
+            
+            // 바퀴
+            ctx.beginPath();
+            ctx.arc(200, 370, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(400, 370, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 창문
+            ctx.beginPath();
+            ctx.roundRect(220, 220, 70, 30, 5);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.roundRect(310, 220, 70, 30, 5);
+            ctx.stroke();
+            
+            // 헤드라이트
+            ctx.beginPath();
+            ctx.arc(460, 280, 15, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        function drawHouseTemplate() {
+            // 집 벽
+            ctx.beginPath();
+            ctx.rect(200, 250, 200, 150);
+            ctx.stroke();
+            
+            // 지붕
+            ctx.beginPath();
+            ctx.moveTo(180, 250);
+            ctx.lineTo(300, 150);
+            ctx.lineTo(420, 250);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // 문
+            ctx.beginPath();
+            ctx.rect(270, 320, 60, 80);
+            ctx.stroke();
+            
+            // 문 손잡이
+            ctx.beginPath();
+            ctx.arc(320, 360, 3, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 창문
+            ctx.beginPath();
+            ctx.rect(220, 280, 40, 40);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.rect(340, 280, 40, 40);
+            ctx.stroke();
+            
+            // 창문 십자
+            ctx.beginPath();
+            ctx.moveTo(240, 280);
+            ctx.lineTo(240, 320);
+            ctx.moveTo(220, 300);
+            ctx.lineTo(260, 300);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(360, 280);
+            ctx.lineTo(360, 320);
+            ctx.moveTo(340, 300);
+            ctx.lineTo(380, 300);
+            ctx.stroke();
+            
+            // 굴뚝
+            ctx.beginPath();
+            ctx.rect(350, 120, 30, 60);
+            ctx.stroke();
+        }
+        
+        // 마우스 이벤트
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = currentColor;
+            ctx.beginPath();
+            ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = 'my-coloring.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        function changeBrushSize() {
+            const sizes = [5, 10, 15, 20];
+            const currentIndex = sizes.indexOf(brushSize);
+            brushSize = sizes[(currentIndex + 1) % sizes.length];
+            alert(`브러시 크기: ${brushSize}px`);
+        }
+        
+        // 초기화
+        createColorPalette();
+        loadTemplate('cat');
+    </script>
+</body>
+</html>

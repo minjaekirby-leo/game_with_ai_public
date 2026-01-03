@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>다트 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+            to { text-shadow: 0 0 30px rgba(255, 255, 255, 0.8); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #2c3e50;
+            cursor: crosshair;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 다트 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>마우스를 움직여서 조준하고 클릭해서 다트를 던지세요!</p>
+        <p>과녁의 중심에 가까울수록 높은 점수를 얻습니다!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">다트: <span id="darts">3</span>/3</div>
+            <div class="info-item">라운드: <span id="round">1</span></div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>슈퍼 정확도 모드 ON! 💖
+            </div>
+            
+            <button onclick="resetGame()">새 게임</button>
+            <button onclick="nextRound()">다음 라운드</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameRunning = true;
+        let score = 0;
+        let darts = 3;
+        let round = 1;
+        let bestScore = localStorage.getItem('dartBestScore') || 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let isAiming = true;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 다트 설정
+        let dartX = 50;
+        let dartY = canvas.height / 2;
+        let dartVelX = 0;
+        let dartVelY = 0;
+        let dartFlying = false;
+        
+        // 과녁 설정
+        const targetX = canvas.width - 100;
+        const targetY = canvas.height / 2;
+        const targetRadius = 150;
+        
+        // 점수 영역들 (반지름과 점수)
+        const scoreRings = [
+            { radius: 20, score: 100, color: '#ffd700' },  // 불스아이
+            { radius: 40, score: 50, color: '#ff6b6b' },   // 빨간색
+            { radius: 70, score: 25, color: '#4ecdc4' },   // 청록색
+            { radius: 100, score: 10, color: '#95e1d3' },  // 연한 청록색
+            { radius: 130, score: 5, color: '#f8b500' },   // 주황색
+            { radius: 150, score: 1, color: '#ddd' }       // 회색
+        ];
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        
+        // 마우스 이벤트
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (isAiming && darts > 0 && !dartFlying) {
+                throwDart();
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        function throwDart() {
+            const angle = Math.atan2(mouseY - dartY, mouseX - dartX);
+            const power = secretMode ? 15 : 10; // 비밀 모드에서는 더 강한 파워
+            
+            dartVelX = Math.cos(angle) * power;
+            dartVelY = Math.sin(angle) * power;
+            dartFlying = true;
+            isAiming = false;
+            
+            darts--;
+            document.getElementById('darts').textContent = darts;
+        }
+        
+        function updateDart() {
+            if (dartFlying) {
+                dartX += dartVelX;
+                dartY += dartVelY;
+                
+                // 중력 효과 (비밀 모드에서는 중력 무시)
+                if (!secretMode) {
+                    dartVelY += 0.2;
+                }
+                
+                // 과녁에 도달했는지 확인
+                const distToTarget = Math.sqrt((dartX - targetX) ** 2 + (dartY - targetY) ** 2);
+                
+                if (dartX >= targetX - 10 || dartX > canvas.width) {
+                    dartFlying = false;
+                    
+                    // 점수 계산
+                    if (distToTarget <= targetRadius) {
+                        let hitScore = 0;
+                        for (let ring of scoreRings) {
+                            if (distToTarget <= ring.radius) {
+                                hitScore = ring.score;
+                                break;
+                            }
+                        }
+                        
+                        if (secretMode) hitScore *= 2; // 비밀 모드에서는 2배 점수
+                        score += hitScore;
+                        document.getElementById('score').textContent = score;
+                        
+                        // 파티클 효과
+                        createHitParticles(dartX, dartY, hitScore);
+                    }
+                    
+                    // 다트 리셋
+                    setTimeout(() => {
+                        dartX = 50;
+                        dartY = canvas.height / 2;
+                        isAiming = true;
+                        
+                        // 모든 다트를 사용했으면 라운드 종료
+                        if (darts === 0) {
+                            endRound();
+                        }
+                    }, 1000);
+                }
+            }
+        }
+        
+        let particles = [];
+        
+        function createHitParticles(x, y, score) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    color: score >= 50 ? '#ffd700' : '#ff6b6b'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        function endRound() {
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('dartBestScore', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+        }
+        
+        function nextRound() {
+            round++;
+            darts = 3;
+            document.getElementById('round').textContent = round;
+            document.getElementById('darts').textContent = darts;
+            
+            dartX = 50;
+            dartY = canvas.height / 2;
+            isAiming = true;
+            dartFlying = false;
+        }
+        
+        function resetGame() {
+            score = 0;
+            darts = 3;
+            round = 1;
+            document.getElementById('score').textContent = score;
+            document.getElementById('darts').textContent = darts;
+            document.getElementById('round').textContent = round;
+            
+            dartX = 50;
+            dartY = canvas.height / 2;
+            isAiming = true;
+            dartFlying = false;
+            particles = [];
+        }
+        
+        function draw() {
+            // 배경 그리기
+            ctx.fillStyle = secretMode ? '#1a1a2e' : '#2c3e50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 과녁 그리기
+            for (let i = scoreRings.length - 1; i >= 0; i--) {
+                const ring = scoreRings[i];
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(targetX, targetY, ring.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 점수 표시
+                if (i % 2 === 0) {
+                    ctx.fillStyle = '#333';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(ring.score, targetX, targetY - ring.radius + 20);
+                }
+            }
+            
+            // 과녁 테두리
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(targetX, targetY, targetRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // 조준선 그리기 (조준 중일 때)
+            if (isAiming && !dartFlying) {
+                ctx.strokeStyle = secretMode ? '#ffd700' : '#fff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(dartX, dartY);
+                ctx.lineTo(mouseX, mouseY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // 다트 그리기
+            ctx.fillStyle = secretMode ? '#ffd700' : '#8b4513';
+            ctx.beginPath();
+            ctx.arc(dartX, dartY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 다트 깃털
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#ff0000';
+            ctx.fillRect(dartX - 15, dartY - 3, 10, 6);
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+        
+        function gameLoop() {
+            updateDart();
+            updateParticles();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

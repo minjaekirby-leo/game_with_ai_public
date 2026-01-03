@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 화학 실험실</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2C3E50, #34495E);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #3498DB;
+            max-width: 1000px;
+        }
+        
+        .lab-area {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        canvas {
+            border: 3px solid #2980B9;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #ECF0F1 0%, #BDC3C7 100%);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: rgba(52, 73, 94, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(52, 152, 219, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .element-panel {
+            margin-bottom: 20px;
+        }
+        
+        .element-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: #3498DB;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .element-btn:hover {
+            background: #2980B9;
+            transform: scale(1.02);
+        }
+        
+        .element-btn.selected {
+            background: #E74C3C;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+        
+        .reaction-log {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            text-align: left;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .formula-display {
+            background: rgba(46, 204, 113, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .clear-btn {
+            background: #E74C3C;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        
+        .clear-btn:hover {
+            background: #C0392B;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧪 화학 실험실</h1>
+        
+        <div class="ui">
+            <div class="stat">⚗️ 실험: <span id="experiments">0</span>회</div>
+            <div class="stat">✅ 성공: <span id="successful">0</span>회</div>
+            <div class="stat">🏆 발견: <span id="discoveries">0</span>개</div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+        </div>
+        
+        <div class="lab-area">
+            <canvas id="gameCanvas" width="600" height="500"></canvas>
+            
+            <div class="sidebar">
+                <h3>🧪 원소 선택</h3>
+                <div class="element-panel" id="elementPanel">
+                    <!-- 원소 버튼들이 여기에 생성됩니다 -->
+                </div>
+                
+                <div class="formula-display" id="formulaDisplay">
+                    현재 조합: 없음
+                </div>
+                
+                <button class="clear-btn" onclick="clearLab()">🗑️ 실험실 청소</button>
+                
+                <h4>📋 실험 기록</h4>
+                <div class="reaction-log" id="reactionLog">
+                    실험을 시작해보세요!
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <p>🎮 조작법: 원소를 선택하고 실험실에 드래그해서 화학 반응을 일으키세요!</p>
+            <p>🧪 목표: 다양한 원소를 조합해서 새로운 화합물을 만들어보세요!</p>
+            <p>💡 팁: 실제 화학 공식을 참고해서 실험해보세요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            experiments: 0,
+            successful: 0,
+            discoveries: 0,
+            score: 0,
+            selectedElement: null
+        };
+        
+        // 원소 데이터
+        const elements = {
+            H: { name: '수소', color: '#FF6B6B', symbol: 'H', atomicNumber: 1 },
+            O: { name: '산소', color: '#4ECDC4', symbol: 'O', atomicNumber: 8 },
+            C: { name: '탄소', color: '#45B7D1', symbol: 'C', atomicNumber: 6 },
+            N: { name: '질소', color: '#96CEB4', symbol: 'N', atomicNumber: 7 },
+            Na: { name: '나트륨', color: '#FFEAA7', symbol: 'Na', atomicNumber: 11 },
+            Cl: { name: '염소', color: '#DDA0DD', symbol: 'Cl', atomicNumber: 17 },
+            Ca: { name: '칼슘', color: '#F0E68C', symbol: 'Ca', atomicNumber: 20 },
+            Fe: { name: '철', color: '#CD853F', symbol: 'Fe', atomicNumber: 26 },
+            S: { name: '황', color: '#FFD700', symbol: 'S', atomicNumber: 16 },
+            P: { name: '인', color: '#FF69B4', symbol: 'P', atomicNumber: 15 }
+        };
+        
+        // 화학 반응 데이터
+        const reactions = {
+            'H+H+O': { product: 'H₂O', name: '물', color: '#4169E1', points: 50 },
+            'H+O': { product: 'OH⁻', name: '수산화 이온', color: '#00CED1', points: 30 },
+            'Na+Cl': { product: 'NaCl', name: '소금', color: '#FFFFFF', points: 40 },
+            'C+O+O': { product: 'CO₂', name: '이산화탄소', color: '#696969', points: 45 },
+            'C+O': { product: 'CO', name: '일산화탄소', color: '#A0A0A0', points: 35 },
+            'Ca+C+O+O+O': { product: 'CaCO₃', name: '탄산칼슘', color: '#F5F5DC', points: 60 },
+            'Fe+O+O+O': { product: 'Fe₂O₃', name: '산화철', color: '#B22222', points: 55 },
+            'S+O+O': { product: 'SO₂', name: '이산화황', color: '#FFFF99', points: 40 },
+            'N+H+H+H': { product: 'NH₃', name: '암모니아', color: '#E0E0E0', points: 50 },
+            'P+O+O+O+O+O': { product: 'P₂O₅', name: '오산화인', color: '#FFA500', points: 70 }
+        };
+        
+        // 실험실의 원소들
+        let labElements = [];
+        let particles = [];
+        let compounds = [];
+        
+        // 드래그 상태
+        let isDragging = false;
+        let dragElement = null;
+        
+        // 원소 패널 생성
+        function createElementPanel() {
+            const panel = document.getElementById('elementPanel');
+            
+            Object.keys(elements).forEach(symbol => {
+                const element = elements[symbol];
+                const button = document.createElement('button');
+                button.className = 'element-btn';
+                button.textContent = `${symbol} - ${element.name}`;
+                button.style.backgroundColor = element.color;
+                button.onclick = () => selectElement(symbol);
+                panel.appendChild(button);
+            });
+        }
+        
+        // 원소 선택
+        function selectElement(symbol) {
+            gameState.selectedElement = symbol;
+            document.querySelectorAll('.element-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+        
+        // 캔버스 클릭 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.selectedElement) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            addElementToLab(x, y, gameState.selectedElement);
+        });
+        
+        // 실험실에 원소 추가
+        function addElementToLab(x, y, symbol) {
+            const element = elements[symbol];
+            
+            labElements.push({
+                x: x,
+                y: y,
+                symbol: symbol,
+                ...element,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                size: 20,
+                id: Date.now() + Math.random()
+            });
+            
+            // 반응 체크
+            setTimeout(() => {
+                checkReactions();
+            }, 100);
+        }
+        
+        // 화학 반응 체크
+        function checkReactions() {
+            const elementCounts = {};
+            
+            // 현재 실험실의 원소들 카운트
+            labElements.forEach(element => {
+                elementCounts[element.symbol] = (elementCounts[element.symbol] || 0) + 1;
+            });
+            
+            // 가능한 반응 체크
+            Object.keys(reactions).forEach(reactionKey => {
+                const requiredElements = reactionKey.split('+');
+                const requiredCounts = {};
+                
+                requiredElements.forEach(element => {
+                    requiredCounts[element] = (requiredCounts[element] || 0) + 1;
+                });
+                
+                // 반응 가능한지 체크
+                let canReact = true;
+                Object.keys(requiredCounts).forEach(element => {
+                    if ((elementCounts[element] || 0) < requiredCounts[element]) {
+                        canReact = false;
+                    }
+                });
+                
+                if (canReact) {
+                    performReaction(reactionKey, requiredCounts);
+                    return;
+                }
+            });
+            
+            updateFormulaDisplay();
+        }
+        
+        // 반응 수행
+        function performReaction(reactionKey, requiredCounts) {
+            const reaction = reactions[reactionKey];
+            
+            // 반응에 사용된 원소들 제거
+            Object.keys(requiredCounts).forEach(element => {
+                let removeCount = requiredCounts[element];
+                labElements = labElements.filter(labElement => {
+                    if (labElement.symbol === element && removeCount > 0) {
+                        removeCount--;
+                        return false;
+                    }
+                    return true;
+                });
+            });
+            
+            // 새로운 화합물 생성
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            compounds.push({
+                x: centerX,
+                y: centerY,
+                product: reaction.product,
+                name: reaction.name,
+                color: reaction.color,
+                size: 30,
+                life: 300,
+                maxLife: 300
+            });
+            
+            // 파티클 효과
+            createParticles(centerX, centerY, reaction.color, 15);
+            
+            // 점수 및 통계 업데이트
+            gameState.experiments++;
+            gameState.successful++;
+            gameState.score += reaction.points;
+            
+            // 새로운 발견인지 체크
+            const logElement = document.getElementById('reactionLog');
+            if (!logElement.textContent.includes(reaction.name)) {
+                gameState.discoveries++;
+            }
+            
+            // 로그 추가
+            addToLog(`✅ ${reaction.name} (${reaction.product}) 생성! +${reaction.points}점`);
+            
+            updateUI();
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        // 로그에 추가
+        function addToLog(message) {
+            const log = document.getElementById('reactionLog');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${time}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // 공식 표시 업데이트
+        function updateFormulaDisplay() {
+            const elementCounts = {};
+            
+            labElements.forEach(element => {
+                elementCounts[element.symbol] = (elementCounts[element.symbol] || 0) + 1;
+            });
+            
+            let formula = '';
+            Object.keys(elementCounts).forEach(symbol => {
+                const count = elementCounts[symbol];
+                formula += count > 1 ? `${symbol}${count} ` : `${symbol} `;
+            });
+            
+            document.getElementById('formulaDisplay').textContent = 
+                formula ? `현재 조합: ${formula.trim()}` : '현재 조합: 없음';
+        }
+        
+        // 실험실 청소
+        function clearLab() {
+            labElements = [];
+            compounds = [];
+            particles = [];
+            updateFormulaDisplay();
+        }
+        
+        // 업데이트
+        function update() {
+            // 원소들 물리 시뮬레이션
+            labElements.forEach(element => {
+                element.x += element.vx;
+                element.y += element.vy;
+                
+                // 경계 반사
+                if (element.x <= element.size || element.x >= canvas.width - element.size) {
+                    element.vx *= -0.8;
+                    element.x = Math.max(element.size, Math.min(canvas.width - element.size, element.x));
+                }
+                if (element.y <= element.size || element.y >= canvas.height - element.size) {
+                    element.vy *= -0.8;
+                    element.y = Math.max(element.size, Math.min(canvas.height - element.size, element.y));
+                }
+                
+                // 마찰력
+                element.vx *= 0.98;
+                element.vy *= 0.98;
+            });
+            
+            // 원소간 충돌
+            for (let i = 0; i < labElements.length; i++) {
+                for (let j = i + 1; j < labElements.length; j++) {
+                    const elem1 = labElements[i];
+                    const elem2 = labElements[j];
+                    
+                    const dx = elem2.x - elem1.x;
+                    const dy = elem2.y - elem1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < elem1.size + elem2.size) {
+                        // 충돌 반응
+                        const angle = Math.atan2(dy, dx);
+                        const force = 2;
+                        
+                        elem1.vx -= Math.cos(angle) * force;
+                        elem1.vy -= Math.sin(angle) * force;
+                        elem2.vx += Math.cos(angle) * force;
+                        elem2.vy += Math.sin(angle) * force;
+                    }
+                }
+            }
+            
+            // 화합물 업데이트
+            compounds.forEach((compound, index) => {
+                compound.life--;
+                if (compound.life <= 0) {
+                    compounds.splice(index, 1);
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#ECF0F1');
+            gradient.addColorStop(1, '#BDC3C7');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 실험대 그리기
+            ctx.fillStyle = '#34495E';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // 비커들 그리기
+            for (let i = 0; i < 3; i++) {
+                const x = 100 + i * 200;
+                const y = canvas.height - 100;
+                
+                ctx.strokeStyle = '#2C3E50';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI);
+                ctx.lineTo(x - 30, y + 40);
+                ctx.lineTo(x + 30, y + 40);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            
+            // 원소들 그리기
+            labElements.forEach(element => {
+                // 원소 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.arc(element.x + 2, element.y + 2, element.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 원소 몸체
+                ctx.fillStyle = element.color;
+                ctx.beginPath();
+                ctx.arc(element.x, element.y, element.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 원소 기호
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(element.symbol, element.x, element.y + 5);
+                
+                // 원소 테두리
+                ctx.strokeStyle = '#2C3E50';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(element.x, element.y, element.size, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // 화합물들 그리기
+            compounds.forEach(compound => {
+                const alpha = compound.life / compound.maxLife;
+                ctx.globalAlpha = alpha;
+                
+                // 화합물 배경
+                ctx.fillStyle = compound.color;
+                ctx.beginPath();
+                ctx.arc(compound.x, compound.y, compound.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 화합물 이름
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(compound.product, compound.x, compound.y + 3);
+                
+                // 화합물 테두리
+                ctx.strokeStyle = '#2C3E50';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(compound.x, compound.y, compound.size, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('experiments').textContent = gameState.experiments;
+            document.getElementById('successful').textContent = gameState.successful;
+            document.getElementById('discoveries').textContent = gameState.discoveries;
+            document.getElementById('score').textContent = gameState.score;
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        createElementPanel();
+        addToLog('🧪 화학 실험실에 오신 것을 환영합니다!');
+        addToLog('💡 원소를 선택하고 실험실에 배치해보세요.');
+        gameLoop();
+    </script>
+</body>
+</html>

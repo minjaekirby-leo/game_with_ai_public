@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 음악 만들기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #9370DB;
+            max-width: 1000px;
+        }
+        
+        .sequencer {
+            display: grid;
+            grid-template-columns: 100px repeat(16, 1fr);
+            gap: 2px;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .track-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #9370DB;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 14px;
+        }
+        
+        .step {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .step:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        
+        .step.active {
+            background: #FFD700;
+            border-color: #FFA500;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .step.playing {
+            background: #FF69B4;
+            border-color: #FF1493;
+            animation: pulse 0.2s;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .current-step {
+            background: rgba(255, 0, 0, 0.3) !important;
+            border-color: #FF0000 !important;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: #9370DB;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: #8A2BE2;
+            transform: scale(1.05);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.playing {
+            background: #FF4500;
+        }
+        
+        .tempo-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: center;
+        }
+        
+        .tempo-slider {
+            width: 200px;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .volume-controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        
+        .volume-control {
+            text-align: center;
+        }
+        
+        .volume-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .volume-slider {
+            width: 100%;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .pattern-controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .pattern-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .pattern-btn:hover {
+            background: #45a049;
+        }
+        
+        .info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎵 음악 만들기</h1>
+        
+        <div class="controls">
+            <button class="control-btn" id="playBtn" onclick="togglePlay()">▶️ 재생</button>
+            <button class="control-btn" onclick="stopSequencer()">⏹️ 정지</button>
+            <button class="control-btn" onclick="clearAll()">🗑️ 모두 지우기</button>
+            <button class="control-btn" onclick="randomPattern()">🎲 랜덤 패턴</button>
+        </div>
+        
+        <div class="tempo-control">
+            <span>🥁 템포:</span>
+            <input type="range" class="tempo-slider" id="tempoSlider" min="60" max="180" value="120" oninput="updateTempo()">
+            <span id="tempoValue">120 BPM</span>
+        </div>
+        
+        <div class="sequencer" id="sequencer">
+            <!-- 시퀀서 그리드가 여기에 생성됩니다 -->
+        </div>
+        
+        <div class="volume-controls">
+            <div class="volume-control">
+                <div class="volume-label">🥁 킥</div>
+                <input type="range" class="volume-slider" id="kickVolume" min="0" max="100" value="80" oninput="updateVolume('kick', this.value)">
+            </div>
+            <div class="volume-control">
+                <div class="volume-label">🥁 스네어</div>
+                <input type="range" class="volume-slider" id="snareVolume" min="0" max="100" value="70" oninput="updateVolume('snare', this.value)">
+            </div>
+            <div class="volume-control">
+                <div class="volume-label">🎩 하이햇</div>
+                <input type="range" class="volume-slider" id="hihatVolume" min="0" max="100" value="60" oninput="updateVolume('hihat', this.value)">
+            </div>
+            <div class="volume-control">
+                <div class="volume-label">🎹 신스</div>
+                <input type="range" class="volume-slider" id="synthVolume" min="0" max="100" value="50" oninput="updateVolume('synth', this.value)">
+            </div>
+        </div>
+        
+        <div class="pattern-controls">
+            <button class="pattern-btn" onclick="loadPattern('rock')">🎸 록 패턴</button>
+            <button class="pattern-btn" onclick="loadPattern('disco')">🕺 디스코 패턴</button>
+            <button class="pattern-btn" onclick="loadPattern('techno')">🤖 테크노 패턴</button>
+            <button class="pattern-btn" onclick="loadPattern('jazz')">🎷 재즈 패턴</button>
+        </div>
+        
+        <div class="info">
+            <p>🎮 조작법: 각 칸을 클릭해서 비트를 만들어보세요!</p>
+            <p>💡 팁: 다양한 패턴을 조합해서 나만의 음악을 만들어보세요!</p>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            isPlaying: false,
+            currentStep: 0,
+            tempo: 120,
+            stepInterval: null
+        };
+        
+        // 트랙 설정
+        const tracks = [
+            { name: '🥁 킥', id: 'kick', frequency: 60, type: 'drum' },
+            { name: '🥁 스네어', id: 'snare', frequency: 200, type: 'drum' },
+            { name: '🎩 하이햇', id: 'hihat', frequency: 8000, type: 'drum' },
+            { name: '🎹 신스', id: 'synth', frequency: 440, type: 'synth' }
+        ];
+        
+        // 패턴 저장 (16스텝)
+        let pattern = {};
+        tracks.forEach(track => {
+            pattern[track.id] = new Array(16).fill(false);
+        });
+        
+        // 볼륨 설정
+        let volumes = {
+            kick: 0.8,
+            snare: 0.7,
+            hihat: 0.6,
+            synth: 0.5
+        };
+        
+        // 오디오 컨텍스트
+        let audioContext;
+        
+        // 오디오 컨텍스트 초기화
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // 시퀀서 그리드 생성
+        function createSequencer() {
+            const sequencer = document.getElementById('sequencer');
+            sequencer.innerHTML = '';
+            
+            tracks.forEach(track => {
+                // 트랙 라벨
+                const label = document.createElement('div');
+                label.className = 'track-label';
+                label.textContent = track.name;
+                sequencer.appendChild(label);
+                
+                // 16개 스텝
+                for (let step = 0; step < 16; step++) {
+                    const stepElement = document.createElement('div');
+                    stepElement.className = 'step';
+                    stepElement.dataset.track = track.id;
+                    stepElement.dataset.step = step;
+                    
+                    stepElement.addEventListener('click', () => {
+                        toggleStep(track.id, step);
+                    });
+                    
+                    sequencer.appendChild(stepElement);
+                }
+            });
+        }
+        
+        // 스텝 토글
+        function toggleStep(trackId, step) {
+            pattern[trackId][step] = !pattern[trackId][step];
+            updateStepDisplay(trackId, step);
+            
+            // 즉시 사운드 재생
+            if (pattern[trackId][step]) {
+                playSound(trackId);
+            }
+        }
+        
+        // 스텝 표시 업데이트
+        function updateStepDisplay(trackId, step) {
+            const stepElement = document.querySelector(`[data-track="${trackId}"][data-step="${step}"]`);
+            if (pattern[trackId][step]) {
+                stepElement.classList.add('active');
+            } else {
+                stepElement.classList.remove('active');
+            }
+        }
+        
+        // 사운드 재생
+        function playSound(trackId) {
+            initAudio();
+            
+            const track = tracks.find(t => t.id === trackId);
+            const volume = volumes[trackId];
+            
+            if (track.type === 'drum') {
+                playDrumSound(track.frequency, volume);
+            } else if (track.type === 'synth') {
+                playSynthSound(track.frequency, volume);
+            }
+        }
+        
+        // 드럼 사운드 생성
+        function playDrumSound(frequency, volume) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(frequency * 2, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+        
+        // 신스 사운드 생성
+        function playSynthSound(frequency, volume) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(frequency * 4, audioContext.currentTime);
+            filter.Q.setValueAtTime(10, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.3, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+        
+        // 재생/정지 토글
+        function togglePlay() {
+            if (gameState.isPlaying) {
+                stopSequencer();
+            } else {
+                startSequencer();
+            }
+        }
+        
+        // 시퀀서 시작
+        function startSequencer() {
+            initAudio();
+            gameState.isPlaying = true;
+            document.getElementById('playBtn').textContent = '⏸️ 일시정지';
+            document.getElementById('playBtn').classList.add('playing');
+            
+            const stepDuration = (60 / gameState.tempo / 4) * 1000; // 16분음표 기준
+            
+            gameState.stepInterval = setInterval(() => {
+                playCurrentStep();
+                gameState.currentStep = (gameState.currentStep + 1) % 16;
+                updateStepIndicator();
+            }, stepDuration);
+        }
+        
+        // 시퀀서 정지
+        function stopSequencer() {
+            gameState.isPlaying = false;
+            document.getElementById('playBtn').textContent = '▶️ 재생';
+            document.getElementById('playBtn').classList.remove('playing');
+            
+            if (gameState.stepInterval) {
+                clearInterval(gameState.stepInterval);
+                gameState.stepInterval = null;
+            }
+            
+            gameState.currentStep = 0;
+            updateStepIndicator();
+        }
+        
+        // 현재 스텝 재생
+        function playCurrentStep() {
+            tracks.forEach(track => {
+                if (pattern[track.id][gameState.currentStep]) {
+                    playSound(track.id);
+                    
+                    // 시각적 효과
+                    const stepElement = document.querySelector(`[data-track="${track.id}"][data-step="${gameState.currentStep}"]`);
+                    stepElement.classList.add('playing');
+                    setTimeout(() => {
+                        stepElement.classList.remove('playing');
+                    }, 200);
+                }
+            });
+        }
+        
+        // 스텝 인디케이터 업데이트
+        function updateStepIndicator() {
+            // 모든 current-step 클래스 제거
+            document.querySelectorAll('.current-step').forEach(el => {
+                el.classList.remove('current-step');
+            });
+            
+            // 현재 스텝에 클래스 추가
+            if (gameState.isPlaying) {
+                document.querySelectorAll(`[data-step="${gameState.currentStep}"]`).forEach(el => {
+                    el.classList.add('current-step');
+                });
+            }
+        }
+        
+        // 템포 업데이트
+        function updateTempo() {
+            const slider = document.getElementById('tempoSlider');
+            gameState.tempo = parseInt(slider.value);
+            document.getElementById('tempoValue').textContent = gameState.tempo + ' BPM';
+            
+            // 재생 중이면 재시작
+            if (gameState.isPlaying) {
+                stopSequencer();
+                startSequencer();
+            }
+        }
+        
+        // 볼륨 업데이트
+        function updateVolume(trackId, value) {
+            volumes[trackId] = value / 100;
+        }
+        
+        // 모든 패턴 지우기
+        function clearAll() {
+            if (confirm('모든 패턴을 지우시겠습니까?')) {
+                tracks.forEach(track => {
+                    pattern[track.id].fill(false);
+                });
+                updateAllSteps();
+            }
+        }
+        
+        // 모든 스텝 표시 업데이트
+        function updateAllSteps() {
+            tracks.forEach(track => {
+                for (let step = 0; step < 16; step++) {
+                    updateStepDisplay(track.id, step);
+                }
+            });
+        }
+        
+        // 랜덤 패턴 생성
+        function randomPattern() {
+            tracks.forEach(track => {
+                for (let step = 0; step < 16; step++) {
+                    pattern[track.id][step] = Math.random() < 0.3; // 30% 확률
+                }
+            });
+            updateAllSteps();
+        }
+        
+        // 프리셋 패턴 로드
+        function loadPattern(patternName) {
+            const patterns = {
+                rock: {
+                    kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+                    snare: [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+                    hihat: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    synth: [1,0,0,1,0,0,1,0,1,0,0,1,0,0,1,0]
+                },
+                disco: {
+                    kick: [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1],
+                    snare: [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+                    hihat: [1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+                    synth: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]
+                },
+                techno: {
+                    kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+                    snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+                    hihat: [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+                    synth: [1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0]
+                },
+                jazz: {
+                    kick: [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0],
+                    snare: [0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0],
+                    hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+                    synth: [1,0,0,0,1,0,0,1,0,0,1,0,0,0,1,0]
+                }
+            };
+            
+            const selectedPattern = patterns[patternName];
+            if (selectedPattern) {
+                tracks.forEach(track => {
+                    pattern[track.id] = selectedPattern[track.id].map(Boolean);
+                });
+                updateAllSteps();
+            }
+        }
+        
+        // 게임 초기화
+        function init() {
+            createSequencer();
+            updateAllSteps();
+        }
+        
+        // 게임 시작
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 집 꾸미기 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FFE4E1, #FFF8DC);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #DDA0DD;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .room-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        canvas {
+            border: 3px solid #DDA0DD;
+            border-radius: 10px;
+            background: #F5F5DC;
+            cursor: crosshair;
+        }
+        
+        .furniture-panel {
+            width: 200px;
+            background: rgba(221, 160, 221, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .furniture-category {
+            margin-bottom: 20px;
+        }
+        
+        .category-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #8B008B;
+            border-bottom: 2px solid #DDA0DD;
+            padding-bottom: 5px;
+        }
+        
+        .furniture-item {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px;
+            background: #DDA0DD;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .furniture-item:hover {
+            background: #DA70D6;
+            transform: scale(1.05);
+        }
+        
+        .furniture-item.selected {
+            background: #8B008B;
+            box-shadow: 0 0 10px rgba(139, 0, 139, 0.5);
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(221, 160, 221, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .action-buttons {
+            margin: 10px 0;
+        }
+        
+        .action-btn {
+            background: #FF69B4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #FF1493;
+            transform: scale(1.05);
+        }
+        
+        .room-selector {
+            margin: 10px 0;
+        }
+        
+        .room-btn {
+            background: #9370DB;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .room-btn.active {
+            background: #4B0082;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🏠 집 꾸미기 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">💰 예산: <span id="budget">1000</span>원</div>
+            <div class="stat">🛋️ 가구: <span id="furnitureCount">0</span>개</div>
+            <div class="stat">⭐ 만족도: <span id="satisfaction">0</span>%</div>
+        </div>
+        
+        <div class="room-selector">
+            <button class="room-btn active" onclick="selectRoom('living')">거실</button>
+            <button class="room-btn" onclick="selectRoom('bedroom')">침실</button>
+            <button class="room-btn" onclick="selectRoom('kitchen')">부엌</button>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn" onclick="clearRoom()">🗑️ 방 비우기</button>
+            <button class="action-btn" onclick="saveRoom()">💾 저장하기</button>
+            <button class="action-btn" onclick="showSatisfaction()">⭐ 만족도 확인</button>
+        </div>
+        
+        <div class="room-container">
+            <div class="furniture-panel">
+                <div class="furniture-category">
+                    <div class="category-title">🛋️ 소파 & 의자</div>
+                    <button class="furniture-item" onclick="selectFurniture('sofa', 150, '🛋️')">소파 (150원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('chair', 80, '🪑')">의자 (80원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('armchair', 120, '🛋️')">안락의자 (120원)</button>
+                </div>
+                
+                <div class="furniture-category">
+                    <div class="category-title">📺 전자제품</div>
+                    <button class="furniture-item" onclick="selectFurniture('tv', 200, '📺')">TV (200원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('computer', 180, '💻')">컴퓨터 (180원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('radio', 60, '📻')">라디오 (60원)</button>
+                </div>
+                
+                <div class="furniture-category">
+                    <div class="category-title">🛏️ 침실 가구</div>
+                    <button class="furniture-item" onclick="selectFurniture('bed', 250, '🛏️')">침대 (250원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('wardrobe', 180, '🚪')">옷장 (180원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('nightstand', 90, '🗄️')">협탁 (90원)</button>
+                </div>
+                
+                <div class="furniture-category">
+                    <div class="category-title">🍽️ 부엌 가구</div>
+                    <button class="furniture-item" onclick="selectFurniture('table', 120, '🍽️')">식탁 (120원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('fridge', 300, '🧊')">냉장고 (300원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('stove', 200, '🔥')">가스레인지 (200원)</button>
+                </div>
+                
+                <div class="furniture-category">
+                    <div class="category-title">🌿 장식품</div>
+                    <button class="furniture-item" onclick="selectFurniture('plant', 40, '🌱')">화분 (40원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('painting', 70, '🖼️')">그림 (70원)</button>
+                    <button class="furniture-item" onclick="selectFurniture('lamp', 50, '💡')">램프 (50원)</button>
+                </div>
+            </div>
+            
+            <canvas id="gameCanvas" width="600" height="500"></canvas>
+        </div>
+        
+        <div class="controls">
+            <p>🎮 조작법: 왼쪽에서 가구를 선택하고 방에 클릭해서 배치하세요!</p>
+            <p>💡 팁: 가구를 적절히 배치하면 만족도가 올라가요! 예산을 잘 관리하세요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            budget: 1000,
+            furnitureCount: 0,
+            satisfaction: 0,
+            selectedFurniture: null,
+            currentRoom: 'living'
+        };
+        
+        // 방별 가구 저장
+        let rooms = {
+            living: [],
+            bedroom: [],
+            kitchen: []
+        };
+        
+        // 방 배경색
+        const roomColors = {
+            living: '#F5F5DC',
+            bedroom: '#E6E6FA',
+            kitchen: '#F0F8FF'
+        };
+        
+        // 방 이름
+        const roomNames = {
+            living: '거실',
+            bedroom: '침실',
+            kitchen: '부엌'
+        };
+        
+        // 가구 선택
+        function selectFurniture(type, cost, emoji) {
+            if (gameState.budget >= cost) {
+                gameState.selectedFurniture = {
+                    type: type,
+                    cost: cost,
+                    emoji: emoji,
+                    size: getFurnitureSize(type)
+                };
+                
+                // 선택된 버튼 표시
+                document.querySelectorAll('.furniture-item').forEach(btn => btn.classList.remove('selected'));
+                event.target.classList.add('selected');
+                
+                canvas.style.cursor = 'crosshair';
+            } else {
+                alert('예산이 부족합니다!');
+            }
+        }
+        
+        // 가구 크기 반환
+        function getFurnitureSize(type) {
+            const sizes = {
+                sofa: { width: 80, height: 40 },
+                chair: { width: 30, height: 30 },
+                armchair: { width: 40, height: 40 },
+                tv: { width: 60, height: 40 },
+                computer: { width: 50, height: 30 },
+                radio: { width: 25, height: 25 },
+                bed: { width: 100, height: 60 },
+                wardrobe: { width: 50, height: 80 },
+                nightstand: { width: 30, height: 30 },
+                table: { width: 80, height: 50 },
+                fridge: { width: 40, height: 60 },
+                stove: { width: 50, height: 40 },
+                plant: { width: 20, height: 20 },
+                painting: { width: 40, height: 30 },
+                lamp: { width: 15, height: 15 }
+            };
+            return sizes[type] || { width: 30, height: 30 };
+        }
+        
+        // 방 선택
+        function selectRoom(room) {
+            gameState.currentRoom = room;
+            document.querySelectorAll('.room-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            render();
+        }
+        
+        // 캔버스 클릭 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.selectedFurniture) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 가구 배치 가능 여부 확인
+            if (canPlaceFurniture(x, y, gameState.selectedFurniture)) {
+                placeFurniture(x, y, gameState.selectedFurniture);
+                gameState.budget -= gameState.selectedFurniture.cost;
+                gameState.furnitureCount++;
+                gameState.selectedFurniture = null;
+                
+                // 선택 해제
+                document.querySelectorAll('.furniture-item').forEach(btn => btn.classList.remove('selected'));
+                canvas.style.cursor = 'default';
+                
+                calculateSatisfaction();
+                updateUI();
+            } else {
+                alert('여기에는 가구를 놓을 수 없어요!');
+            }
+        });
+        
+        // 가구 배치 가능 여부 확인
+        function canPlaceFurniture(x, y, furniture) {
+            const currentRoomFurniture = rooms[gameState.currentRoom];
+            
+            // 경계 체크
+            if (x < 0 || y < 0 || x + furniture.size.width > canvas.width || y + furniture.size.height > canvas.height) {
+                return false;
+            }
+            
+            // 다른 가구와 겹치는지 체크
+            for (let item of currentRoomFurniture) {
+                if (x < item.x + item.size.width &&
+                    x + furniture.size.width > item.x &&
+                    y < item.y + item.size.height &&
+                    y + furniture.size.height > item.y) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // 가구 배치
+        function placeFurniture(x, y, furniture) {
+            rooms[gameState.currentRoom].push({
+                x: x,
+                y: y,
+                type: furniture.type,
+                emoji: furniture.emoji,
+                size: furniture.size,
+                cost: furniture.cost
+            });
+        }
+        
+        // 만족도 계산
+        function calculateSatisfaction() {
+            let totalSatisfaction = 0;
+            let totalFurniture = 0;
+            
+            Object.keys(rooms).forEach(roomType => {
+                const roomFurniture = rooms[roomType];
+                totalFurniture += roomFurniture.length;
+                
+                // 방별 적절한 가구 보너스
+                roomFurniture.forEach(furniture => {
+                    let bonus = 10; // 기본 만족도
+                    
+                    // 방에 맞는 가구 보너스
+                    if (roomType === 'living' && ['sofa', 'tv', 'chair', 'table'].includes(furniture.type)) {
+                        bonus += 15;
+                    } else if (roomType === 'bedroom' && ['bed', 'wardrobe', 'nightstand'].includes(furniture.type)) {
+                        bonus += 15;
+                    } else if (roomType === 'kitchen' && ['table', 'fridge', 'stove'].includes(furniture.type)) {
+                        bonus += 15;
+                    }
+                    
+                    // 장식품 보너스
+                    if (['plant', 'painting', 'lamp'].includes(furniture.type)) {
+                        bonus += 5;
+                    }
+                    
+                    totalSatisfaction += bonus;
+                });
+                
+                // 가구 조합 보너스
+                const furnitureTypes = roomFurniture.map(f => f.type);
+                if (roomType === 'living' && furnitureTypes.includes('sofa') && furnitureTypes.includes('tv')) {
+                    totalSatisfaction += 20;
+                }
+                if (roomType === 'bedroom' && furnitureTypes.includes('bed') && furnitureTypes.includes('wardrobe')) {
+                    totalSatisfaction += 20;
+                }
+                if (roomType === 'kitchen' && furnitureTypes.includes('fridge') && furnitureTypes.includes('stove')) {
+                    totalSatisfaction += 20;
+                }
+            });
+            
+            gameState.satisfaction = Math.min(100, Math.floor(totalSatisfaction / Math.max(1, totalFurniture) * 2));
+        }
+        
+        // 방 비우기
+        function clearRoom() {
+            if (confirm(`${roomNames[gameState.currentRoom]}의 모든 가구를 제거하시겠습니까?`)) {
+                // 예산 환불
+                rooms[gameState.currentRoom].forEach(furniture => {
+                    gameState.budget += Math.floor(furniture.cost * 0.5); // 50% 환불
+                    gameState.furnitureCount--;
+                });
+                
+                rooms[gameState.currentRoom] = [];
+                calculateSatisfaction();
+                updateUI();
+            }
+        }
+        
+        // 저장하기
+        function saveRoom() {
+            const roomData = {
+                rooms: rooms,
+                budget: gameState.budget,
+                satisfaction: gameState.satisfaction
+            };
+            localStorage.setItem('houseDecorator', JSON.stringify(roomData));
+            alert('집 꾸미기가 저장되었습니다!');
+        }
+        
+        // 만족도 확인
+        function showSatisfaction() {
+            let message = `현재 만족도: ${gameState.satisfaction}%\n\n`;
+            
+            Object.keys(rooms).forEach(roomType => {
+                const count = rooms[roomType].length;
+                message += `${roomNames[roomType]}: ${count}개 가구\n`;
+            });
+            
+            if (gameState.satisfaction >= 80) {
+                message += '\n🎉 훌륭한 인테리어입니다!';
+            } else if (gameState.satisfaction >= 60) {
+                message += '\n😊 좋은 인테리어네요!';
+            } else if (gameState.satisfaction >= 40) {
+                message += '\n🙂 괜찮은 인테리어입니다.';
+            } else {
+                message += '\n😐 더 많은 가구가 필요해요.';
+            }
+            
+            alert(message);
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            ctx.fillStyle = roomColors[gameState.currentRoom];
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 격자 그리기
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 방 이름 표시
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(roomNames[gameState.currentRoom], canvas.width / 2, 30);
+            
+            // 현재 방의 가구들 그리기
+            const currentRoomFurniture = rooms[gameState.currentRoom];
+            currentRoomFurniture.forEach(furniture => {
+                // 가구 배경
+                ctx.fillStyle = 'rgba(139, 69, 19, 0.3)';
+                ctx.fillRect(furniture.x, furniture.y, furniture.size.width, furniture.size.height);
+                
+                // 가구 테두리
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(furniture.x, furniture.y, furniture.size.width, furniture.size.height);
+                
+                // 가구 이모지
+                ctx.font = `${Math.min(furniture.size.width, furniture.size.height) * 0.6}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#000';
+                ctx.fillText(
+                    furniture.emoji,
+                    furniture.x + furniture.size.width / 2,
+                    furniture.y + furniture.size.height / 2 + 5
+                );
+            });
+            
+            // 선택된 가구 미리보기
+            if (gameState.selectedFurniture) {
+                ctx.fillStyle = 'rgba(221, 160, 221, 0.5)';
+                ctx.fillRect(0, 0, gameState.selectedFurniture.size.width, gameState.selectedFurniture.size.height);
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('budget').textContent = gameState.budget;
+            document.getElementById('furnitureCount').textContent = gameState.furnitureCount;
+            document.getElementById('satisfaction').textContent = gameState.satisfaction;
+        }
+        
+        // 저장된 데이터 로드
+        function loadSavedData() {
+            const saved = localStorage.getItem('houseDecorator');
+            if (saved) {
+                const data = JSON.parse(saved);
+                rooms = data.rooms || rooms;
+                gameState.budget = data.budget || gameState.budget;
+                gameState.satisfaction = data.satisfaction || gameState.satisfaction;
+                
+                // 가구 개수 계산
+                gameState.furnitureCount = 0;
+                Object.keys(rooms).forEach(roomType => {
+                    gameState.furnitureCount += rooms[roomType].length;
+                });
+                
+                updateUI();
+            }
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        loadSavedData();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -137,6 +137,9 @@
     <div class="game-info">
         <div class="info-box">점수: <span id="score">0</span></div>
         <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+        <div id="secretMessage" style="display: none; background: linear-gradient(45deg, #ff6b6b, #ffd700); color: white; padding: 10px 20px; border-radius: 20px; font-size: 1rem; font-weight: bold; margin: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            💖 비밀 암호 활성화! 무적 모드 ON! 💖
+        </div>
     </div>
     
     <div class="game-container">
@@ -176,6 +179,11 @@
         let gameStarted = false;
         let score = 0;
         let bestScore = localStorage.getItem('flappyBirdBestScore') || 0;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
 
         // 새 설정
         const bird = {
@@ -364,7 +372,7 @@
                 bird.y = 0;
                 bird.velocityY = 0;
             }
-            if (bird.y > canvas.height - 50 - bird.height) {
+            if (!secretMode && bird.y > canvas.height - 50 - bird.height) {
                 gameOver();
             }
         }
@@ -412,8 +420,8 @@
                 const pipe = pipes[i];
                 pipe.update();
                 
-                // 충돌 검사
-                if (pipe.checkCollision(bird)) {
+                // 충돌 검사 (비밀 모드에서는 무시)
+                if (!secretMode && pipe.checkCollision(bird)) {
                     gameOver();
                     return;
                 }
@@ -557,6 +565,20 @@
 
         // 키보드 이벤트
         document.addEventListener('keydown', (e) => {
+            // 비밀 암호 입력 처리
+            if (e.key.length === 1) { // 일반 문자 키인 경우
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = ''; // 암호 입력 초기화
+                }
+            }
+            
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (!gameStarted) {

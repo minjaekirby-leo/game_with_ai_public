@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>궁수 마스터</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #228B22 0%, #32CD32 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏹 궁수 마스터</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">화살: <span id="arrows">10</span></div>
+            <div class="info-box">바람: <span id="wind">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 마우스로 조준, 클릭으로 발사</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let arrows = 10;
+        let wind = 0;
+
+        // 궁수
+        const archer = {
+            x: 100,
+            y: 400,
+            width: 40,
+            height: 60
+        };
+
+        // 과녁
+        const target = {
+            x: 650,
+            y: 300,
+            radius: 80,
+            moving: false,
+            moveSpeed: 2,
+            moveDirection: 1
+        };
+
+        // 화살들
+        let arrowsInFlight = [];
+        let particles = [];
+
+        // 마우스 위치
+        let mouseX = 0;
+        let mouseY = 0;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameRunning && !gamePaused) {
+                shootArrow();
+            }
+        });
+
+        function shootArrow() {
+            if (arrows <= 0) return;
+
+            const angle = Math.atan2(mouseY - archer.y, mouseX - archer.x);
+            const power = Math.min(15, Math.sqrt(Math.pow(mouseX - archer.x, 2) + Math.pow(mouseY - archer.y, 2)) / 20);
+
+            arrowsInFlight.push({
+                x: archer.x + 20,
+                y: archer.y + 30,
+                vx: Math.cos(angle) * power,
+                vy: Math.sin(angle) * power,
+                angle: angle,
+                trail: []
+            });
+
+            arrows--;
+        }
+
+        function updateArrows() {
+            arrowsInFlight.forEach((arrow, index) => {
+                // 바람 영향
+                arrow.vx += wind * 0.01;
+                
+                // 중력
+                arrow.vy += 0.3;
+                
+                // 위치 업데이트
+                arrow.x += arrow.vx;
+                arrow.y += arrow.vy;
+                
+                // 각도 업데이트 (화살이 날아가는 방향)
+                arrow.angle = Math.atan2(arrow.vy, arrow.vx);
+                
+                // 궤적 추가
+                arrow.trail.push({x: arrow.x, y: arrow.y});
+                if (arrow.trail.length > 10) {
+                    arrow.trail.shift();
+                }
+                
+                // 과녁과 충돌 검사
+                const distance = Math.sqrt(Math.pow(arrow.x - target.x, 2) + Math.pow(arrow.y - target.y, 2));
+                if (distance < target.radius) {
+                    hitTarget(arrow, distance);
+                    arrowsInFlight.splice(index, 1);
+                    return;
+                }
+                
+                // 화면 밖으로 나가면 제거
+                if (arrow.x > canvas.width || arrow.y > canvas.height || arrow.x < 0) {
+                    arrowsInFlight.splice(index, 1);
+                }
+            });
+        }
+
+        function hitTarget(arrow, distance) {
+            let points = 0;
+            
+            // 거리에 따른 점수 계산
+            if (distance < 20) {
+                points = 100; // 불스아이
+            } else if (distance < 40) {
+                points = 50;
+            } else if (distance < 60) {
+                points = 25;
+            } else {
+                points = 10;
+            }
+            
+            score += points;
+            
+            // 히트 파티클 생성
+            createHitParticles(arrow.x, arrow.y, points);
+            
+            // 과녁 이동 시작 (높은 점수일 때)
+            if (points >= 50) {
+                target.moving = true;
+            }
+        }
+
+        function updateTarget() {
+            if (target.moving) {
+                target.y += target.moveSpeed * target.moveDirection;
+                
+                if (target.y < 100 || target.y > canvas.height - 100) {
+                    target.moveDirection *= -1;
+                }
+            }
+        }
+
+        function createHitParticles(x, y, points) {
+            const color = points >= 100 ? '#FFD700' : points >= 50 ? '#FF6B6B' : '#4ECDC4';
+            
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 40,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.2; // 중력
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawArcher() {
+            // 궁수 몸
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(archer.x, archer.y, archer.width, archer.height);
+            
+            // 머리
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(archer.x + 5, archer.y, 30, 25);
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(archer.x + 10, archer.y + 8, 3, 3);
+            ctx.fillRect(archer.x + 20, archer.y + 8, 3, 3);
+            
+            // 활
+            const angle = Math.atan2(mouseY - archer.y, mouseX - archer.x);
+            const bowX = archer.x + 20;
+            const bowY = archer.y + 30;
+            
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(bowX, bowY, 25, angle - 0.5, angle + 0.5);
+            ctx.stroke();
+            
+            // 화살 (조준선)
+            if (arrows > 0) {
+                ctx.strokeStyle = '#D2691E';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(bowX, bowY);
+                ctx.lineTo(bowX + Math.cos(angle) * 40, bowY + Math.sin(angle) * 40);
+                ctx.stroke();
+            }
+        }
+
+        function drawTarget() {
+            // 과녁 링들
+            const rings = [
+                {radius: 80, color: '#FFFFFF'},
+                {radius: 65, color: '#000000'},
+                {radius: 50, color: '#0000FF'},
+                {radius: 35, color: '#FF0000'},
+                {radius: 20, color: '#FFD700'}
+            ];
+            
+            rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, ring.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 점수 표시
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('100', target.x, target.y + 5);
+            ctx.fillText('50', target.x, target.y + 25);
+            ctx.fillText('25', target.x, target.y + 45);
+            ctx.fillText('10', target.x, target.y + 65);
+        }
+
+        function drawArrows() {
+            arrowsInFlight.forEach(arrow => {
+                // 궤적
+                ctx.strokeStyle = 'rgba(139, 69, 19, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                arrow.trail.forEach((point, index) => {
+                    if (index === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                });
+                ctx.stroke();
+                
+                // 화살
+                ctx.save();
+                ctx.translate(arrow.x, arrow.y);
+                ctx.rotate(arrow.angle);
+                
+                // 화살대
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-15, -2, 30, 4);
+                
+                // 화살촉
+                ctx.fillStyle = '#C0C0C0';
+                ctx.beginPath();
+                ctx.moveTo(15, 0);
+                ctx.lineTo(10, -4);
+                ctx.lineTo(10, 4);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 깃털
+                ctx.fillStyle = '#FF6B6B';
+                ctx.fillRect(-15, -3, 8, 2);
+                ctx.fillRect(-15, 1, 8, 2);
+                
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 40;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBackground() {
+            // 하늘
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 5; i++) {
+                const x = i * 150 + 50;
+                const y = 50 + i * 10;
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI * 2);
+                ctx.arc(x + 20, y, 35, 0, Math.PI * 2);
+                ctx.arc(x + 40, y, 30, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 땅
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // 바람 표시
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            const windText = wind > 0 ? `바람: ${wind.toFixed(1)} →` : wind < 0 ? `바람: ${Math.abs(wind).toFixed(1)} ←` : '바람: 없음';
+            ctx.fillText(windText, 20, 30);
+        }
+
+        function checkGameEnd() {
+            if (arrows <= 0 && arrowsInFlight.length === 0) {
+                gameRunning = false;
+                setTimeout(() => {
+                    alert(`게임 종료! 최종 점수: ${score}점`);
+                }, 500);
+            }
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updateArrows();
+            updateTarget();
+            updateParticles();
+            checkGameEnd();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawTarget();
+            drawArcher();
+            drawArrows();
+            drawParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('arrows').textContent = arrows;
+            document.getElementById('wind').textContent = wind.toFixed(1);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            score = 0;
+            arrows = 10;
+            wind = (Math.random() - 0.5) * 4; // -2 ~ 2
+            
+            target.y = 300;
+            target.moving = false;
+            target.moveDirection = 1;
+            
+            arrowsInFlight = [];
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

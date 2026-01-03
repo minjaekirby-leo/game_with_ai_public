@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>연극 무대 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #8b0000 0%, #4b0000 50%, #2b0000 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            margin-bottom: 20px;
+            animation: spotlight 3s ease-in-out infinite;
+        }
+        
+        @keyframes spotlight {
+            0%, 100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+            50% { text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 40px rgba(255, 255, 255, 0.5); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #2c1810 0%, #8b4513 100%);
+            cursor: pointer;
+        }
+        
+        .game-info {
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            min-width: 200px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .actor-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .actor-btn {
+            background: linear-gradient(45deg, #8b0000, #4b0000);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .actor-btn:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #ffd700, #ffb347);
+            color: #333;
+        }
+        
+        .actor-btn.selected {
+            background: linear-gradient(45deg, #ffd700, #ffb347);
+            color: #333;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8b0000, #4b0000);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .scene-info {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 연극 무대</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>배우를 선택하고 무대에서 클릭해서 움직이세요!</p>
+        <p>각 장면의 지시사항에 따라 배우들을 배치하세요!</p>
+        <p>관객들의 박수를 받으면 점수를 얻어요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">장면: <span id="scene">1</span></div>
+            <div class="info-item">박수: <span id="applause">0</span></div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div class="scene-info" id="sceneInfo">
+                첫 번째 장면: 왕과 왕비가 만나는 장면
+            </div>
+            
+            <div class="actor-controls">
+                <button class="actor-btn" onclick="selectActor('king')">👑 왕</button>
+                <button class="actor-btn" onclick="selectActor('queen')">👸 왕비</button>
+                <button class="actor-btn" onclick="selectActor('knight')">⚔️ 기사</button>
+                <button class="actor-btn" onclick="selectActor('jester')">🃏 광대</button>
+            </div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>완벽한 연기 모드 ON! 💖
+            </div>
+            
+            <button onclick="nextScene()">다음 장면</button>
+            <button onclick="resetGame()">새 게임</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let score = 0;
+        let currentScene = 1;
+        let applause = 0;
+        let bestScore = localStorage.getItem('theaterBestScore') || 0;
+        let selectedActor = null;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 배우들
+        let actors = {
+            king: { x: 100, y: 400, emoji: '👑', name: '왕', color: '#ffd700', active: false },
+            queen: { x: 200, y: 400, emoji: '👸', name: '왕비', color: '#ff69b4', active: false },
+            knight: { x: 300, y: 400, emoji: '⚔️', name: '기사', color: '#c0c0c0', active: false },
+            jester: { x: 400, y: 400, emoji: '🃏', name: '광대', color: '#ff6b6b', active: false }
+        };
+        
+        // 장면 설정
+        const scenes = [
+            {
+                title: "첫 번째 장면: 왕과 왕비가 만나는 장면",
+                requirements: [
+                    { actor: 'king', x: 300, y: 300, tolerance: 80 },
+                    { actor: 'queen', x: 500, y: 300, tolerance: 80 }
+                ],
+                description: "왕과 왕비를 무대 중앙에 배치하세요!"
+            },
+            {
+                title: "두 번째 장면: 기사가 등장하는 장면",
+                requirements: [
+                    { actor: 'king', x: 200, y: 250, tolerance: 60 },
+                    { actor: 'queen', x: 600, y: 250, tolerance: 60 },
+                    { actor: 'knight', x: 400, y: 200, tolerance: 60 }
+                ],
+                description: "기사가 왕과 왕비 사이에 서도록 배치하세요!"
+            },
+            {
+                title: "세 번째 장면: 광대가 모두를 즐겁게 하는 장면",
+                requirements: [
+                    { actor: 'king', x: 150, y: 350, tolerance: 70 },
+                    { actor: 'queen', x: 650, y: 350, tolerance: 70 },
+                    { actor: 'knight', x: 300, y: 200, tolerance: 70 },
+                    { actor: 'jester', x: 400, y: 300, tolerance: 70 }
+                ],
+                description: "광대를 중앙에, 다른 배우들을 둘러싸게 배치하세요!"
+            },
+            {
+                title: "네 번째 장면: 대단원의 마지막",
+                requirements: [
+                    { actor: 'king', x: 300, y: 200, tolerance: 50 },
+                    { actor: 'queen', x: 500, y: 200, tolerance: 50 },
+                    { actor: 'knight', x: 250, y: 300, tolerance: 50 },
+                    { actor: 'jester', x: 550, y: 300, tolerance: 50 }
+                ],
+                description: "모든 배우들이 조화롭게 배치되도록 하세요!"
+            }
+        ];
+        
+        // 관객들
+        let audience = [];
+        let spotlights = [];
+        let particles = [];
+        
+        // 관객 생성
+        function createAudience() {
+            audience = [];
+            for (let i = 0; i < 20; i++) {
+                audience.push({
+                    x: 50 + i * 35,
+                    y: 500 + Math.random() * 50,
+                    happiness: 0,
+                    clapTimer: 0
+                });
+            }
+        }
+        
+        // 스포트라이트 생성
+        function createSpotlights() {
+            spotlights = [];
+            for (let i = 0; i < 3; i++) {
+                spotlights.push({
+                    x: 200 + i * 200,
+                    y: 100,
+                    radius: 80,
+                    intensity: Math.random() * 0.3 + 0.7
+                });
+            }
+        }
+        
+        // 파티클 효과
+        function createApplauseParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: Math.random() * -4 - 2,
+                    life: 40,
+                    color: secretMode ? '#ffd700' : '#ff6b6b',
+                    type: 'applause'
+                });
+            }
+        }
+        
+        function createSparkleParticles(x, y) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 30,
+                    color: '#ffd700',
+                    type: 'sparkle'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        createAudience();
+        createSpotlights();
+        
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!selectedActor) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 무대 영역 확인 (y < 450)
+            if (y < 450) {
+                actors[selectedActor].x = x;
+                actors[selectedActor].y = y;
+                
+                // 스파클 효과
+                createSparkleParticles(x, y);
+                
+                // 장면 요구사항 확인
+                checkSceneRequirements();
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        function selectActor(actorType) {
+            selectedActor = selectedActor === actorType ? null : actorType;
+            
+            // 모든 배우 비활성화
+            Object.keys(actors).forEach(key => {
+                actors[key].active = false;
+            });
+            
+            // 선택된 배우 활성화
+            if (selectedActor) {
+                actors[selectedActor].active = true;
+            }
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.actor-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            if (selectedActor) {
+                event.target.classList.add('selected');
+            }
+        }
+        
+        function checkSceneRequirements() {
+            const scene = scenes[currentScene - 1];
+            let correctPositions = 0;
+            
+            for (let req of scene.requirements) {
+                const actor = actors[req.actor];
+                const distance = Math.sqrt((actor.x - req.x)**2 + (actor.y - req.y)**2);
+                
+                if (distance <= req.tolerance) {
+                    correctPositions++;
+                }
+            }
+            
+            // 관객 반응 업데이트
+            const satisfaction = correctPositions / scene.requirements.length;
+            
+            for (let person of audience) {
+                person.happiness = satisfaction;
+                if (satisfaction > 0.8 || secretMode) {
+                    person.clapTimer = 60;
+                    if (Math.random() < 0.1) {
+                        createApplauseParticles(person.x, person.y - 20);
+                    }
+                }
+            }
+            
+            // 점수 계산
+            if (satisfaction >= 1.0 || secretMode) {
+                const bonus = secretMode ? 200 : 100;
+                score += bonus;
+                applause += 10;
+                
+                // 완벽한 배치 파티클
+                for (let req of scene.requirements) {
+                    const actor = actors[req.actor];
+                    createApplauseParticles(actor.x, actor.y - 30);
+                }
+            }
+            
+            updateDisplay();
+        }
+        
+        function nextScene() {
+            if (currentScene < scenes.length) {
+                currentScene++;
+                updateSceneInfo();
+                
+                // 배우들 초기 위치로 리셋
+                actors.king.x = 100;
+                actors.king.y = 400;
+                actors.queen.x = 200;
+                actors.queen.y = 400;
+                actors.knight.x = 300;
+                actors.knight.y = 400;
+                actors.jester.x = 400;
+                actors.jester.y = 400;
+                
+                selectedActor = null;
+                document.querySelectorAll('.actor-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                Object.keys(actors).forEach(key => {
+                    actors[key].active = false;
+                });
+            } else {
+                // 게임 완료
+                if (score > bestScore) {
+                    bestScore = score;
+                    localStorage.setItem('theaterBestScore', bestScore);
+                    document.getElementById('bestScore').textContent = bestScore;
+                }
+                alert(`연극 완료! 최종 점수: ${score}`);
+            }
+        }
+        
+        function updateSceneInfo() {
+            const scene = scenes[currentScene - 1];
+            document.getElementById('sceneInfo').textContent = scene.title;
+        }
+        
+        function resetGame() {
+            score = 0;
+            currentScene = 1;
+            applause = 0;
+            selectedActor = null;
+            
+            // 배우들 초기 위치로 리셋
+            actors.king.x = 100;
+            actors.king.y = 400;
+            actors.queen.x = 200;
+            actors.queen.y = 400;
+            actors.knight.x = 300;
+            actors.knight.y = 400;
+            actors.jester.x = 400;
+            actors.jester.y = 400;
+            
+            Object.keys(actors).forEach(key => {
+                actors[key].active = false;
+            });
+            
+            particles = [];
+            createAudience();
+            
+            document.querySelectorAll('.actor-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateSceneInfo();
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('scene').textContent = currentScene;
+            document.getElementById('applause').textContent = applause;
+        }
+        
+        function draw() {
+            // 배경 그리기
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, secretMode ? '#1a1a2e' : '#2c1810');
+            gradient.addColorStop(0.7, secretMode ? '#16213e' : '#8b4513');
+            gradient.addColorStop(1, '#654321');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 무대 그리기
+            ctx.fillStyle = secretMode ? '#ffd700' : '#daa520';
+            ctx.fillRect(0, 450, canvas.width, 150);
+            
+            // 무대 경계선
+            ctx.strokeStyle = '#8b4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 450);
+            ctx.lineTo(canvas.width, 450);
+            ctx.stroke();
+            
+            // 스포트라이트 효과
+            for (let spotlight of spotlights) {
+                const gradient = ctx.createRadialGradient(
+                    spotlight.x, spotlight.y, 0,
+                    spotlight.x, spotlight.y, spotlight.radius
+                );
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${spotlight.intensity})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(spotlight.x, spotlight.y, spotlight.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 장면 요구사항 표시 (반투명 원)
+            if (currentScene <= scenes.length) {
+                const scene = scenes[currentScene - 1];
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                
+                for (let req of scene.requirements) {
+                    ctx.beginPath();
+                    ctx.arc(req.x, req.y, req.tolerance, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+            }
+            
+            // 배우들 그리기
+            for (let [key, actor] of Object.entries(actors)) {
+                // 선택된 배우 하이라이트
+                if (actor.active) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(actor.x, actor.y, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 배우 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(actor.x, actor.y + 25, 20, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 배우 본체
+                ctx.fillStyle = actor.color;
+                ctx.beginPath();
+                ctx.arc(actor.x, actor.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 배우 이모지
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(actor.emoji, actor.x, actor.y + 10);
+                
+                // 배우 이름
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.fillText(actor.name, actor.x, actor.y + 45);
+            }
+            
+            // 관객 그리기
+            for (let person of audience) {
+                // 관객 몸
+                ctx.fillStyle = person.happiness > 0.5 ? '#4ecdc4' : '#95a5a6';
+                ctx.beginPath();
+                ctx.arc(person.x, person.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 박수 효과
+                if (person.clapTimer > 0) {
+                    person.clapTimer--;
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('👏', person.x, person.y - 15);
+                }
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                
+                if (p.type === 'sparkle') {
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✨', p.x, p.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+            
+            // 커튼 그리기
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#8b0000';
+            ctx.fillRect(0, 0, 50, canvas.height);
+            ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
+            
+            // 커튼 디테일
+            ctx.fillStyle = secretMode ? '#e74c3c' : '#4b0000';
+            for (let i = 0; i < 10; i++) {
+                ctx.fillRect(5, i * 60, 40, 20);
+                ctx.fillRect(canvas.width - 45, i * 60, 40, 20);
+            }
+        }
+        
+        function gameLoop() {
+            updateParticles();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        updateSceneInfo();
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

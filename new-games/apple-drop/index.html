@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>사과 떨어뜨리기 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🍎 사과 떨어뜨리기</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>마우스를 클릭해서 사과를 떨어뜨리세요!</p>
+        <p>바구니에 사과를 넣으면 점수를 얻습니다!</p>
+        <p>물리 법칙을 이용해서 정확하게 조준하세요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">사과: <span id="apples">10</span>/10</div>
+            <div class="info-item">성공률: <span id="accuracy">0</span>%</div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>자석 바구니 모드 ON! 💖
+            </div>
+            
+            <button onclick="resetGame()">새 게임</button>
+            <button onclick="togglePause()">일시정지</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameRunning = true;
+        let gamePaused = false;
+        let score = 0;
+        let applesLeft = 10;
+        let applesThrown = 0;
+        let applesInBasket = 0;
+        let bestScore = localStorage.getItem('appleDropBestScore') || 0;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 물리 설정
+        const gravity = 0.5;
+        const bounce = 0.7;
+        const friction = 0.98;
+        
+        // 사과들
+        let apples = [];
+        
+        // 바구니 설정
+        const basket = {
+            x: canvas.width - 150,
+            y: canvas.height - 100,
+            width: 120,
+            height: 60
+        };
+        
+        // 나무 설정
+        const tree = {
+            x: 100,
+            y: 150,
+            width: 80,
+            height: 200
+        };
+        
+        // 사과 클래스
+        class Apple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = 0;
+                this.radius = 15;
+                this.color = '#ff6b6b';
+                this.inBasket = false;
+                this.onGround = false;
+            }
+            
+            update() {
+                if (!this.inBasket && !this.onGround) {
+                    // 중력 적용
+                    this.vy += gravity;
+                    
+                    // 위치 업데이트
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // 바구니 충돌 검사
+                    if (this.x > basket.x && this.x < basket.x + basket.width &&
+                        this.y + this.radius > basket.y && this.y < basket.y + basket.height) {
+                        this.inBasket = true;
+                        this.vx = 0;
+                        this.vy = 0;
+                        this.y = basket.y - this.radius;
+                        
+                        // 점수 추가
+                        const points = secretMode ? 20 : 10;
+                        score += points;
+                        applesInBasket++;
+                        document.getElementById('score').textContent = score;
+                        updateAccuracy();
+                        
+                        // 파티클 효과
+                        createSuccessParticles(this.x, this.y);
+                    }
+                    
+                    // 바닥 충돌 검사
+                    if (this.y + this.radius > canvas.height - 20) {
+                        this.y = canvas.height - 20 - this.radius;
+                        this.vy *= -bounce;
+                        this.vx *= friction;
+                        
+                        if (Math.abs(this.vy) < 1) {
+                            this.onGround = true;
+                            this.vy = 0;
+                        }
+                    }
+                    
+                    // 벽 충돌 검사
+                    if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                        this.vx *= -bounce;
+                        this.x = this.x - this.radius < 0 ? this.radius : canvas.width - this.radius;
+                    }
+                    
+                    // 비밀 모드: 자석 효과
+                    if (secretMode && !this.inBasket) {
+                        const distToBasket = Math.sqrt((this.x - (basket.x + basket.width/2))**2 + (this.y - basket.y)**2);
+                        if (distToBasket < 100) {
+                            const magnetForce = 0.3;
+                            const dx = (basket.x + basket.width/2) - this.x;
+                            const dy = basket.y - this.y;
+                            this.vx += dx * magnetForce / distToBasket;
+                            this.vy += dy * magnetForce / distToBasket;
+                        }
+                    }
+                }
+            }
+            
+            draw() {
+                if (this.inBasket) {
+                    ctx.fillStyle = secretMode ? '#ffd700' : '#ff6b6b';
+                } else {
+                    ctx.fillStyle = this.color;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 사과 줄기
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(this.x - 2, this.y - this.radius, 4, 8);
+                
+                // 사과 잎사귀
+                ctx.fillStyle = '#228b22';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 5, this.y - this.radius + 3, 6, 3, Math.PI/4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 파티클 시스템
+        let particles = [];
+        
+        function createSuccessParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 40,
+                    color: secretMode ? '#ffd700' : '#00ff00'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (gameRunning && !gamePaused && applesLeft > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                
+                // 나무 근처에서만 사과 생성
+                if (mouseX < tree.x + tree.width + 50) {
+                    const apple = new Apple(
+                        tree.x + tree.width/2 + (Math.random() - 0.5) * 40,
+                        tree.y + 20
+                    );
+                    apples.push(apple);
+                    
+                    applesLeft--;
+                    applesThrown++;
+                    document.getElementById('apples').textContent = applesLeft;
+                    updateAccuracy();
+                }
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        function updateAccuracy() {
+            const accuracy = applesThrown > 0 ? Math.round((applesInBasket / applesThrown) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy;
+        }
+        
+        function resetGame() {
+            apples = [];
+            particles = [];
+            score = 0;
+            applesLeft = 10;
+            applesThrown = 0;
+            applesInBasket = 0;
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('apples').textContent = applesLeft;
+            updateAccuracy();
+            
+            gameRunning = true;
+            gamePaused = false;
+        }
+        
+        function togglePause() {
+            gamePaused = !gamePaused;
+        }
+        
+        function checkGameEnd() {
+            if (applesLeft === 0 && apples.every(apple => apple.inBasket || apple.onGround)) {
+                if (score > bestScore) {
+                    bestScore = score;
+                    localStorage.setItem('appleDropBestScore', bestScore);
+                    document.getElementById('bestScore').textContent = bestScore;
+                }
+            }
+        }
+        
+        function draw() {
+            // 배경 그리기
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, secretMode ? '#1a1a2e' : '#87CEEB');
+            gradient.addColorStop(1, secretMode ? '#16213e' : '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 구름 그리기
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 3; i++) {
+                const x = 100 + i * 200;
+                const y = 80 + i * 20;
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI * 2);
+                ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
+                ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 나무 그리기
+            ctx.fillStyle = '#8b4513';
+            ctx.fillRect(tree.x + 20, tree.y + 100, 40, 100);
+            
+            // 나무 잎사귀
+            ctx.fillStyle = secretMode ? '#ffd700' : '#228b22';
+            ctx.beginPath();
+            ctx.arc(tree.x + tree.width/2, tree.y + 50, 60, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 바구니 그리기
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#8b4513';
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+            
+            // 바구니 테두리
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(basket.x, basket.y, basket.width, basket.height);
+            
+            // 비밀 모드: 자석 효과 표시
+            if (secretMode) {
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(basket.x + basket.width/2, basket.y + basket.height/2, 100, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // 사과들 그리기
+            for (let apple of apples) {
+                apple.draw();
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // 바닥 그리기
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+            
+            // 게임 종료 메시지
+            if (applesLeft === 0 && apples.every(apple => apple.inBasket || apple.onGround)) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('게임 종료!', canvas.width/2, canvas.height/2 - 50);
+                
+                ctx.font = '24px Arial';
+                ctx.fillText(`최종 점수: ${score}`, canvas.width/2, canvas.height/2);
+                ctx.fillText(`성공률: ${Math.round((applesInBasket / applesThrown) * 100)}%`, canvas.width/2, canvas.height/2 + 30);
+            }
+        }
+        
+        function gameLoop() {
+            if (gameRunning && !gamePaused) {
+                // 사과들 업데이트
+                for (let apple of apples) {
+                    apple.update();
+                }
+                
+                updateParticles();
+                checkGameEnd();
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

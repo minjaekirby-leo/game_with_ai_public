@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>성 방어 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+            to { text-shadow: 0 0 30px rgba(255, 255, 255, 0.8); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%);
+            cursor: crosshair;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .tower-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .tower-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tower-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .tower-btn.selected {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🏰 성 방어 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>적들이 성에 도달하기 전에 타워를 설치해서 막으세요!</p>
+        <p>타워를 선택하고 맵에 클릭해서 설치하세요!</p>
+        <p>각 타워마다 다른 능력이 있어요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">체력: <span id="health">100</span></div>
+            <div class="info-item">골드: <span id="gold">100</span></div>
+            <div class="info-item">웨이브: <span id="wave">1</span></div>
+            <div class="info-item">적 수: <span id="enemies">0</span></div>
+            
+            <div class="tower-buttons">
+                <button class="tower-btn" onclick="selectTower('basic')">🏹 기본 (10G)</button>
+                <button class="tower-btn" onclick="selectTower('cannon')">💣 대포 (25G)</button>
+                <button class="tower-btn" onclick="selectTower('ice')">❄️ 얼음 (20G)</button>
+                <button class="tower-btn" onclick="selectTower('lightning')">⚡ 번개 (30G)</button>
+            </div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>무한 골드 모드 ON! 💖
+            </div>
+            
+            <button onclick="startWave()">웨이브 시작</button>
+            <button onclick="resetGame()">새 게임</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameRunning = false;
+        let health = 100;
+        let gold = 100;
+        let wave = 1;
+        let selectedTowerType = null;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 경로 설정
+        const path = [
+            {x: 0, y: 300},
+            {x: 200, y: 300},
+            {x: 200, y: 150},
+            {x: 400, y: 150},
+            {x: 400, y: 450},
+            {x: 600, y: 450},
+            {x: 600, y: 300},
+            {x: 800, y: 300}
+        ];
+        
+        // 게임 객체들
+        let towers = [];
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        
+        // 타워 타입들
+        const towerTypes = {
+            basic: { cost: 10, damage: 20, range: 80, speed: 1000, color: '#8b4513', projectileColor: '#ff6b6b' },
+            cannon: { cost: 25, damage: 50, range: 100, speed: 1500, color: '#2c3e50', projectileColor: '#e74c3c' },
+            ice: { cost: 20, damage: 15, range: 90, speed: 800, color: '#3498db', projectileColor: '#74b9ff', slow: true },
+            lightning: { cost: 30, damage: 80, range: 120, speed: 2000, color: '#f39c12', projectileColor: '#ffd700', chain: true }
+        };
+        
+        // 적 클래스
+        class Enemy {
+            constructor(type, wave) {
+                this.type = type;
+                this.maxHealth = 50 + wave * 10;
+                this.health = this.maxHealth;
+                this.speed = 1 + wave * 0.1;
+                this.reward = 5 + wave;
+                this.pathIndex = 0;
+                this.x = path[0].x;
+                this.y = path[0].y;
+                this.slowEffect = 0;
+                this.color = this.getColor();
+            }
+            
+            getColor() {
+                const colors = ['#e74c3c', '#9b59b6', '#3498db', '#e67e22', '#1abc9c'];
+                return colors[this.type % colors.length];
+            }
+            
+            update() {
+                if (this.pathIndex < path.length - 1) {
+                    const target = path[this.pathIndex + 1];
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 5) {
+                        this.pathIndex++;
+                    } else {
+                        const currentSpeed = this.slowEffect > 0 ? this.speed * 0.5 : this.speed;
+                        this.x += (dx / distance) * currentSpeed;
+                        this.y += (dy / distance) * currentSpeed;
+                    }
+                    
+                    if (this.slowEffect > 0) this.slowEffect--;
+                } else {
+                    // 성에 도달
+                    health -= 10;
+                    return false;
+                }
+                
+                return this.health > 0;
+            }
+            
+            takeDamage(damage, slowEffect = false) {
+                this.health -= damage;
+                if (slowEffect) {
+                    this.slowEffect = 60; // 1초간 느려짐
+                }
+                
+                if (this.health <= 0) {
+                    gold += secretMode ? this.reward * 2 : this.reward;
+                    createDeathParticles(this.x, this.y);
+                    return true;
+                }
+                return false;
+            }
+            
+            draw() {
+                // 적 몸체
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 체력바
+                const barWidth = 30;
+                const barHeight = 4;
+                const healthPercent = this.health / this.maxHealth;
+                
+                ctx.fillStyle = '#333';
+                ctx.fillRect(this.x - barWidth/2, this.y - 25, barWidth, barHeight);
+                
+                ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                ctx.fillRect(this.x - barWidth/2, this.y - 25, barWidth * healthPercent, barHeight);
+                
+                // 슬로우 효과 표시
+                if (this.slowEffect > 0) {
+                    ctx.strokeStyle = '#74b9ff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // 타워 클래스
+        class Tower {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.config = towerTypes[type];
+                this.lastShot = 0;
+                this.target = null;
+            }
+            
+            update() {
+                // 타겟 찾기
+                this.target = null;
+                let closestDistance = this.config.range;
+                
+                for (let enemy of enemies) {
+                    const distance = Math.sqrt((enemy.x - this.x)**2 + (enemy.y - this.y)**2);
+                    if (distance < closestDistance) {
+                        this.target = enemy;
+                        closestDistance = distance;
+                    }
+                }
+                
+                // 발사
+                if (this.target && Date.now() - this.lastShot > this.config.speed) {
+                    this.shoot();
+                    this.lastShot = Date.now();
+                }
+            }
+            
+            shoot() {
+                if (this.type === 'lightning') {
+                    // 번개 타워: 즉시 데미지
+                    this.target.takeDamage(this.config.damage);
+                    createLightningEffect(this.x, this.y, this.target.x, this.target.y);
+                    
+                    // 체인 라이트닝
+                    if (this.config.chain) {
+                        for (let enemy of enemies) {
+                            if (enemy !== this.target) {
+                                const distance = Math.sqrt((enemy.x - this.target.x)**2 + (enemy.y - this.target.y)**2);
+                                if (distance < 60) {
+                                    enemy.takeDamage(this.config.damage * 0.5);
+                                    createLightningEffect(this.target.x, this.target.y, enemy.x, enemy.y);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 일반 발사체
+                    projectiles.push(new Projectile(this.x, this.y, this.target, this.config));
+                }
+            }
+            
+            draw() {
+                // 타워 베이스
+                ctx.fillStyle = this.config.color;
+                ctx.fillRect(this.x - 15, this.y - 15, 30, 30);
+                
+                // 타워 포탑
+                ctx.fillStyle = '#34495e';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 사거리 표시 (선택된 타워만)
+                if (selectedTowerType && this.type === selectedTowerType) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.config.range, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+        
+        // 발사체 클래스
+        class Projectile {
+            constructor(x, y, target, config) {
+                this.x = x;
+                this.y = y;
+                this.target = target;
+                this.config = config;
+                this.speed = 5;
+            }
+            
+            update() {
+                if (!this.target || this.target.health <= 0) {
+                    return false;
+                }
+                
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 10) {
+                    // 타겟에 도달
+                    const killed = this.target.takeDamage(this.config.damage, this.config.slow);
+                    if (killed) {
+                        enemies = enemies.filter(e => e !== this.target);
+                    }
+                    return false;
+                } else {
+                    this.x += (dx / distance) * this.speed;
+                    this.y += (dy / distance) * this.speed;
+                    return true;
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = this.config.projectileColor;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 파티클 효과
+        function createDeathParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color: secretMode ? '#ffd700' : '#ff6b6b'
+                });
+            }
+        }
+        
+        function createLightningEffect(x1, y1, x2, y2) {
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            
+            // 지그재그 번개 효과
+            const steps = 5;
+            for (let i = 1; i <= steps; i++) {
+                const progress = i / steps;
+                const x = x1 + (x2 - x1) * progress + (Math.random() - 0.5) * 20;
+                const y = y1 + (y2 - y1) * progress + (Math.random() - 0.5) * 20;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 마우스 이벤트
+        canvas.addEventListener('click', (e) => {
+            if (!selectedTowerType) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 경로와 다른 타워와 겹치지 않는지 확인
+            let canPlace = true;
+            
+            // 경로 확인
+            for (let point of path) {
+                if (Math.sqrt((x - point.x)**2 + (y - point.y)**2) < 40) {
+                    canPlace = false;
+                    break;
+                }
+            }
+            
+            // 다른 타워 확인
+            for (let tower of towers) {
+                if (Math.sqrt((x - tower.x)**2 + (y - tower.y)**2) < 40) {
+                    canPlace = false;
+                    break;
+                }
+            }
+            
+            // 타워 설치
+            if (canPlace) {
+                const cost = towerTypes[selectedTowerType].cost;
+                if (secretMode || gold >= cost) {
+                    if (!secretMode) gold -= cost;
+                    towers.push(new Tower(x, y, selectedTowerType));
+                    updateDisplay();
+                }
+            }
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                    
+                    if (secretMode) {
+                        gold = 9999; // 무한 골드
+                        updateDisplay();
+                    }
+                }
+            }
+        });
+        
+        function selectTower(type) {
+            selectedTowerType = selectedTowerType === type ? null : type;
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.tower-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            if (selectedTowerType) {
+                event.target.classList.add('selected');
+            }
+        }
+        
+        function startWave() {
+            if (gameRunning) return;
+            
+            gameRunning = true;
+            const enemyCount = 5 + wave * 2;
+            
+            for (let i = 0; i < enemyCount; i++) {
+                setTimeout(() => {
+                    enemies.push(new Enemy(i % 3, wave));
+                }, i * 1000);
+            }
+        }
+        
+        function updateDisplay() {
+            document.getElementById('health').textContent = health;
+            document.getElementById('gold').textContent = gold;
+            document.getElementById('wave').textContent = wave;
+            document.getElementById('enemies').textContent = enemies.length;
+        }
+        
+        function resetGame() {
+            health = 100;
+            gold = 100;
+            wave = 1;
+            gameRunning = false;
+            selectedTowerType = null;
+            
+            towers = [];
+            enemies = [];
+            projectiles = [];
+            particles = [];
+            
+            updateDisplay();
+            
+            document.querySelectorAll('.tower-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+        
+        function checkWaveComplete() {
+            if (gameRunning && enemies.length === 0) {
+                gameRunning = false;
+                wave++;
+                gold += 20; // 웨이브 완료 보너스
+                updateDisplay();
+            }
+        }
+        
+        function draw() {
+            // 배경 그리기
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, secretMode ? '#1a1a2e' : '#87CEEB');
+            gradient.addColorStop(1, secretMode ? '#16213e' : '#90EE90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 경로 그리기
+            ctx.strokeStyle = secretMode ? '#ffd700' : '#8b4513';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            // 성 그리기
+            const castleX = path[path.length - 1].x - 50;
+            const castleY = path[path.length - 1].y - 40;
+            
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#7f8c8d';
+            ctx.fillRect(castleX, castleY, 100, 80);
+            
+            // 성 탑들
+            ctx.fillStyle = secretMode ? '#e74c3c' : '#95a5a6';
+            ctx.fillRect(castleX - 10, castleY - 20, 30, 40);
+            ctx.fillRect(castleX + 80, castleY - 20, 30, 40);
+            ctx.fillRect(castleX + 35, castleY - 30, 30, 50);
+            
+            // 타워들 그리기
+            for (let tower of towers) {
+                tower.draw();
+            }
+            
+            // 적들 그리기
+            for (let enemy of enemies) {
+                enemy.draw();
+            }
+            
+            // 발사체들 그리기
+            for (let projectile of projectiles) {
+                projectile.draw();
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // 게임 오버 화면
+            if (health <= 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('게임 오버!', canvas.width/2, canvas.height/2 - 50);
+                
+                ctx.font = '24px Arial';
+                ctx.fillText(`웨이브 ${wave}까지 도달!`, canvas.width/2, canvas.height/2);
+            }
+        }
+        
+        function gameLoop() {
+            if (health > 0) {
+                // 타워들 업데이트
+                for (let tower of towers) {
+                    tower.update();
+                }
+                
+                // 적들 업데이트
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    if (!enemies[i].update()) {
+                        enemies.splice(i, 1);
+                    }
+                }
+                
+                // 발사체들 업데이트
+                for (let i = projectiles.length - 1; i >= 0; i--) {
+                    if (!projectiles[i].update()) {
+                        projectiles.splice(i, 1);
+                    }
+                }
+                
+                updateParticles();
+                checkWaveComplete();
+                updateDisplay();
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

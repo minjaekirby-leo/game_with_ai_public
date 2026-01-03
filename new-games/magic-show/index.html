@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>마술 쇼</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #2c3e50 0%, #8e44ad 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: radial-gradient(circle, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        .magic-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .magic-btn {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .magic-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎪 마술 쇼</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">관객 만족도: <span id="satisfaction">50</span>%</div>
+            <div class="info-box">마술 횟수: <span id="tricks">0</span></div>
+            <div class="info-box">점수: <span id="score">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="magic-controls">
+            <button class="magic-btn" onclick="performTrick('disappear')">🎩 사라지기</button>
+            <button class="magic-btn" onclick="performTrick('cards')">🃏 카드 트릭</button>
+            <button class="magic-btn" onclick="performTrick('rabbit')">🐰 토끼 마술</button>
+            <button class="magic-btn" onclick="performTrick('levitate')">🪄 공중부양</button>
+            <button class="magic-btn" onclick="performTrick('fire')">🔥 불 마술</button>
+            <button class="magic-btn" onclick="performTrick('teleport')">✨ 순간이동</button>
+        </div>
+        
+        <div class="controls">
+            <button onclick="startShow()">🎮 쇼 시작</button>
+            <button onclick="resetShow()">🔄 다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let showRunning = false;
+        let satisfaction = 50;
+        let tricksPerformed = 0;
+        let score = 0;
+        let currentTrick = null;
+        let particles = [];
+        let audience = [];
+
+        // 마술사
+        const magician = {
+            x: 400,
+            y: 350,
+            width: 60,
+            height: 100,
+            hat: true,
+            wand: false,
+            performing: false
+        };
+
+        function initializeAudience() {
+            audience = [];
+            for (let i = 0; i < 20; i++) {
+                audience.push({
+                    x: 50 + i * 35,
+                    y: 450,
+                    mood: 0.5, // 0 = 불만, 1 = 매우 만족
+                    clapping: false,
+                    clapTimer: 0
+                });
+            }
+        }
+
+        function performTrick(trickType) {
+            if (!showRunning || currentTrick) return;
+            
+            currentTrick = {
+                type: trickType,
+                phase: 'start',
+                timer: 0,
+                success: Math.random() > 0.2 // 80% 성공률
+            };
+            
+            magician.performing = true;
+            magician.wand = true;
+            
+            tricksPerformed++;
+        }
+
+        function updateTrick() {
+            if (!currentTrick) return;
+            
+            currentTrick.timer++;
+            
+            switch (currentTrick.phase) {
+                case 'start':
+                    if (currentTrick.timer > 60) {
+                        currentTrick.phase = 'effect';
+                        currentTrick.timer = 0;
+                        createTrickEffect();
+                    }
+                    break;
+                    
+                case 'effect':
+                    if (currentTrick.timer > 120) {
+                        currentTrick.phase = 'end';
+                        currentTrick.timer = 0;
+                        endTrick();
+                    }
+                    break;
+                    
+                case 'end':
+                    if (currentTrick.timer > 60) {
+                        currentTrick = null;
+                        magician.performing = false;
+                        magician.wand = false;
+                    }
+                    break;
+            }
+        }
+
+        function createTrickEffect() {
+            const effects = {
+                'disappear': () => {
+                    magician.hat = false;
+                    createParticles(magician.x, magician.y - 50, '#9b59b6', 20);
+                },
+                'cards': () => {
+                    for (let i = 0; i < 10; i++) {
+                        createParticles(magician.x + (Math.random() - 0.5) * 100, 
+                                      magician.y - Math.random() * 100, '#e74c3c', 5);
+                    }
+                },
+                'rabbit': () => {
+                    createParticles(magician.x, magician.y - 80, '#ffffff', 15);
+                },
+                'levitate': () => {
+                    magician.y -= 50;
+                    createParticles(magician.x, magician.y + 50, '#f1c40f', 25);
+                },
+                'fire': () => {
+                    createParticles(magician.x, magician.y - 30, '#e67e22', 30);
+                },
+                'teleport': () => {
+                    createParticles(magician.x, magician.y, '#3498db', 40);
+                    magician.x = 200 + Math.random() * 400;
+                }
+            };
+            
+            if (effects[currentTrick.type]) {
+                effects[currentTrick.type]();
+            }
+        }
+
+        function endTrick() {
+            // 마술사 원상복구
+            magician.y = 350;
+            magician.hat = true;
+            
+            // 성공/실패에 따른 관객 반응
+            const satisfactionChange = currentTrick.success ? 
+                Math.random() * 20 + 10 : // 성공: +10~30
+                -(Math.random() * 15 + 5); // 실패: -5~20
+            
+            satisfaction = Math.max(0, Math.min(100, satisfaction + satisfactionChange));
+            
+            if (currentTrick.success) {
+                score += Math.floor(satisfactionChange * 10);
+                
+                // 관객 박수
+                audience.forEach(person => {
+                    person.clapping = true;
+                    person.clapTimer = 60;
+                    person.mood = Math.min(1, person.mood + 0.1);
+                });
+            } else {
+                audience.forEach(person => {
+                    person.mood = Math.max(0, person.mood - 0.1);
+                });
+            }
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 50,
+                    y: y + (Math.random() - 0.5) * 50,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 60,
+                    color: color,
+                    size: Math.random() * 5 + 2
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.1; // 중력
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function updateAudience() {
+            audience.forEach(person => {
+                if (person.clapping && person.clapTimer > 0) {
+                    person.clapTimer--;
+                    if (person.clapTimer <= 0) {
+                        person.clapping = false;
+                    }
+                }
+                
+                // 시간이 지나면서 만족도 천천히 감소
+                if (Math.random() < 0.001) {
+                    person.mood = Math.max(0, person.mood - 0.01);
+                }
+            });
+        }
+
+        function drawStage() {
+            // 무대 배경
+            const gradient = ctx.createRadialGradient(400, 250, 0, 400, 250, 400);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 스포트라이트
+            const spotlight = ctx.createRadialGradient(magician.x, magician.y - 50, 0, magician.x, magician.y - 50, 150);
+            spotlight.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+            spotlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = spotlight;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 무대 바닥
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 400, canvas.width, 100);
+        }
+
+        function drawMagician() {
+            // 몸
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(magician.x - 15, magician.y, 30, 60);
+            
+            // 망토
+            ctx.fillStyle = '#8e44ad';
+            ctx.fillRect(magician.x - 25, magician.y + 10, 50, 50);
+            
+            // 머리
+            ctx.fillStyle = '#f4d03f';
+            ctx.fillRect(magician.x - 10, magician.y - 20, 20, 20);
+            
+            // 모자 (사라지기 마술 중이 아닐 때만)
+            if (magician.hat) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(magician.x - 12, magician.y - 35, 24, 15);
+                ctx.fillRect(magician.x - 8, magician.y - 45, 16, 10);
+            }
+            
+            // 지팡이
+            if (magician.wand) {
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(magician.x + 20, magician.y + 20);
+                ctx.lineTo(magician.x + 35, magician.y - 10);
+                ctx.stroke();
+                
+                // 지팡이 끝 별
+                ctx.fillStyle = '#f1c40f';
+                ctx.font = '16px Arial';
+                ctx.fillText('⭐', magician.x + 30, magician.y - 5);
+            }
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(magician.x - 6, magician.y - 15, 2, 2);
+            ctx.fillRect(magician.x + 4, magician.y - 15, 2, 2);
+        }
+
+        function drawAudience() {
+            audience.forEach(person => {
+                // 몸
+                const moodColor = person.mood > 0.7 ? '#27ae60' : 
+                                person.mood > 0.3 ? '#f39c12' : '#e74c3c';
+                ctx.fillStyle = moodColor;
+                ctx.fillRect(person.x - 8, person.y - 20, 16, 20);
+                
+                // 머리
+                ctx.fillStyle = '#f4d03f';
+                ctx.beginPath();
+                ctx.arc(person.x, person.y - 25, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 박수 중일 때 손 표시
+                if (person.clapping) {
+                    ctx.fillStyle = '#f4d03f';
+                    ctx.fillRect(person.x - 12, person.y - 15, 4, 8);
+                    ctx.fillRect(person.x + 8, person.y - 15, 4, 8);
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 60;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawTrickText() {
+            if (!currentTrick) return;
+            
+            const trickNames = {
+                'disappear': '사라지기 마술!',
+                'cards': '카드 트릭!',
+                'rabbit': '토끼 마술!',
+                'levitate': '공중부양!',
+                'fire': '불 마술!',
+                'teleport': '순간이동!'
+            };
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(trickNames[currentTrick.type], canvas.width / 2, 50);
+            
+            if (currentTrick.phase === 'end') {
+                const result = currentTrick.success ? '성공!' : '실패...';
+                const color = currentTrick.success ? '#27ae60' : '#e74c3c';
+                ctx.fillStyle = color;
+                ctx.fillText(result, canvas.width / 2, 80);
+            }
+        }
+
+        function checkShowEnd() {
+            if (satisfaction <= 0) {
+                showRunning = false;
+                alert('관객들이 모두 떠났습니다... 쇼가 끝났습니다.');
+            } else if (tricksPerformed >= 15) {
+                showRunning = false;
+                alert(`훌륭한 쇼였습니다! 최종 점수: ${score}점`);
+            }
+        }
+
+        function update() {
+            if (!showRunning) return;
+            
+            updateTrick();
+            updateParticles();
+            updateAudience();
+            checkShowEnd();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawStage();
+            drawAudience();
+            drawMagician();
+            drawParticles();
+            drawTrickText();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('satisfaction').textContent = Math.floor(satisfaction);
+            document.getElementById('tricks').textContent = tricksPerformed;
+            document.getElementById('score').textContent = score;
+        }
+
+        function startShow() {
+            showRunning = true;
+            satisfaction = 50;
+            tricksPerformed = 0;
+            score = 0;
+            currentTrick = null;
+            particles = [];
+            
+            magician.x = 400;
+            magician.y = 350;
+            magician.hat = true;
+            magician.wand = false;
+            magician.performing = false;
+            
+            initializeAudience();
+            updateDisplay();
+        }
+
+        function resetShow() {
+            showRunning = false;
+            satisfaction = 50;
+            tricksPerformed = 0;
+            score = 0;
+            currentTrick = null;
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetShow();
+        gameLoop();
+    </script>
+</body>
+</html>

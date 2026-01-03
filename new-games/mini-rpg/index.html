@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>미니 RPG 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            color: #f39c12;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0,0,0,0.5); }
+            to { text-shadow: 3px 3px 20px rgba(243, 156, 18, 0.8); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px auto;
+            max-width: 1200px;
+            flex-wrap: wrap;
+        }
+        
+        .game-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        canvas {
+            border: 3px solid #f39c12;
+            border-radius: 10px;
+            background: #2c3e50;
+        }
+        
+        .ui-panel {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .player-stats {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-bar {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            height: 20px;
+            margin: 5px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .hp-fill { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .mp-fill { background: linear-gradient(90deg, #3498db, #2980b9); }
+        .exp-fill { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        
+        .stat-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .inventory {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .item-slot {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            margin: 2px;
+            text-align: center;
+            line-height: 36px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .item-slot:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .controls {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .message-log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .battle-ui {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            display: none;
+            z-index: 100;
+            border: 3px solid #e74c3c;
+            min-width: 400px;
+        }
+        
+        .enemy-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .battle-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏰 미니 RPG 던전</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 조작법:</strong> WASD 또는 화살표 키로 이동</p>
+        <p><strong>🎯 목표:</strong> 던전을 탐험하고 몬스터를 물리치며 레벨업하세요!</p>
+        <p><strong>⚔️ 전투:</strong> 몬스터와 만나면 자동으로 전투가 시작됩니다!</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-area">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+        </div>
+        
+        <div class="ui-panel">
+            <div class="player-stats">
+                <h3>🧙‍♂️ 플레이어 상태</h3>
+                <div>레벨: <span id="playerLevel">1</span></div>
+                <div>골드: <span id="playerGold">0</span>G</div>
+                
+                <div class="stat-bar">
+                    <div class="stat-fill hp-fill" id="hpBar"></div>
+                    <div class="stat-text" id="hpText">HP: 100/100</div>
+                </div>
+                
+                <div class="stat-bar">
+                    <div class="stat-fill mp-fill" id="mpBar"></div>
+                    <div class="stat-text" id="mpText">MP: 50/50</div>
+                </div>
+                
+                <div class="stat-bar">
+                    <div class="stat-fill exp-fill" id="expBar"></div>
+                    <div class="stat-text" id="expText">EXP: 0/100</div>
+                </div>
+            </div>
+            
+            <div class="inventory">
+                <h3>🎒 인벤토리</h3>
+                <div id="inventorySlots">
+                    <!-- 인벤토리 슬롯들이 여기에 생성됩니다 -->
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button onclick="usePotion('hp')">🧪 체력 포션</button>
+                <button onclick="usePotion('mp')">💙 마나 포션</button>
+                <button onclick="resetGame()">🔄 새 게임</button>
+            </div>
+            
+            <div class="message-log" id="messageLog">
+                <div>던전에 오신 것을 환영합니다!</div>
+                <div>WASD 키로 이동하세요.</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="battle-ui" id="battleUI">
+        <div class="enemy-info">
+            <h3 id="enemyName">고블린</h3>
+            <div class="stat-bar">
+                <div class="stat-fill hp-fill" id="enemyHpBar"></div>
+                <div class="stat-text" id="enemyHpText">HP: 50/50</div>
+            </div>
+        </div>
+        
+        <div class="battle-actions">
+            <button onclick="battleAction('attack')">⚔️ 공격</button>
+            <button onclick="battleAction('magic')">✨ 마법</button>
+            <button onclick="battleAction('defend')">🛡️ 방어</button>
+            <button onclick="battleAction('run')">🏃‍♂️ 도망</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameRunning = true;
+        let inBattle = false;
+        let currentEnemy = null;
+
+        // 플레이어 설정
+        const player = {
+            x: 5,
+            y: 5,
+            level: 1,
+            hp: 100,
+            maxHp: 100,
+            mp: 50,
+            maxMp: 50,
+            exp: 0,
+            expToNext: 100,
+            gold: 0,
+            attack: 20,
+            defense: 10,
+            inventory: {
+                hpPotions: 3,
+                mpPotions: 2,
+                keys: 0,
+                treasures: 0
+            }
+        };
+
+        // 던전 맵 (0: 빈 공간, 1: 벽, 2: 몬스터, 3: 보물, 4: 계단)
+        const dungeonMap = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,3,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,2,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,2,1,1,1,0,1,1,1,0,1,1,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,0,1,1,1,2,1,1,1,0,1,3,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,2,1,0,1,1,1,1,1,1,1,0,1,2,1],
+            [1,0,0,0,0,0,0,4,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // 몬스터 데이터
+        const monsters = {
+            goblin: { name: '고블린', hp: 50, attack: 15, defense: 5, exp: 25, gold: 10, emoji: '👹' },
+            orc: { name: '오크', hp: 80, attack: 25, defense: 8, exp: 40, gold: 20, emoji: '👺' },
+            skeleton: { name: '스켈레톤', hp: 60, attack: 20, defense: 6, exp: 30, gold: 15, emoji: '💀' },
+            dragon: { name: '드래곤', hp: 200, attack: 50, defense: 20, exp: 100, gold: 100, emoji: '🐉' }
+        };
+
+        // 타일 크기
+        const TILE_SIZE = 40;
+
+        // 던전 그리기
+        function drawDungeon() {
+            for (let y = 0; y < dungeonMap.length; y++) {
+                for (let x = 0; x < dungeonMap[y].length; x++) {
+                    const tileX = x * TILE_SIZE;
+                    const tileY = y * TILE_SIZE;
+                    
+                    switch (dungeonMap[y][x]) {
+                        case 0: // 빈 공간
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            break;
+                        case 1: // 벽
+                            ctx.fillStyle = '#2c3e50';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#1a252f';
+                            ctx.fillRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                            break;
+                        case 2: // 몬스터
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.font = '24px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('👹', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 8);
+                            break;
+                        case 3: // 보물
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#f39c12';
+                            ctx.font = '24px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('💰', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 8);
+                            break;
+                        case 4: // 계단
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#9b59b6';
+                            ctx.font = '24px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🚪', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 8);
+                            break;
+                    }
+                }
+            }
+        }
+
+        // 플레이어 그리기
+        function drawPlayer() {
+            const playerX = player.x * TILE_SIZE;
+            const playerY = player.y * TILE_SIZE;
+            
+            ctx.fillStyle = '#3498db';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🧙‍♂️', playerX + TILE_SIZE/2, playerY + TILE_SIZE/2 + 10);
+        }
+
+        // 게임 그리기
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawDungeon();
+            drawPlayer();
+        }
+
+        // 플레이어 이동
+        function movePlayer(dx, dy) {
+            if (inBattle) return;
+            
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            // 경계 확인
+            if (newX < 0 || newX >= dungeonMap[0].length || 
+                newY < 0 || newY >= dungeonMap.length) {
+                return;
+            }
+            
+            const tile = dungeonMap[newY][newX];
+            
+            // 벽 충돌 확인
+            if (tile === 1) {
+                addMessage('벽에 부딪혔습니다!');
+                return;
+            }
+            
+            // 이동
+            player.x = newX;
+            player.y = newY;
+            
+            // 타일 상호작용
+            handleTileInteraction(tile);
+            
+            draw();
+        }
+
+        // 타일 상호작용
+        function handleTileInteraction(tile) {
+            switch (tile) {
+                case 2: // 몬스터
+                    startBattle();
+                    break;
+                case 3: // 보물
+                    findTreasure();
+                    dungeonMap[player.y][player.x] = 0; // 보물 제거
+                    break;
+                case 4: // 계단
+                    nextLevel();
+                    break;
+            }
+        }
+
+        // 전투 시작
+        function startBattle() {
+            inBattle = true;
+            
+            // 랜덤 몬스터 선택
+            const monsterTypes = Object.keys(monsters);
+            const randomType = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+            currentEnemy = { ...monsters[randomType] };
+            currentEnemy.maxHp = currentEnemy.hp;
+            
+            addMessage(`${currentEnemy.name}과 조우했습니다!`);
+            
+            // 전투 UI 표시
+            document.getElementById('enemyName').textContent = currentEnemy.name + ' ' + currentEnemy.emoji;
+            updateEnemyUI();
+            document.getElementById('battleUI').style.display = 'block';
+        }
+
+        // 전투 액션
+        function battleAction(action) {
+            if (!inBattle) return;
+            
+            let playerDamage = 0;
+            let enemyDamage = 0;
+            
+            switch (action) {
+                case 'attack':
+                    playerDamage = Math.max(1, player.attack - currentEnemy.defense + Math.floor(Math.random() * 10) - 5);
+                    currentEnemy.hp -= playerDamage;
+                    addMessage(`${currentEnemy.name}에게 ${playerDamage} 데미지!`);
+                    break;
+                    
+                case 'magic':
+                    if (player.mp >= 10) {
+                        playerDamage = player.attack * 1.5;
+                        currentEnemy.hp -= playerDamage;
+                        player.mp -= 10;
+                        addMessage(`마법 공격으로 ${playerDamage} 데미지!`);
+                    } else {
+                        addMessage('마나가 부족합니다!');
+                        return;
+                    }
+                    break;
+                    
+                case 'defend':
+                    addMessage('방어 태세를 취했습니다!');
+                    enemyDamage = Math.max(1, Math.floor((currentEnemy.attack - player.defense * 2) / 2));
+                    break;
+                    
+                case 'run':
+                    if (Math.random() < 0.7) {
+                        addMessage('성공적으로 도망쳤습니다!');
+                        endBattle(false);
+                        return;
+                    } else {
+                        addMessage('도망치지 못했습니다!');
+                    }
+                    break;
+            }
+            
+            // 적이 죽었는지 확인
+            if (currentEnemy.hp <= 0) {
+                addMessage(`${currentEnemy.name}을 물리쳤습니다!`);
+                gainExp(currentEnemy.exp);
+                gainGold(currentEnemy.gold);
+                dungeonMap[player.y][player.x] = 0; // 몬스터 제거
+                endBattle(true);
+                return;
+            }
+            
+            // 적 공격 (방어하지 않았을 때)
+            if (action !== 'defend') {
+                enemyDamage = Math.max(1, currentEnemy.attack - player.defense + Math.floor(Math.random() * 5) - 2);
+            }
+            
+            if (enemyDamage > 0) {
+                player.hp -= enemyDamage;
+                addMessage(`${currentEnemy.name}이 ${enemyDamage} 데미지를 입혔습니다!`);
+            }
+            
+            // 플레이어가 죽었는지 확인
+            if (player.hp <= 0) {
+                addMessage('당신은 쓰러졌습니다... 게임 오버!');
+                gameOver();
+                return;
+            }
+            
+            updateUI();
+            updateEnemyUI();
+        }
+
+        // 전투 종료
+        function endBattle(victory) {
+            inBattle = false;
+            currentEnemy = null;
+            document.getElementById('battleUI').style.display = 'none';
+            
+            if (victory) {
+                // 랜덤 아이템 드롭
+                if (Math.random() < 0.3) {
+                    if (Math.random() < 0.5) {
+                        player.inventory.hpPotions++;
+                        addMessage('체력 포션을 발견했습니다!');
+                    } else {
+                        player.inventory.mpPotions++;
+                        addMessage('마나 포션을 발견했습니다!');
+                    }
+                }
+            }
+            
+            updateUI();
+        }
+
+        // 보물 발견
+        function findTreasure() {
+            const goldFound = Math.floor(Math.random() * 50) + 20;
+            gainGold(goldFound);
+            addMessage(`보물상자에서 ${goldFound} 골드를 발견했습니다!`);
+            
+            // 랜덤 아이템
+            if (Math.random() < 0.5) {
+                player.inventory.hpPotions++;
+                addMessage('체력 포션도 발견했습니다!');
+            }
+        }
+
+        // 다음 레벨
+        function nextLevel() {
+            addMessage('다음 층으로 내려갑니다...');
+            // 간단히 체력/마나 회복
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+            addMessage('체력과 마나가 회복되었습니다!');
+            updateUI();
+        }
+
+        // 경험치 획득
+        function gainExp(exp) {
+            player.exp += exp;
+            addMessage(`${exp} 경험치를 획득했습니다!`);
+            
+            // 레벨업 확인
+            while (player.exp >= player.expToNext) {
+                levelUp();
+            }
+        }
+
+        // 레벨업
+        function levelUp() {
+            player.exp -= player.expToNext;
+            player.level++;
+            player.expToNext = player.level * 100;
+            
+            // 스탯 증가
+            const hpIncrease = 20;
+            const mpIncrease = 10;
+            player.maxHp += hpIncrease;
+            player.maxMp += mpIncrease;
+            player.hp = player.maxHp; // 레벨업 시 완전 회복
+            player.mp = player.maxMp;
+            player.attack += 5;
+            player.defense += 3;
+            
+            addMessage(`레벨 업! 레벨 ${player.level}이 되었습니다!`);
+            addMessage(`체력 +${hpIncrease}, 마나 +${mpIncrease}, 공격력 +5, 방어력 +3`);
+        }
+
+        // 골드 획득
+        function gainGold(gold) {
+            player.gold += gold;
+        }
+
+        // 포션 사용
+        function usePotion(type) {
+            if (inBattle) {
+                addMessage('전투 중에는 포션을 사용할 수 없습니다!');
+                return;
+            }
+            
+            if (type === 'hp' && player.inventory.hpPotions > 0) {
+                if (player.hp < player.maxHp) {
+                    player.inventory.hpPotions--;
+                    const healAmount = 50;
+                    player.hp = Math.min(player.maxHp, player.hp + healAmount);
+                    addMessage(`체력 포션을 사용했습니다! (+${healAmount} HP)`);
+                } else {
+                    addMessage('체력이 이미 가득합니다!');
+                }
+            } else if (type === 'mp' && player.inventory.mpPotions > 0) {
+                if (player.mp < player.maxMp) {
+                    player.inventory.mpPotions--;
+                    const restoreAmount = 30;
+                    player.mp = Math.min(player.maxMp, player.mp + restoreAmount);
+                    addMessage(`마나 포션을 사용했습니다! (+${restoreAmount} MP)`);
+                } else {
+                    addMessage('마나가 이미 가득합니다!');
+                }
+            } else {
+                addMessage('포션이 없습니다!');
+            }
+            
+            updateUI();
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('playerLevel').textContent = player.level;
+            document.getElementById('playerGold').textContent = player.gold;
+            
+            // HP 바
+            const hpPercent = (player.hp / player.maxHp) * 100;
+            document.getElementById('hpBar').style.width = hpPercent + '%';
+            document.getElementById('hpText').textContent = `HP: ${player.hp}/${player.maxHp}`;
+            
+            // MP 바
+            const mpPercent = (player.mp / player.maxMp) * 100;
+            document.getElementById('mpBar').style.width = mpPercent + '%';
+            document.getElementById('mpText').textContent = `MP: ${player.mp}/${player.maxMp}`;
+            
+            // EXP 바
+            const expPercent = (player.exp / player.expToNext) * 100;
+            document.getElementById('expBar').style.width = expPercent + '%';
+            document.getElementById('expText').textContent = `EXP: ${player.exp}/${player.expToNext}`;
+            
+            // 인벤토리
+            updateInventory();
+        }
+
+        // 적 UI 업데이트
+        function updateEnemyUI() {
+            if (!currentEnemy) return;
+            
+            const hpPercent = (currentEnemy.hp / currentEnemy.maxHp) * 100;
+            document.getElementById('enemyHpBar').style.width = hpPercent + '%';
+            document.getElementById('enemyHpText').textContent = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+        }
+
+        // 인벤토리 업데이트
+        function updateInventory() {
+            const inventoryDiv = document.getElementById('inventorySlots');
+            inventoryDiv.innerHTML = '';
+            
+            // 체력 포션
+            for (let i = 0; i < player.inventory.hpPotions; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'item-slot';
+                slot.textContent = '🧪';
+                slot.title = '체력 포션';
+                inventoryDiv.appendChild(slot);
+            }
+            
+            // 마나 포션
+            for (let i = 0; i < player.inventory.mpPotions; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'item-slot';
+                slot.textContent = '💙';
+                slot.title = '마나 포션';
+                inventoryDiv.appendChild(slot);
+            }
+            
+            // 빈 슬롯
+            const totalSlots = 12;
+            const usedSlots = player.inventory.hpPotions + player.inventory.mpPotions;
+            for (let i = usedSlots; i < totalSlots; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'item-slot';
+                inventoryDiv.appendChild(slot);
+            }
+        }
+
+        // 메시지 추가
+        function addMessage(message) {
+            const messageLog = document.getElementById('messageLog');
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageLog.appendChild(messageDiv);
+            messageLog.scrollTop = messageLog.scrollHeight;
+            
+            // 메시지가 너무 많으면 오래된 것 제거
+            if (messageLog.children.length > 20) {
+                messageLog.removeChild(messageLog.firstChild);
+            }
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            addMessage('게임이 종료되었습니다. 새 게임을 시작하세요.');
+        }
+
+        // 게임 리셋
+        function resetGame() {
+            // 플레이어 초기화
+            player.x = 5;
+            player.y = 5;
+            player.level = 1;
+            player.hp = 100;
+            player.maxHp = 100;
+            player.mp = 50;
+            player.maxMp = 50;
+            player.exp = 0;
+            player.expToNext = 100;
+            player.gold = 0;
+            player.attack = 20;
+            player.defense = 10;
+            player.inventory = {
+                hpPotions: 3,
+                mpPotions: 2,
+                keys: 0,
+                treasures: 0
+            };
+            
+            // 게임 상태 초기화
+            gameRunning = true;
+            inBattle = false;
+            currentEnemy = null;
+            
+            // UI 초기화
+            document.getElementById('battleUI').style.display = 'none';
+            document.getElementById('messageLog').innerHTML = '<div>새로운 모험이 시작됩니다!</div>';
+            
+            updateUI();
+            draw();
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            switch(e.code) {
+                case 'KeyW':
+                case 'ArrowUp':
+                    e.preventDefault();
+                    movePlayer(0, -1);
+                    break;
+                case 'KeyS':
+                case 'ArrowDown':
+                    e.preventDefault();
+                    movePlayer(0, 1);
+                    break;
+                case 'KeyA':
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePlayer(-1, 0);
+                    break;
+                case 'KeyD':
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePlayer(1, 0);
+                    break;
+                case 'KeyH':
+                    e.preventDefault();
+                    usePotion('hp');
+                    break;
+                case 'KeyM':
+                    e.preventDefault();
+                    usePotion('mp');
+                    break;
+            }
+        });
+
+        // 게임 시작
+        updateUI();
+        draw();
+        
+        console.log('미니 RPG 게임이 로드되었습니다!');
+    </script>
+</body>
+</html>

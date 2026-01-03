@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 저글링 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: rainbow 3s ease-in-out infinite;
+        }
+        
+        @keyframes rainbow {
+            0% { color: #ff6b6b; }
+            16% { color: #feca57; }
+            32% { color: #48dbfb; }
+            48% { color: #ff9ff3; }
+            64% { color: #54a0ff; }
+            80% { color: #5f27cd; }
+            100% { color: #ff6b6b; }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #87CEEB 0%, #FFE4B5 100%);
+            cursor: pointer;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+            color: #333;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: #333;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 저글링</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>마우스를 움직여서 공을 공중에 띄워 저글링하세요!</p>
+        <p>공이 땅에 떨어지지 않게 계속 튕겨주세요!</p>
+        <p>더 많은 공을 동시에 저글링할수록 높은 점수!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">공 개수: <span id="ballCount">1</span></div>
+            <div class="info-item">콤보: <span id="combo">0</span></div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>무지개 공 모드 ON! 💖
+            </div>
+            
+            <button onclick="resetGame()">새 게임</button>
+            <button onclick="addBall()">공 추가</button>
+            <button onclick="togglePause()">일시정지</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameRunning = true;
+        let gamePaused = false;
+        let score = 0;
+        let combo = 0;
+        let bestScore = localStorage.getItem('jugglingBestScore') || 0;
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 공들
+        let balls = [];
+        
+        // 저글러 설정
+        const juggler = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 60,
+            height: 80
+        };
+        
+        // 공 클래스
+        class Ball {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = -Math.random() * 5 - 5;
+                this.radius = 20;
+                this.color = color || this.getRandomColor();
+                this.trail = [];
+                this.bounces = 0;
+            }
+            
+            getRandomColor() {
+                const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            update() {
+                // 중력 적용
+                this.vy += 0.4;
+                
+                // 위치 업데이트
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // 트레일 업데이트
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 10) {
+                    this.trail.shift();
+                }
+                
+                // 마우스와의 충돌 검사 (저글링)
+                const distToMouse = Math.sqrt((this.x - mouseX)**2 + (this.y - mouseY)**2);
+                if (distToMouse < this.radius + 30 && this.vy > 0) {
+                    // 공을 위로 튕겨올림
+                    const angle = Math.atan2(this.y - mouseY, this.x - mouseX);
+                    const force = secretMode ? 15 : 12;
+                    this.vx = Math.cos(angle) * force * 0.5;
+                    this.vy = Math.sin(angle) * force * -1;
+                    
+                    this.bounces++;
+                    combo++;
+                    score += combo * (secretMode ? 20 : 10);
+                    
+                    // 파티클 효과
+                    createJuggleParticles(this.x, this.y);
+                    
+                    // 비밀 모드에서는 색깔 변경
+                    if (secretMode) {
+                        this.color = `hsl(${Date.now() % 360}, 70%, 60%)`;
+                    }
+                }
+                
+                // 벽 충돌
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.vx *= -0.8;
+                    this.x = this.x - this.radius < 0 ? this.radius : canvas.width - this.radius;
+                }
+                
+                // 바닥 충돌 (게임 오버)
+                if (this.y + this.radius > canvas.height - 20) {
+                    return false; // 공이 떨어짐
+                }
+                
+                return true;
+            }
+            
+            draw() {
+                // 트레일 그리기
+                for (let i = 0; i < this.trail.length; i++) {
+                    const alpha = i / this.trail.length;
+                    ctx.globalAlpha = alpha * 0.5;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.trail[i].x, this.trail[i].y, this.radius * alpha, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                
+                // 공 그리기
+                const gradient = ctx.createRadialGradient(
+                    this.x - 5, this.y - 5, 0,
+                    this.x, this.y, this.radius
+                );
+                gradient.addColorStop(0, 'white');
+                gradient.addColorStop(1, this.color);
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 공 하이라이트
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(this.x - 6, this.y - 6, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 파티클 시스템
+        let particles = [];
+        
+        function createJuggleParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    color: secretMode ? `hsl(${Date.now() % 360}, 70%, 60%)` : '#ffd700'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        balls.push(new Ball(canvas.width / 2, 200));
+        
+        // 마우스 이벤트
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        function addBall() {
+            if (balls.length < 5) {
+                balls.push(new Ball(
+                    canvas.width / 2 + (Math.random() - 0.5) * 100,
+                    200 + Math.random() * 100
+                ));
+                document.getElementById('ballCount').textContent = balls.length;
+            }
+        }
+        
+        function resetGame() {
+            balls = [new Ball(canvas.width / 2, 200)];
+            particles = [];
+            score = 0;
+            combo = 0;
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('ballCount').textContent = balls.length;
+            document.getElementById('combo').textContent = combo;
+            
+            gameRunning = true;
+            gamePaused = false;
+        }
+        
+        function togglePause() {
+            gamePaused = !gamePaused;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('jugglingBestScore', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+        }
+        
+        function draw() {
+            // 배경 그리기
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, secretMode ? '#1a1a2e' : '#87CEEB');
+            gradient.addColorStop(1, secretMode ? '#16213e' : '#FFE4B5');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 서커스 텐트 배경
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 0);
+                ctx.lineTo(i * (canvas.width / 8), canvas.height);
+                ctx.lineTo((i + 1) * (canvas.width / 8), canvas.height);
+                ctx.closePath();
+                if (i % 2 === 0) ctx.fill();
+            }
+            
+            // 저글러 그리기
+            juggler.x = mouseX;
+            
+            // 저글러 몸
+            ctx.fillStyle = secretMode ? '#ff6b6b' : '#4ecdc4';
+            ctx.fillRect(juggler.x - juggler.width/2, juggler.y, juggler.width, juggler.height);
+            
+            // 저글러 머리
+            ctx.fillStyle = '#fdbcb4';
+            ctx.beginPath();
+            ctx.arc(juggler.x, juggler.y, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 저글러 모자
+            ctx.fillStyle = secretMode ? '#ffd700' : '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(juggler.x, juggler.y - 10, 30, Math.PI, 0);
+            ctx.fill();
+            
+            // 저글러 손
+            ctx.fillStyle = '#fdbcb4';
+            ctx.beginPath();
+            ctx.arc(juggler.x - 35, juggler.y + 30, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(juggler.x + 35, juggler.y + 30, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 마우스 위치 표시 (저글링 범위)
+            ctx.strokeStyle = secretMode ? '#ffd700' : 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 공들 그리기
+            for (let ball of balls) {
+                ball.draw();
+            }
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // 바닥 그리기
+            ctx.fillStyle = '#8b4513';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+            
+            // 게임 오버 화면
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('게임 오버!', canvas.width/2, canvas.height/2 - 50);
+                
+                ctx.font = '24px Arial';
+                ctx.fillText(`최종 점수: ${score}`, canvas.width/2, canvas.height/2);
+                ctx.fillText(`최대 콤보: ${combo}`, canvas.width/2, canvas.height/2 + 30);
+            }
+        }
+        
+        function gameLoop() {
+            if (gameRunning && !gamePaused) {
+                // 공들 업데이트
+                for (let i = balls.length - 1; i >= 0; i--) {
+                    if (!balls[i].update()) {
+                        // 공이 떨어짐 - 게임 오버
+                        gameOver();
+                        break;
+                    }
+                }
+                
+                updateParticles();
+                
+                // UI 업데이트
+                document.getElementById('score').textContent = score;
+                document.getElementById('combo').textContent = combo;
+                
+                // 콤보 감소
+                if (combo > 0 && Math.random() < 0.01) {
+                    combo = Math.max(0, combo - 1);
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

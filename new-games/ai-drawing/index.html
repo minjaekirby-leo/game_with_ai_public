@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 AI 그림 맞추기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #9370DB;
+            max-width: 900px;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .drawing-area {
+            flex: 1;
+        }
+        
+        canvas {
+            border: 3px solid #8A2BE2;
+            border-radius: 10px;
+            background: white;
+            cursor: crosshair;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: rgba(147, 112, 219, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(147, 112, 219, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .word-display {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .ai-guesses {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        .guess-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .guess-item.correct {
+            color: #00FF7F;
+            font-weight: bold;
+        }
+        
+        .drawing-tools {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .tool-group {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+        
+        .tool-btn {
+            background: #9370DB;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .tool-btn:hover {
+            background: #8A2BE2;
+        }
+        
+        .tool-btn.active {
+            background: #FF69B4;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.active {
+            border-color: #FFD700;
+            border-width: 3px;
+        }
+        
+        .brush-size {
+            margin: 10px 0;
+        }
+        
+        .size-slider {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .timer-display {
+            font-size: 36px;
+            font-weight: bold;
+            color: #FF6B6B;
+            margin: 10px 0;
+        }
+        
+        .action-buttons {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: #27AE60;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎨 AI 그림 맞추기</h1>
+        
+        <div class="ui">
+            <div class="stat">🎯 정답: <span id="correct">0</span></div>
+            <div class="stat">❌ 실패: <span id="failed">0</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">🏆 연속: <span id="streak">0</span></div>
+        </div>
+        
+        <div class="game-area">
+            <div class="drawing-area">
+                <div class="word-display" id="wordDisplay">
+                    그릴 단어: <span id="currentWord">시작하기를 눌러주세요</span>
+                </div>
+                
+                <div class="timer-display" id="timerDisplay">60</div>
+                
+                <canvas id="drawingCanvas" width="500" height="400"></canvas>
+                
+                <div class="drawing-tools">
+                    <div class="tool-group">
+                        <button class="tool-btn active" onclick="selectTool('brush')" id="brushBtn">🖌️ 브러시</button>
+                        <button class="tool-btn" onclick="selectTool('eraser')" id="eraserBtn">🧽 지우개</button>
+                        <button class="tool-btn" onclick="clearCanvas()">🗑️ 전체 지우기</button>
+                    </div>
+                    
+                    <div class="color-picker">
+                        <div class="color-btn active" style="background: #000000" onclick="selectColor('#000000')"></div>
+                        <div class="color-btn" style="background: #FF0000" onclick="selectColor('#FF0000')"></div>
+                        <div class="color-btn" style="background: #00FF00" onclick="selectColor('#00FF00')"></div>
+                        <div class="color-btn" style="background: #0000FF" onclick="selectColor('#0000FF')"></div>
+                        <div class="color-btn" style="background: #FFFF00" onclick="selectColor('#FFFF00')"></div>
+                        <div class="color-btn" style="background: #FF00FF" onclick="selectColor('#FF00FF')"></div>
+                        <div class="color-btn" style="background: #00FFFF" onclick="selectColor('#00FFFF')"></div>
+                        <div class="color-btn" style="background: #FFA500" onclick="selectColor('#FFA500')"></div>
+                    </div>
+                    
+                    <div class="brush-size">
+                        <label>브러시 크기: <span id="brushSizeValue">5</span>px</label>
+                        <input type="range" class="size-slider" id="brushSize" min="1" max="20" value="5" oninput="updateBrushSize()">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <h3>🤖 AI 추측</h3>
+                <div class="ai-guesses" id="aiGuesses">
+                    AI가 그림을 분석 중입니다...
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="startNewRound()">🎮 새 게임 시작</button>
+                    <button class="action-btn" onclick="giveHint()">💡 힌트 보기</button>
+                    <button class="action-btn" onclick="skipWord()">⏭️ 단어 건너뛰기</button>
+                </div>
+                
+                <h4>📊 게임 통계</h4>
+                <div style="font-size: 14px; text-align: left;">
+                    <div>정확도: <span id="accuracy">0</span>%</div>
+                    <div>평균 시간: <span id="avgTime">0</span>초</div>
+                    <div>최고 연속: <span id="bestStreak">0</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <p>🎮 조작법: 주어진 단어를 그림으로 그리면 AI가 맞춰봅니다!</p>
+            <p>🎨 그리기: 마우스로 드래그해서 그림을 그리세요</p>
+            <p>💡 팁: 간단하고 명확하게 그리면 AI가 더 잘 맞춰요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            correct: 0,
+            failed: 0,
+            score: 0,
+            streak: 0,
+            bestStreak: 0,
+            currentWord: '',
+            timeLeft: 60,
+            gameRunning: false,
+            roundStartTime: 0
+        };
+        
+        // 그리기 상태
+        let drawingState = {
+            isDrawing: false,
+            currentTool: 'brush',
+            currentColor: '#000000',
+            brushSize: 5,
+            lastX: 0,
+            lastY: 0
+        };
+        
+        // 그릴 단어들
+        const words = [
+            '고양이', '강아지', '집', '나무', '자동차', '비행기', '꽃', '태양',
+            '달', '별', '물고기', '새', '사과', '바나나', '케이크', '피자',
+            '컴퓨터', '전화기', '시계', '안경', '모자', '신발', '가방', '우산',
+            '책', '연필', '공', '하트', '웃는얼굴', '눈사람', '무지개', '구름'
+        ];
+        
+        // AI 추측 시뮬레이션 데이터
+        const aiGuessPatterns = {
+            '고양이': ['동물', '털이 있는 것', '애완동물', '고양이'],
+            '강아지': ['동물', '네발동물', '애완동물', '강아지'],
+            '집': ['건물', '사각형', '문이 있는 것', '집'],
+            '나무': ['식물', '갈색 줄기', '초록 잎', '나무'],
+            '자동차': ['탈것', '바퀴가 있는 것', '운송수단', '자동차'],
+            '태양': ['원', '노란색', '밝은 것', '태양'],
+            '꽃': ['식물', '예쁜 것', '색깔이 있는 것', '꽃']
+        };
+        
+        let aiGuessTimer = null;
+        let gameTimer = null;
+        
+        // 캔버스 이벤트 설정
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // 터치 이벤트 (모바일 지원)
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            if (e.type === 'touchstart') {
+                startDrawing({ offsetX: x, offsetY: y });
+            } else if (e.type === 'touchmove') {
+                draw({ offsetX: x, offsetY: y });
+            }
+        }
+        
+        // 그리기 시작
+        function startDrawing(e) {
+            if (!gameState.gameRunning) return;
+            
+            drawingState.isDrawing = true;
+            drawingState.lastX = e.offsetX;
+            drawingState.lastY = e.offsetY;
+        }
+        
+        // 그리기
+        function draw(e) {
+            if (!drawingState.isDrawing || !gameState.gameRunning) return;
+            
+            ctx.beginPath();
+            ctx.moveTo(drawingState.lastX, drawingState.lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            
+            if (drawingState.currentTool === 'brush') {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = drawingState.currentColor;
+            } else if (drawingState.currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+            }
+            
+            ctx.lineWidth = drawingState.brushSize;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            drawingState.lastX = e.offsetX;
+            drawingState.lastY = e.offsetY;
+            
+            // AI 추측 트리거
+            if (!aiGuessTimer) {
+                aiGuessTimer = setTimeout(simulateAIGuess, 1000);
+            }
+        }
+        
+        // 그리기 중지
+        function stopDrawing() {
+            drawingState.isDrawing = false;
+        }
+        
+        // 도구 선택
+        function selectTool(tool) {
+            drawingState.currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tool + 'Btn').classList.add('active');
+        }
+        
+        // 색상 선택
+        function selectColor(color) {
+            drawingState.currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // 브러시 크기 업데이트
+        function updateBrushSize() {
+            drawingState.brushSize = document.getElementById('brushSize').value;
+            document.getElementById('brushSizeValue').textContent = drawingState.brushSize;
+        }
+        
+        // 캔버스 지우기
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            clearAIGuesses();
+        }
+        
+        // 새 라운드 시작
+        function startNewRound() {
+            gameState.currentWord = words[Math.floor(Math.random() * words.length)];
+            gameState.timeLeft = 60;
+            gameState.gameRunning = true;
+            gameState.roundStartTime = Date.now();
+            
+            document.getElementById('currentWord').textContent = gameState.currentWord;
+            clearCanvas();
+            clearAIGuesses();
+            
+            // 타이머 시작
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            // AI 추측 시작
+            setTimeout(simulateAIGuess, 3000);
+        }
+        
+        // AI 추측 시뮬레이션
+        function simulateAIGuess() {
+            if (!gameState.gameRunning) return;
+            
+            const currentWord = gameState.currentWord;
+            const guessPattern = aiGuessPatterns[currentWord] || ['무언가', '그림', '도형', currentWord];
+            
+            // 랜덤하게 추측 진행
+            const guessIndex = Math.floor(Math.random() * guessPattern.length);
+            const guess = guessPattern[guessIndex];
+            
+            addAIGuess(guess);
+            
+            // 정답을 맞췄는지 확인
+            if (guess === currentWord) {
+                roundComplete(true);
+            } else {
+                // 다음 추측 예약
+                aiGuessTimer = setTimeout(simulateAIGuess, 2000 + Math.random() * 3000);
+            }
+        }
+        
+        // AI 추측 추가
+        function addAIGuess(guess) {
+            const guessesContainer = document.getElementById('aiGuesses');
+            const guessElement = document.createElement('div');
+            guessElement.className = 'guess-item';
+            
+            if (guess === gameState.currentWord) {
+                guessElement.className += ' correct';
+                guessElement.textContent = `🎉 "${guess}" - 정답!`;
+            } else {
+                guessElement.textContent = `🤔 "${guess}"`;
+            }
+            
+            guessesContainer.appendChild(guessElement);
+            guessesContainer.scrollTop = guessesContainer.scrollHeight;
+        }
+        
+        // AI 추측 지우기
+        function clearAIGuesses() {
+            document.getElementById('aiGuesses').innerHTML = 'AI가 그림을 분석 중입니다...';
+        }
+        
+        // 라운드 완료
+        function roundComplete(success) {
+            gameState.gameRunning = false;
+            clearTimeout(aiGuessTimer);
+            clearInterval(gameTimer);
+            aiGuessTimer = null;
+            
+            const timeUsed = Math.floor((Date.now() - gameState.roundStartTime) / 1000);
+            
+            if (success) {
+                gameState.correct++;
+                gameState.streak++;
+                gameState.score += Math.max(10, 60 - timeUsed);
+                
+                if (gameState.streak > gameState.bestStreak) {
+                    gameState.bestStreak = gameState.streak;
+                }
+            } else {
+                gameState.failed++;
+                gameState.streak = 0;
+            }
+            
+            updateUI();
+            
+            setTimeout(() => {
+                if (confirm(success ? '정답입니다! 다음 라운드를 시작하시겠습니까?' : '시간 초과! 다시 시도하시겠습니까?')) {
+                    startNewRound();
+                }
+            }, 1000);
+        }
+        
+        // 타이머 업데이트
+        function updateTimer() {
+            gameState.timeLeft--;
+            document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+            
+            if (gameState.timeLeft <= 0) {
+                roundComplete(false);
+            }
+        }
+        
+        // 힌트 보기
+        function giveHint() {
+            if (!gameState.gameRunning) return;
+            
+            const hints = {
+                '고양이': '네 발로 걷고 "야옹" 소리를 내는 동물',
+                '강아지': '네 발로 걷고 "멍멍" 소리를 내는 동물',
+                '집': '사람이 사는 건물',
+                '나무': '땅에서 자라는 큰 식물',
+                '자동차': '바퀴가 4개 달린 탈것',
+                '태양': '하늘에서 빛나는 노란 원',
+                '꽃': '예쁜 색깔을 가진 식물의 일부'
+            };
+            
+            const hint = hints[gameState.currentWord] || '그림으로 표현해보세요!';
+            alert(`힌트: ${hint}`);
+        }
+        
+        // 단어 건너뛰기
+        function skipWord() {
+            if (confirm('이 단어를 건너뛰시겠습니까?')) {
+                roundComplete(false);
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('correct').textContent = gameState.correct;
+            document.getElementById('failed').textContent = gameState.failed;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('streak').textContent = gameState.streak;
+            document.getElementById('bestStreak').textContent = gameState.bestStreak;
+            
+            // 정확도 계산
+            const total = gameState.correct + gameState.failed;
+            const accuracy = total > 0 ? Math.round((gameState.correct / total) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy;
+            
+            // 평균 시간 (임시로 랜덤 값)
+            document.getElementById('avgTime').textContent = Math.floor(Math.random() * 30) + 20;
+        }
+        
+        // 게임 시작
+        updateUI();
+    </script>
+</body>
+</html>

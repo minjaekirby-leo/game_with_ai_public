@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥷 닌자 스텔스</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1A1A2E, #16213E);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #0F3460;
+        }
+        
+        canvas {
+            border: 3px solid #0F3460;
+            border-radius: 10px;
+            background: #0E1621;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(15, 52, 96, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .mission-status {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        .stealth-meter {
+            width: 200px;
+            height: 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        
+        .stealth-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #E74C3C, #F39C12, #27AE60);
+            transition: width 0.3s;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .ninja-skills {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .skill-btn {
+            background: #16213E;
+            color: white;
+            border: 2px solid #0F3460;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .skill-btn:hover {
+            background: #0F3460;
+            border-color: #E74C3C;
+        }
+        
+        .skill-btn:disabled {
+            background: #333;
+            border-color: #555;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .alert-level {
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .alert-level.safe {
+            color: #27AE60;
+        }
+        
+        .alert-level.caution {
+            color: #F39C12;
+        }
+        
+        .alert-level.danger {
+            color: #E74C3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🥷 닌자 스텔스</h1>
+        
+        <div class="ui">
+            <div class="stat">🎯 목표: <span id="objectives">0</span>/3</div>
+            <div class="stat">👁️ 발각: <span id="detections">0</span>회</div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">⏱️ 시간: <span id="timer">05:00</span></div>
+        </div>
+        
+        <div class="alert-level safe" id="alertLevel">
+            🟢 안전 상태
+        </div>
+        
+        <div class="stealth-meter">
+            <div class="stealth-fill" id="stealthFill" style="width: 100%;"></div>
+        </div>
+        
+        <div class="mission-status" id="missionStatus">
+            미션: 경비를 피해 3개의 보물을 수집하세요!
+        </div>
+        
+        <div class="ninja-skills">
+            <button class="skill-btn" onclick="useSkill('smoke')" id="smokeBtn">💨 연막탄 (S)</button>
+            <button class="skill-btn" onclick="useSkill('teleport')" id="teleportBtn">⚡ 순간이동 (T)</button>
+            <button class="skill-btn" onclick="useSkill('invisible')" id="invisibleBtn">👻 투명화 (I)</button>
+            <button class="skill-btn" onclick="useSkill('distraction')" id="distractionBtn">🎯 주의분산 (D)</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: WASD로 이동, 그림자에 숨어 경비를 피하세요!</p>
+            <p>🥷 닌자 기술: S(연막탄), T(순간이동), I(투명화), D(주의분산)</p>
+            <p>💡 팁: 경비의 시야에 들어가지 말고 조용히 움직이세요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            objectives: 0,
+            detections: 0,
+            score: 0,
+            timeLeft: 300, // 5분
+            alertLevel: 0, // 0: 안전, 1: 주의, 2: 위험
+            stealthLevel: 100,
+            gameRunning: true,
+            timer: null
+        };
+        
+        // 닌자
+        const ninja = {
+            x: 50,
+            y: 550,
+            width: 15,
+            height: 20,
+            speed: 2,
+            isHidden: false,
+            isInvisible: false,
+            invisibleTime: 0,
+            lastMovement: 0
+        };
+        
+        // 스킬 쿨다운
+        const skills = {
+            smoke: { cooldown: 0, maxCooldown: 300 },
+            teleport: { cooldown: 0, maxCooldown: 600 },
+            invisible: { cooldown: 0, maxCooldown: 900 },
+            distraction: { cooldown: 0, maxCooldown: 180 }
+        };
+        
+        // 게임 객체들
+        let guards = [];
+        let treasures = [];
+        let shadows = [];
+        let smokeClouds = [];
+        let distractions = [];
+        let particles = [];
+        
+        // 키 입력
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            // 스킬 단축키
+            if (e.key.toLowerCase() === 's') useSkill('smoke');
+            if (e.key.toLowerCase() === 't') useSkill('teleport');
+            if (e.key.toLowerCase() === 'i') useSkill('invisible');
+            if (e.key.toLowerCase() === 'd') useSkill('distraction');
+        });
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        
+        // 레벨 생성
+        function createLevel() {
+            // 경비 생성
+            guards = [
+                { 
+                    x: 200, y: 300, width: 20, height: 25, 
+                    vx: 1, vy: 0, 
+                    patrol: { startX: 150, endX: 350, startY: 300, endY: 300 },
+                    viewAngle: 0, viewDistance: 120, viewWidth: Math.PI / 3,
+                    alertness: 0, maxAlertness: 100,
+                    type: 'patrol'
+                },
+                { 
+                    x: 500, y: 200, width: 20, height: 25, 
+                    vx: 0, vy: 1, 
+                    patrol: { startX: 500, endX: 500, startY: 150, endY: 350 },
+                    viewAngle: Math.PI / 2, viewDistance: 100, viewWidth: Math.PI / 4,
+                    alertness: 0, maxAlertness: 100,
+                    type: 'patrol'
+                },
+                { 
+                    x: 650, y: 450, width: 20, height: 25, 
+                    vx: 0, vy: 0, 
+                    patrol: { startX: 650, endX: 650, startY: 450, endY: 450 },
+                    viewAngle: Math.PI, viewDistance: 150, viewWidth: Math.PI / 2,
+                    alertness: 0, maxAlertness: 100,
+                    type: 'stationary',
+                    rotationSpeed: 0.02
+                }
+            ];
+            
+            // 보물 생성
+            treasures = [
+                { x: 300, y: 250, width: 15, height: 15, collected: false },
+                { x: 550, y: 100, width: 15, height: 15, collected: false },
+                { x: 700, y: 500, width: 15, height: 15, collected: false }
+            ];
+            
+            // 그림자 영역 생성
+            shadows = [
+                { x: 0, y: 0, width: 100, height: 600 },
+                { x: 120, y: 200, width: 80, height: 200 },
+                { x: 380, y: 100, width: 60, height: 150 },
+                { x: 600, y: 300, width: 100, height: 100 },
+                { x: 720, y: 0, width: 80, height: 300 }
+            ];
+        }
+        
+        // 스킬 사용
+        function useSkill(skillName) {
+            if (skills[skillName].cooldown > 0) return;
+            
+            switch(skillName) {
+                case 'smoke':
+                    smokeClouds.push({
+                        x: ninja.x,
+                        y: ninja.y,
+                        radius: 50,
+                        life: 180,
+                        maxLife: 180
+                    });
+                    skills.smoke.cooldown = skills.smoke.maxCooldown;
+                    break;
+                    
+                case 'teleport':
+                    // 마우스 위치로 순간이동 (간단히 랜덤 위치로)
+                    ninja.x = Math.random() * (canvas.width - ninja.width);
+                    ninja.y = Math.random() * (canvas.height - ninja.height);
+                    createParticles(ninja.x, ninja.y, '#9B59B6', 10);
+                    skills.teleport.cooldown = skills.teleport.maxCooldown;
+                    break;
+                    
+                case 'invisible':
+                    ninja.isInvisible = true;
+                    ninja.invisibleTime = 120; // 2초
+                    skills.invisible.cooldown = skills.invisible.maxCooldown;
+                    break;
+                    
+                case 'distraction':
+                    // 랜덤 위치에 주의분산 생성
+                    distractions.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        life: 120,
+                        maxLife: 120
+                    });
+                    skills.distraction.cooldown = skills.distraction.maxCooldown;
+                    break;
+            }
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 3 + 1
+                });
+            }
+        }
+        
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // 시야 내 감지
+        function isInView(guard, target) {
+            const dx = target.x - guard.x;
+            const dy = target.y - guard.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > guard.viewDistance) return false;
+            
+            const angleToTarget = Math.atan2(dy, dx);
+            let angleDiff = Math.abs(angleToTarget - guard.viewAngle);
+            
+            // 각도 정규화
+            if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+            
+            return angleDiff <= guard.viewWidth / 2;
+        }
+        
+        // 업데이트
+        function update() {
+            if (!gameState.gameRunning) return;
+            
+            // 닌자 이동
+            let moved = false;
+            if (keys['w'] || keys['ㅈ']) { ninja.y -= ninja.speed; moved = true; }
+            if (keys['s'] || keys['ㄴ']) { ninja.y += ninja.speed; moved = true; }
+            if (keys['a'] || keys['ㅁ']) { ninja.x -= ninja.speed; moved = true; }
+            if (keys['d'] || keys['ㅇ']) { ninja.x += ninja.speed; moved = true; }
+            
+            // 경계 체크
+            ninja.x = Math.max(0, Math.min(canvas.width - ninja.width, ninja.x));
+            ninja.y = Math.max(0, Math.min(canvas.height - ninja.height, ninja.y));
+            
+            // 움직임 감지
+            if (moved) {
+                ninja.lastMovement = 30; // 30프레임 동안 움직임 상태
+                if (!ninja.isHidden && !ninja.isInvisible) {
+                    gameState.stealthLevel = Math.max(0, gameState.stealthLevel - 2);
+                }
+            } else {
+                if (ninja.lastMovement > 0) ninja.lastMovement--;
+                if (ninja.isHidden || ninja.isInvisible) {
+                    gameState.stealthLevel = Math.min(100, gameState.stealthLevel + 1);
+                }
+            }
+            
+            // 그림자에 숨기
+            ninja.isHidden = false;
+            shadows.forEach(shadow => {
+                if (checkCollision(ninja, shadow)) {
+                    ninja.isHidden = true;
+                }
+            });
+            
+            // 연막 속에 숨기
+            smokeClouds.forEach(smoke => {
+                const distance = Math.sqrt((ninja.x - smoke.x) ** 2 + (ninja.y - smoke.y) ** 2);
+                if (distance < smoke.radius) {
+                    ninja.isHidden = true;
+                }
+            });
+            
+            // 투명화 시간 감소
+            if (ninja.invisibleTime > 0) {
+                ninja.invisibleTime--;
+                if (ninja.invisibleTime <= 0) {
+                    ninja.isInvisible = false;
+                }
+            }
+            
+            // 경비 업데이트
+            guards.forEach(guard => {
+                // 순찰 이동
+                if (guard.type === 'patrol') {
+                    guard.x += guard.vx;
+                    guard.y += guard.vy;
+                    
+                    // 순찰 경로 체크
+                    if (guard.x <= guard.patrol.startX || guard.x >= guard.patrol.endX) {
+                        guard.vx *= -1;
+                        guard.viewAngle = guard.vx > 0 ? 0 : Math.PI;
+                    }
+                    if (guard.y <= guard.patrol.startY || guard.y >= guard.patrol.endY) {
+                        guard.vy *= -1;
+                        guard.viewAngle = guard.vy > 0 ? Math.PI / 2 : -Math.PI / 2;
+                    }
+                } else if (guard.type === 'stationary') {
+                    // 회전하는 경비
+                    guard.viewAngle += guard.rotationSpeed;
+                }
+                
+                // 주의분산에 반응
+                distractions.forEach(distraction => {
+                    const distance = Math.sqrt((guard.x - distraction.x) ** 2 + (guard.y - distraction.y) ** 2);
+                    if (distance < 100) {
+                        guard.viewAngle = Math.atan2(distraction.y - guard.y, distraction.x - guard.x);
+                    }
+                });
+                
+                // 닌자 감지
+                if (!ninja.isHidden && !ninja.isInvisible && isInView(guard, ninja)) {
+                    guard.alertness = Math.min(guard.maxAlertness, guard.alertness + 3);
+                    gameState.stealthLevel = Math.max(0, gameState.stealthLevel - 5);
+                    
+                    if (guard.alertness >= guard.maxAlertness) {
+                        // 발각됨
+                        gameState.detections++;
+                        gameState.score = Math.max(0, gameState.score - 50);
+                        guard.alertness = 0;
+                        createParticles(ninja.x, ninja.y, '#E74C3C', 8);
+                    }
+                } else {
+                    guard.alertness = Math.max(0, guard.alertness - 1);
+                }
+            });
+            
+            // 보물 수집
+            treasures.forEach(treasure => {
+                if (!treasure.collected && checkCollision(ninja, treasure)) {
+                    treasure.collected = true;
+                    gameState.objectives++;
+                    gameState.score += 100;
+                    createParticles(treasure.x, treasure.y, '#F1C40F', 10);
+                }
+            });
+            
+            // 연막 업데이트
+            smokeClouds.forEach((smoke, index) => {
+                smoke.life--;
+                if (smoke.life <= 0) {
+                    smokeClouds.splice(index, 1);
+                }
+            });
+            
+            // 주의분산 업데이트
+            distractions.forEach((distraction, index) => {
+                distraction.life--;
+                if (distraction.life <= 0) {
+                    distractions.splice(index, 1);
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            // 스킬 쿨다운 업데이트
+            Object.keys(skills).forEach(skillName => {
+                if (skills[skillName].cooldown > 0) {
+                    skills[skillName].cooldown--;
+                }
+            });
+            
+            // 경고 레벨 업데이트
+            if (gameState.stealthLevel > 70) {
+                gameState.alertLevel = 0;
+            } else if (gameState.stealthLevel > 30) {
+                gameState.alertLevel = 1;
+            } else {
+                gameState.alertLevel = 2;
+            }
+            
+            // 승리 조건
+            if (gameState.objectives >= 3) {
+                gameState.gameRunning = false;
+                clearInterval(gameState.timer);
+                setTimeout(() => {
+                    alert(`🎉 미션 완료!\n발각 횟수: ${gameState.detections}회\n최종 점수: ${gameState.score}점`);
+                }, 500);
+            }
+            
+            // 게임 오버 (시간 초과)
+            if (gameState.timeLeft <= 0) {
+                gameState.gameRunning = false;
+                clearInterval(gameState.timer);
+                setTimeout(() => {
+                    alert(`⏰ 시간 초과!\n수집한 보물: ${gameState.objectives}/3\n최종 점수: ${gameState.score}점`);
+                }, 500);
+            }
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            ctx.fillStyle = '#0E1621';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 그림자 영역
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            shadows.forEach(shadow => {
+                ctx.fillRect(shadow.x, shadow.y, shadow.width, shadow.height);
+            });
+            
+            // 연막
+            smokeClouds.forEach(smoke => {
+                const alpha = smoke.life / smoke.maxLife * 0.7;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#95A5A6';
+                ctx.beginPath();
+                ctx.arc(smoke.x, smoke.y, smoke.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 주의분산
+            distractions.forEach(distraction => {
+                const alpha = distraction.life / distraction.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#F39C12';
+                ctx.beginPath();
+                ctx.arc(distraction.x, distraction.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 파장 효과
+                ctx.strokeStyle = '#F39C12';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(distraction.x, distraction.y, 20 * (1 - alpha), 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+            
+            // 경비들
+            guards.forEach(guard => {
+                // 시야 그리기
+                ctx.fillStyle = `rgba(231, 76, 60, ${0.1 + guard.alertness / guard.maxAlertness * 0.2})`;
+                ctx.beginPath();
+                ctx.moveTo(guard.x + guard.width/2, guard.y + guard.height/2);
+                ctx.arc(
+                    guard.x + guard.width/2, 
+                    guard.y + guard.height/2, 
+                    guard.viewDistance,
+                    guard.viewAngle - guard.viewWidth/2,
+                    guard.viewAngle + guard.viewWidth/2
+                );
+                ctx.closePath();
+                ctx.fill();
+                
+                // 경비 몸체
+                ctx.fillStyle = guard.alertness > 50 ? '#E74C3C' : '#34495E';
+                ctx.fillRect(guard.x, guard.y, guard.width, guard.height);
+                
+                // 경비 방향 표시
+                const dirX = guard.x + guard.width/2 + Math.cos(guard.viewAngle) * 15;
+                const dirY = guard.y + guard.height/2 + Math.sin(guard.viewAngle) * 15;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(guard.x + guard.width/2, guard.y + guard.height/2);
+                ctx.lineTo(dirX, dirY);
+                ctx.stroke();
+                
+                // 경계 상태 표시
+                if (guard.alertness > 0) {
+                    ctx.fillStyle = '#F39C12';
+                    ctx.beginPath();
+                    ctx.arc(guard.x + guard.width/2, guard.y - 10, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            
+            // 보물들
+            treasures.forEach(treasure => {
+                if (!treasure.collected) {
+                    ctx.fillStyle = '#F1C40F';
+                    ctx.fillRect(treasure.x, treasure.y, treasure.width, treasure.height);
+                    
+                    // 반짝임 효과
+                    ctx.fillStyle = `rgba(241, 196, 15, ${0.5 + Math.sin(Date.now() * 0.01) * 0.3})`;
+                    ctx.fillRect(treasure.x - 2, treasure.y - 2, treasure.width + 4, treasure.height + 4);
+                }
+            });
+            
+            // 닌자
+            if (!ninja.isInvisible) {
+                ctx.globalAlpha = ninja.isHidden ? 0.3 : 1;
+                ctx.fillStyle = ninja.isHidden ? '#3498DB' : '#2C3E50';
+                ctx.fillRect(ninja.x, ninja.y, ninja.width, ninja.height);
+                
+                // 닌자 눈
+                ctx.fillStyle = '#E74C3C';
+                ctx.fillRect(ninja.x + 2, ninja.y + 2, 3, 2);
+                ctx.fillRect(ninja.x + ninja.width - 5, ninja.y + 2, 3, 2);
+            } else {
+                // 투명화 상태 - 희미한 윤곽
+                ctx.globalAlpha = 0.2;
+                ctx.strokeStyle = '#9B59B6';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(ninja.x, ninja.y, ninja.width, ninja.height);
+            }
+            ctx.globalAlpha = 1;
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('objectives').textContent = gameState.objectives;
+            document.getElementById('detections').textContent = gameState.detections;
+            document.getElementById('score').textContent = gameState.score;
+            
+            // 타이머
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 스텔스 미터
+            document.getElementById('stealthFill').style.width = gameState.stealthLevel + '%';
+            
+            // 경고 레벨
+            const alertElement = document.getElementById('alertLevel');
+            switch(gameState.alertLevel) {
+                case 0:
+                    alertElement.textContent = '🟢 안전 상태';
+                    alertElement.className = 'alert-level safe';
+                    break;
+                case 1:
+                    alertElement.textContent = '🟡 주의 상태';
+                    alertElement.className = 'alert-level caution';
+                    break;
+                case 2:
+                    alertElement.textContent = '🔴 위험 상태';
+                    alertElement.className = 'alert-level danger';
+                    break;
+            }
+            
+            // 스킬 버튼 상태
+            document.getElementById('smokeBtn').disabled = skills.smoke.cooldown > 0;
+            document.getElementById('teleportBtn').disabled = skills.teleport.cooldown > 0;
+            document.getElementById('invisibleBtn').disabled = skills.invisible.cooldown > 0;
+            document.getElementById('distractionBtn').disabled = skills.distraction.cooldown > 0;
+        }
+        
+        // 타이머 시작
+        function startTimer() {
+            gameState.timer = setInterval(() => {
+                if (gameState.gameRunning) {
+                    gameState.timeLeft--;
+                }
+            }, 1000);
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        createLevel();
+        startTimer();
+        gameLoop();
+    </script>
+</body>
+</html>

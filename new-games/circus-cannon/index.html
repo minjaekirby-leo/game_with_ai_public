@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 대포</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: 'Comic Sans MS', cursive; background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%); color: white; text-align: center; min-height: 100vh; }
+        h1 { font-size: 3rem; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .game-container { background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin: 20px auto; max-width: 900px; backdrop-filter: blur(10px); }
+        canvas { border: 5px solid #fff; border-radius: 15px; background: linear-gradient(180deg, #74b9ff 0%, #00b894 100%); }
+        button { background: linear-gradient(45deg, #ff7675, #fd79a8); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 5px; transition: all 0.3s; }
+        button:hover { transform: scale(1.05); }
+        .info { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }
+        .info-box { background: rgba(255, 255, 255, 0.2); padding: 15px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 대포</h1>
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">시도: <span id="attempts">0</span></div>
+            <div class="info-box">성공: <span id="success">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="fire()" id="fireBtn">🔥 발사!</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        <p><strong>조작법:</strong> 마우스로 각도 조절, 버튼으로 발사</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false, score = 0, attempts = 0, success = 0, mouseX = 400, mouseY = 300;
+        let human = null, particles = [];
+        const cannon = { x: 100, y: 450, angle: -Math.PI/4 };
+        const target = { x: 650, y: 400, width: 100, height: 50 };
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            if (gameRunning && !human) {
+                cannon.angle = Math.atan2(mouseY - cannon.y, mouseX - cannon.x);
+            }
+        });
+        
+        function fire() {
+            if (!gameRunning || human) return;
+            const power = 15;
+            human = {
+                x: cannon.x + 50,
+                y: cannon.y - 20,
+                vx: Math.cos(cannon.angle) * power,
+                vy: Math.sin(cannon.angle) * power,
+                trail: []
+            };
+            attempts++;
+            document.getElementById('fireBtn').disabled = true;
+        }
+        
+        function updateHuman() {
+            if (!human) return;
+            human.vy += 0.4;
+            human.x += human.vx;
+            human.y += human.vy;
+            human.trail.push({x: human.x, y: human.y});
+            if (human.trail.length > 20) human.trail.shift();
+            
+            if (human.x > target.x && human.x < target.x + target.width && 
+                human.y > target.y && human.y < target.y + target.height) {
+                score += 100;
+                success++;
+                createSuccessParticles();
+                human = null;
+                document.getElementById('fireBtn').disabled = false;
+            } else if (human.y > canvas.height) {
+                human = null;
+                document.getElementById('fireBtn').disabled = false;
+            }
+        }
+        
+        function createSuccessParticles() {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: target.x + target.width/2,
+                    y: target.y + target.height/2,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: -Math.random() * 8,
+                    life: 60,
+                    color: '#FFD700'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#74b9ff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 대포
+            ctx.save();
+            ctx.translate(cannon.x, cannon.y);
+            ctx.rotate(cannon.angle);
+            ctx.fillStyle = '#2d3436';
+            ctx.fillRect(0, -15, 60, 30);
+            ctx.restore();
+            
+            // 안전망
+            ctx.fillStyle = '#e17055';
+            ctx.fillRect(target.x, target.y, target.width, target.height);
+            
+            // 인간
+            if (human) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                human.trail.forEach((p, i) => {
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                });
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.arc(human.x, human.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 조준선
+            if (!human) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(cannon.x + 50, cannon.y - 20);
+                ctx.lineTo(mouseX, mouseY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // 파티클
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life / 60;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+        
+        function gameLoop() {
+            if (gameRunning) {
+                updateHuman();
+                updateParticles();
+                updateDisplay();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('attempts').textContent = attempts;
+            document.getElementById('success').textContent = success;
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            document.getElementById('fireBtn').disabled = false;
+        }
+        
+        function resetGame() {
+            gameRunning = false;
+            score = 0; attempts = 0; success = 0;
+            human = null; particles = [];
+            updateDisplay();
+            document.getElementById('fireBtn').disabled = true;
+        }
+        
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

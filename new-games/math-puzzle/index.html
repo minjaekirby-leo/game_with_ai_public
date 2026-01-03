@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧮 수학 퍼즐</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4A90E2, #7B68EE);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 20px;
+            border: 3px solid #4169E1;
+            max-width: 800px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+        
+        .ui {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(65, 105, 225, 0.8);
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 5px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .problem-area {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .problem-text {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #FFD700;
+        }
+        
+        .math-expression {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #00FF7F;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .answer-input {
+            font-size: 24px;
+            padding: 15px 20px;
+            border: 3px solid #4169E1;
+            border-radius: 10px;
+            text-align: center;
+            width: 200px;
+            margin: 10px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        
+        .answer-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .answer-btn {
+            background: #32CD32;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .answer-btn:hover {
+            background: #228B22;
+            transform: scale(1.05);
+        }
+        
+        .answer-btn.correct {
+            background: #00FF00;
+            animation: correctAnswer 0.5s;
+        }
+        
+        .answer-btn.wrong {
+            background: #FF0000;
+            animation: wrongAnswer 0.5s;
+        }
+        
+        @keyframes correctAnswer {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes wrongAnswer {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: #9370DB;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: #8A2BE2;
+            transform: scale(1.05);
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: #FF6347;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            background: #FF4500;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #32CD32, #00FF7F);
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        .streak-indicator {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        
+        .feedback {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 15px 0;
+            min-height: 25px;
+        }
+        
+        .feedback.correct {
+            color: #00FF7F;
+        }
+        
+        .feedback.wrong {
+            color: #FF6B6B;
+        }
+        
+        .info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧮 수학 퍼즐</h1>
+        
+        <div class="ui">
+            <div class="stat">🎯 정답: <span id="correctCount">0</span></div>
+            <div class="stat">❌ 오답: <span id="wrongCount">0</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">⏰ 시간: <span id="timeLeft">60</span>초</div>
+        </div>
+        
+        <div class="streak-indicator">
+            🔥 연속 정답: <span id="streak">0</span>개
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">쉬움 (1자리)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">보통 (2자리)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">어려움 (3자리)</button>
+        </div>
+        
+        <div class="problem-area">
+            <div class="problem-text" id="problemText">새 게임을 시작하세요!</div>
+            <div class="math-expression" id="mathExpression"></div>
+            <input type="number" class="answer-input" id="answerInput" placeholder="답을 입력하세요" style="display: none;">
+            <div class="answer-buttons" id="answerButtons" style="display: none;">
+                <!-- 선택지 버튼들이 여기에 생성됩니다 -->
+            </div>
+        </div>
+        
+        <div class="feedback" id="feedback"></div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="startNewGame()">🎮 새 게임</button>
+            <button class="control-btn" onclick="skipProblem()">⏭️ 문제 건너뛰기</button>
+            <button class="control-btn" onclick="showHint()">💡 힌트</button>
+            <button class="control-btn" onclick="pauseGame()">⏸️ 일시정지</button>
+        </div>
+        
+        <div class="info">
+            <p>🎮 조작법: 수학 문제를 풀고 정답을 선택하거나 입력하세요!</p>
+            <p>💡 팁: 연속으로 맞추면 보너스 점수를 받을 수 있어요!</p>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            difficulty: 'easy',
+            correctCount: 0,
+            wrongCount: 0,
+            score: 0,
+            streak: 0,
+            timeLeft: 60,
+            gameRunning: false,
+            isPaused: false,
+            timer: null,
+            currentProblem: null,
+            problemType: 'multiple'
+        };
+        
+        // 난이도별 설정
+        const difficultySettings = {
+            easy: { 
+                range: [1, 10], 
+                operations: ['+', '-'], 
+                timeLimit: 60,
+                pointsPerCorrect: 10
+            },
+            medium: { 
+                range: [10, 50], 
+                operations: ['+', '-', '×'], 
+                timeLimit: 90,
+                pointsPerCorrect: 20
+            },
+            hard: { 
+                range: [50, 100], 
+                operations: ['+', '-', '×', '÷'], 
+                timeLimit: 120,
+                pointsPerCorrect: 30
+            }
+        };
+        
+        // 문제 유형
+        const problemTypes = [
+            'arithmetic',    // 기본 사칙연산
+            'comparison',    // 크기 비교
+            'sequence',      // 수열
+            'word',          // 문장제
+            'pattern'        // 패턴 찾기
+        ];
+        
+        // 난이도 설정
+        function setDifficulty(difficulty) {
+            gameState.difficulty = difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // 새 게임 시작
+        function startNewGame() {
+            const settings = difficultySettings[gameState.difficulty];
+            
+            gameState.correctCount = 0;
+            gameState.wrongCount = 0;
+            gameState.score = 0;
+            gameState.streak = 0;
+            gameState.timeLeft = settings.timeLimit;
+            gameState.gameRunning = true;
+            gameState.isPaused = false;
+            
+            generateNewProblem();
+            startTimer();
+            updateUI();
+        }
+        
+        // 새 문제 생성
+        function generateNewProblem() {
+            const settings = difficultySettings[gameState.difficulty];
+            const problemType = problemTypes[Math.floor(Math.random() * problemTypes.length)];
+            
+            switch(problemType) {
+                case 'arithmetic':
+                    generateArithmeticProblem(settings);
+                    break;
+                case 'comparison':
+                    generateComparisonProblem(settings);
+                    break;
+                case 'sequence':
+                    generateSequenceProblem(settings);
+                    break;
+                case 'word':
+                    generateWordProblem(settings);
+                    break;
+                case 'pattern':
+                    generatePatternProblem(settings);
+                    break;
+            }
+        }
+        
+        // 사칙연산 문제
+        function generateArithmeticProblem(settings) {
+            const operation = settings.operations[Math.floor(Math.random() * settings.operations.length)];
+            let a = Math.floor(Math.random() * (settings.range[1] - settings.range[0])) + settings.range[0];
+            let b = Math.floor(Math.random() * (settings.range[1] - settings.range[0])) + settings.range[0];
+            let answer;
+            
+            // 나눗셈의 경우 나누어떨어지게 조정
+            if (operation === '÷') {
+                answer = Math.floor(Math.random() * 10) + 1;
+                a = answer * b;
+            }
+            
+            switch(operation) {
+                case '+': answer = a + b; break;
+                case '-': 
+                    if (a < b) [a, b] = [b, a]; // 음수 방지
+                    answer = a - b; 
+                    break;
+                case '×': answer = a * b; break;
+                case '÷': break; // 이미 계산됨
+            }
+            
+            gameState.currentProblem = {
+                type: 'arithmetic',
+                question: `다음 계산의 결과는?`,
+                expression: `${a} ${operation} ${b} = ?`,
+                answer: answer,
+                choices: generateChoices(answer)
+            };
+            
+            displayProblem();
+        }
+        
+        // 크기 비교 문제
+        function generateComparisonProblem(settings) {
+            const a = Math.floor(Math.random() * settings.range[1]) + 1;
+            const b = Math.floor(Math.random() * settings.range[1]) + 1;
+            const operations = ['>', '<', '='];
+            const correctOp = a > b ? '>' : a < b ? '<' : '=';
+            
+            gameState.currentProblem = {
+                type: 'comparison',
+                question: `다음 중 올바른 부등호는?`,
+                expression: `${a} ? ${b}`,
+                answer: correctOp,
+                choices: operations
+            };
+            
+            displayProblem();
+        }
+        
+        // 수열 문제
+        function generateSequenceProblem(settings) {
+            const start = Math.floor(Math.random() * 10) + 1;
+            const step = Math.floor(Math.random() * 5) + 1;
+            const sequence = [start, start + step, start + step * 2, start + step * 3];
+            const answer = start + step * 4;
+            
+            gameState.currentProblem = {
+                type: 'sequence',
+                question: `다음 수열에서 빈 칸에 들어갈 숫자는?`,
+                expression: `${sequence.join(', ')}, ?`,
+                answer: answer,
+                choices: generateChoices(answer)
+            };
+            
+            displayProblem();
+        }
+        
+        // 문장제 문제
+        function generateWordProblem(settings) {
+            const scenarios = [
+                {
+                    text: "철수가 사탕을 {a}개 가지고 있었습니다. 영희가 {b}개를 더 주었습니다. 철수가 가진 사탕은 모두 몇 개일까요?",
+                    operation: (a, b) => a + b
+                },
+                {
+                    text: "상자에 공이 {a}개 들어있었습니다. {b}개를 꺼냈습니다. 상자에 남은 공은 몇 개일까요?",
+                    operation: (a, b) => a - b
+                },
+                {
+                    text: "한 상자에 연필이 {a}자루씩 들어있습니다. {b}상자에는 연필이 모두 몇 자루 들어있을까요?",
+                    operation: (a, b) => a * b
+                }
+            ];
+            
+            const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+            let a = Math.floor(Math.random() * 20) + 5;
+            let b = Math.floor(Math.random() * 10) + 2;
+            
+            // 뺄셈의 경우 음수 방지
+            if (scenario.operation === ((a, b) => a - b) && a < b) {
+                [a, b] = [b, a];
+            }
+            
+            const answer = scenario.operation(a, b);
+            const questionText = scenario.text.replace('{a}', a).replace('{b}', b);
+            
+            gameState.currentProblem = {
+                type: 'word',
+                question: questionText,
+                expression: '',
+                answer: answer,
+                choices: generateChoices(answer)
+            };
+            
+            displayProblem();
+        }
+        
+        // 패턴 문제
+        function generatePatternProblem(settings) {
+            const patterns = [
+                { sequence: [2, 4, 6, 8], next: 10, rule: "+2" },
+                { sequence: [1, 3, 5, 7], next: 9, rule: "+2" },
+                { sequence: [5, 10, 15, 20], next: 25, rule: "+5" },
+                { sequence: [1, 2, 4, 8], next: 16, rule: "×2" },
+                { sequence: [3, 6, 9, 12], next: 15, rule: "+3" }
+            ];
+            
+            const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+            
+            gameState.currentProblem = {
+                type: 'pattern',
+                question: `다음 패턴에서 빈 칸에 들어갈 숫자는?`,
+                expression: `${pattern.sequence.join(', ')}, ?`,
+                answer: pattern.next,
+                choices: generateChoices(pattern.next)
+            };
+            
+            displayProblem();
+        }
+        
+        // 선택지 생성
+        function generateChoices(correctAnswer) {
+            const choices = [correctAnswer];
+            
+            while (choices.length < 4) {
+                let wrongAnswer;
+                if (correctAnswer < 10) {
+                    wrongAnswer = Math.floor(Math.random() * 20) + 1;
+                } else {
+                    wrongAnswer = correctAnswer + (Math.floor(Math.random() * 20) - 10);
+                }
+                
+                if (!choices.includes(wrongAnswer) && wrongAnswer > 0) {
+                    choices.push(wrongAnswer);
+                }
+            }
+            
+            // 배열 섞기
+            for (let i = choices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [choices[i], choices[j]] = [choices[j], choices[i]];
+            }
+            
+            return choices;
+        }
+        
+        // 문제 표시
+        function displayProblem() {
+            const problem = gameState.currentProblem;
+            
+            document.getElementById('problemText').textContent = problem.question;
+            document.getElementById('mathExpression').textContent = problem.expression;
+            
+            // 선택지 버튼 생성
+            const buttonsContainer = document.getElementById('answerButtons');
+            buttonsContainer.innerHTML = '';
+            buttonsContainer.style.display = 'grid';
+            
+            if (problem.type === 'comparison') {
+                problem.choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'answer-btn';
+                    button.textContent = choice;
+                    button.onclick = () => checkAnswer(choice);
+                    buttonsContainer.appendChild(button);
+                });
+            } else {
+                problem.choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'answer-btn';
+                    button.textContent = choice;
+                    button.onclick = () => checkAnswer(choice);
+                    buttonsContainer.appendChild(button);
+                });
+            }
+            
+            document.getElementById('answerInput').style.display = 'none';
+            document.getElementById('feedback').textContent = '';
+        }
+        
+        // 답 확인
+        function checkAnswer(selectedAnswer) {
+            const problem = gameState.currentProblem;
+            const isCorrect = selectedAnswer == problem.answer;
+            
+            // 버튼 색상 변경
+            document.querySelectorAll('.answer-btn').forEach(btn => {
+                if (btn.textContent == selectedAnswer) {
+                    btn.classList.add(isCorrect ? 'correct' : 'wrong');
+                } else if (btn.textContent == problem.answer) {
+                    btn.classList.add('correct');
+                }
+                btn.disabled = true;
+            });
+            
+            if (isCorrect) {
+                gameState.correctCount++;
+                gameState.streak++;
+                const basePoints = difficultySettings[gameState.difficulty].pointsPerCorrect;
+                const streakBonus = Math.floor(gameState.streak / 3) * 5;
+                const points = basePoints + streakBonus;
+                gameState.score += points;
+                
+                document.getElementById('feedback').textContent = `🎉 정답! +${points}점`;
+                document.getElementById('feedback').className = 'feedback correct';
+            } else {
+                gameState.wrongCount++;
+                gameState.streak = 0;
+                document.getElementById('feedback').textContent = `❌ 틀렸습니다. 정답: ${problem.answer}`;
+                document.getElementById('feedback').className = 'feedback wrong';
+            }
+            
+            updateUI();
+            
+            // 2초 후 다음 문제
+            setTimeout(() => {
+                if (gameState.gameRunning) {
+                    generateNewProblem();
+                }
+            }, 2000);
+        }
+        
+        // 문제 건너뛰기
+        function skipProblem() {
+            if (gameState.gameRunning && !gameState.isPaused) {
+                gameState.streak = 0;
+                document.getElementById('feedback').textContent = '⏭️ 문제를 건너뛰었습니다.';
+                document.getElementById('feedback').className = 'feedback';
+                generateNewProblem();
+            }
+        }
+        
+        // 힌트 보기
+        function showHint() {
+            if (!gameState.currentProblem) return;
+            
+            const problem = gameState.currentProblem;
+            let hint = '';
+            
+            switch(problem.type) {
+                case 'arithmetic':
+                    hint = '💡 계산을 차근차근 해보세요!';
+                    break;
+                case 'comparison':
+                    hint = '💡 두 숫자의 크기를 비교해보세요!';
+                    break;
+                case 'sequence':
+                    hint = '💡 숫자들 사이의 규칙을 찾아보세요!';
+                    break;
+                case 'word':
+                    hint = '💡 문제를 천천히 읽고 어떤 계산이 필요한지 생각해보세요!';
+                    break;
+                case 'pattern':
+                    hint = '💡 숫자들이 어떤 규칙으로 증가하는지 찾아보세요!';
+                    break;
+            }
+            
+            document.getElementById('feedback').textContent = hint;
+            document.getElementById('feedback').className = 'feedback';
+        }
+        
+        // 게임 일시정지
+        function pauseGame() {
+            if (!gameState.gameRunning) return;
+            
+            gameState.isPaused = !gameState.isPaused;
+            
+            if (gameState.isPaused) {
+                clearInterval(gameState.timer);
+                event.target.textContent = '▶️ 계속하기';
+            } else {
+                startTimer();
+                event.target.textContent = '⏸️ 일시정지';
+            }
+        }
+        
+        // 타이머 시작
+        function startTimer() {
+            gameState.timer = setInterval(() => {
+                if (gameState.gameRunning && !gameState.isPaused) {
+                    gameState.timeLeft--;
+                    
+                    if (gameState.timeLeft <= 0) {
+                        gameOver();
+                    }
+                    
+                    updateUI();
+                }
+            }, 1000);
+        }
+        
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            clearInterval(gameState.timer);
+            
+            const accuracy = gameState.correctCount + gameState.wrongCount > 0 
+                ? Math.round((gameState.correctCount / (gameState.correctCount + gameState.wrongCount)) * 100) 
+                : 0;
+            
+            setTimeout(() => {
+                alert(`⏰ 시간 종료!\n정답: ${gameState.correctCount}개\n오답: ${gameState.wrongCount}개\n정확도: ${accuracy}%\n최종 점수: ${gameState.score}점`);
+            }, 500);
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('correctCount').textContent = gameState.correctCount;
+            document.getElementById('wrongCount').textContent = gameState.wrongCount;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('timeLeft').textContent = gameState.timeLeft;
+            document.getElementById('streak').textContent = gameState.streak;
+            
+            // 진행도 바 (시간 기준)
+            const settings = difficultySettings[gameState.difficulty];
+            const progress = ((settings.timeLimit - gameState.timeLeft) / settings.timeLimit) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '1' && e.key <= '4' && gameState.currentProblem) {
+                const buttons = document.querySelectorAll('.answer-btn');
+                const index = parseInt(e.key) - 1;
+                if (buttons[index] && !buttons[index].disabled) {
+                    buttons[index].click();
+                }
+            }
+        });
+        
+        // 게임 초기화
+        document.getElementById('problemText').textContent = '새 게임을 시작하세요!';
+        document.getElementById('mathExpression').textContent = '';
+    </script>
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>광대 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .action-btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e17055, #d63031);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤡 광대 게임</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">웃음: <span id="laughter">0</span></div>
+            <div class="info-box">관객: <span id="audience">10</span></div>
+            <div class="info-box">시간: <span id="time">60</span>초</div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="action-buttons">
+            <button class="action-btn" onclick="performAction('joke')">🎭 개그</button>
+            <button class="action-btn" onclick="performAction('balloon')">🎈 풍선</button>
+            <button class="action-btn" onclick="performAction('magic')">🪄 마술</button>
+            <button class="action-btn" onclick="performAction('dance')">💃 춤</button>
+            <button class="action-btn" onclick="performAction('juggle')">🤹 저글링</button>
+            <button class="action-btn" onclick="performAction('honk')">📯 경적</button>
+        </div>
+        
+        <div class="controls">
+            <button onclick="startShow()">🎮 쇼 시작</button>
+            <button onclick="resetShow()">🔄 다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let showRunning = false;
+        let laughter = 0;
+        let audienceCount = 10;
+        let timeLeft = 60;
+        let gameTimer = null;
+
+        // 광대
+        const clown = {
+            x: 400,
+            y: 300,
+            width: 80,
+            height: 120,
+            action: 'idle',
+            actionTimer: 0,
+            mood: 'happy'
+        };
+
+        // 관객들
+        let audience = [];
+        let particles = [];
+        let balloons = [];
+
+        function initializeAudience() {
+            audience = [];
+            for (let i = 0; i < audienceCount; i++) {
+                audience.push({
+                    x: 50 + i * 70,
+                    y: 400,
+                    mood: 0.5, // 0 = 지루함, 1 = 매우 즐거움
+                    laughing: false,
+                    laughTimer: 0,
+                    emoji: '😐'
+                });
+            }
+        }
+
+        function performAction(actionType) {
+            if (!showRunning || clown.action !== 'idle') return;
+            
+            clown.action = actionType;
+            clown.actionTimer = 120; // 2초
+            
+            // 액션별 효과
+            const effects = {
+                'joke': () => {
+                    makeAudienceLaugh(0.8, 30);
+                    createTextParticle(clown.x, clown.y - 50, 'HA HA HA!', '#FFD700');
+                },
+                'balloon': () => {
+                    createBalloon();
+                    makeAudienceLaugh(0.6, 20);
+                },
+                'magic': () => {
+                    createMagicParticles();
+                    makeAudienceLaugh(0.7, 25);
+                },
+                'dance': () => {
+                    makeAudienceLaugh(0.5, 15);
+                    createDanceParticles();
+                },
+                'juggle': () => {
+                    createJugglingBalls();
+                    makeAudienceLaugh(0.6, 20);
+                },
+                'honk': () => {
+                    makeAudienceLaugh(0.4, 10);
+                    createSoundWaves();
+                }
+            };
+            
+            if (effects[actionType]) {
+                effects[actionType]();
+            }
+        }
+
+        function makeAudienceLaugh(probability, laughterPoints) {
+            audience.forEach(person => {
+                if (Math.random() < probability) {
+                    person.laughing = true;
+                    person.laughTimer = 120;
+                    person.mood = Math.min(1, person.mood + 0.2);
+                    person.emoji = '😂';
+                    laughter += laughterPoints / audience.length;
+                }
+            });
+        }
+
+        function createBalloon() {
+            balloons.push({
+                x: clown.x,
+                y: clown.y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -Math.random() * 3 - 2,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                life: 180,
+                size: 20 + Math.random() * 10
+            });
+        }
+
+        function createMagicParticles() {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: clown.x + (Math.random() - 0.5) * 100,
+                    y: clown.y + (Math.random() - 0.5) * 100,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 60,
+                    color: '#9b59b6',
+                    size: Math.random() * 5 + 3,
+                    type: 'star'
+                });
+            }
+        }
+
+        function createDanceParticles() {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: clown.x + (Math.random() - 0.5) * 80,
+                    y: clown.y + 60,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -Math.random() * 4,
+                    life: 40,
+                    color: '#e74c3c',
+                    size: Math.random() * 4 + 2,
+                    type: 'heart'
+                });
+            }
+        }
+
+        function createJugglingBalls() {
+            for (let i = 0; i < 3; i++) {
+                particles.push({
+                    x: clown.x - 30 + i * 30,
+                    y: clown.y - 50,
+                    vx: (i - 1) * 2,
+                    vy: -8,
+                    life: 100,
+                    color: `hsl(${i * 120}, 100%, 50%)`,
+                    size: 15,
+                    type: 'ball'
+                });
+            }
+        }
+
+        function createSoundWaves() {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: clown.x + 40,
+                    y: clown.y + 20,
+                    radius: i * 20,
+                    maxRadius: 100,
+                    life: 30,
+                    color: '#3498db',
+                    type: 'wave'
+                });
+            }
+        }
+
+        function createTextParticle(x, y, text, color) {
+            particles.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                life: 60,
+                type: 'text'
+            });
+        }
+
+        function updateClown() {
+            if (clown.actionTimer > 0) {
+                clown.actionTimer--;
+                if (clown.actionTimer <= 0) {
+                    clown.action = 'idle';
+                }
+            }
+        }
+
+        function updateAudience() {
+            audience.forEach(person => {
+                if (person.laughing && person.laughTimer > 0) {
+                    person.laughTimer--;
+                    if (person.laughTimer <= 0) {
+                        person.laughing = false;
+                        person.emoji = person.mood > 0.7 ? '😊' : person.mood > 0.3 ? '😐' : '😴';
+                    }
+                }
+                
+                // 시간이 지나면서 기분 천천히 감소
+                if (Math.random() < 0.005) {
+                    person.mood = Math.max(0, person.mood - 0.02);
+                    if (person.mood < 0.3) {
+                        person.emoji = '😴';
+                    }
+                }
+            });
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                if (particle.type === 'ball') {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.3; // 중력
+                } else if (particle.type === 'wave') {
+                    particle.radius += 3;
+                    if (particle.radius > particle.maxRadius) {
+                        particles.splice(index, 1);
+                        return;
+                    }
+                } else if (particle.type === 'text') {
+                    particle.y -= 1;
+                } else {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    if (particle.type !== 'star') {
+                        particle.vy += 0.1;
+                    }
+                }
+                
+                particle.life--;
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function updateBalloons() {
+            balloons.forEach((balloon, index) => {
+                balloon.x += balloon.vx;
+                balloon.y += balloon.vy;
+                balloon.vy -= 0.02; // 부력
+                balloon.life--;
+                
+                if (balloon.life <= 0 || balloon.y < -50) {
+                    balloons.splice(index, 1);
+                }
+            });
+        }
+
+        function drawBackground() {
+            // 무대 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 무대 바닥
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 450, canvas.width, 50);
+            
+            // 커튼
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(0, 0, 50, canvas.height);
+            ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
+        }
+
+        function drawClown() {
+            let offsetX = 0;
+            let offsetY = 0;
+            
+            // 액션에 따른 애니메이션
+            switch(clown.action) {
+                case 'dance':
+                    offsetX = Math.sin(clown.actionTimer * 0.3) * 10;
+                    break;
+                case 'juggle':
+                    offsetY = Math.sin(clown.actionTimer * 0.2) * 5;
+                    break;
+                case 'magic':
+                    offsetY = -10;
+                    break;
+            }
+            
+            const x = clown.x + offsetX;
+            const y = clown.y + offsetY;
+            
+            // 몸
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(x - 30, y, 60, 80);
+            
+            // 머리
+            ctx.fillStyle = '#FFE4B5';
+            ctx.beginPath();
+            ctx.arc(x, y - 20, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 빨간 코
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(x, y - 20, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 모자
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillRect(x - 25, y - 50, 50, 20);
+            ctx.fillRect(x - 15, y - 60, 30, 10);
+            
+            // 신발
+            ctx.fillStyle = '#ffff00';
+            ctx.fillRect(x - 40, y + 80, 25, 15);
+            ctx.fillRect(x + 15, y + 80, 25, 15);
+            
+            // 액션별 추가 그리기
+            if (clown.action === 'honk') {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(x + 35, y + 10, 20, 8);
+            }
+        }
+
+        function drawAudience() {
+            audience.forEach(person => {
+                // 몸
+                ctx.fillStyle = person.laughing ? '#27ae60' : '#3498db';
+                ctx.fillRect(person.x - 10, person.y - 30, 20, 30);
+                
+                // 머리
+                ctx.fillStyle = '#f4d03f';
+                ctx.beginPath();
+                ctx.arc(person.x, person.y - 40, 12, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 표정
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(person.emoji, person.x, person.y - 50);
+                
+                // 박수 효과
+                if (person.laughing) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('👏', person.x - 15, person.y - 60);
+                    ctx.fillText('👏', person.x + 15, person.y - 60);
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 60;
+                
+                switch(particle.type) {
+                    case 'star':
+                        ctx.fillStyle = particle.color;
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('⭐', particle.x, particle.y);
+                        break;
+                        
+                    case 'heart':
+                        ctx.fillStyle = particle.color;
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('❤️', particle.x, particle.y);
+                        break;
+                        
+                    case 'ball':
+                        ctx.fillStyle = particle.color;
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case 'wave':
+                        ctx.strokeStyle = particle.color;
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                        break;
+                        
+                    case 'text':
+                        ctx.fillStyle = particle.color;
+                        ctx.font = 'bold 20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(particle.text, particle.x, particle.y);
+                        break;
+                        
+                    default:
+                        ctx.fillStyle = particle.color;
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        ctx.fill();
+                }
+                
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBalloons() {
+            balloons.forEach(balloon => {
+                ctx.fillStyle = balloon.color;
+                ctx.beginPath();
+                ctx.arc(balloon.x, balloon.y, balloon.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 풍선 끈
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(balloon.x, balloon.y + balloon.size);
+                ctx.lineTo(balloon.x, balloon.y + balloon.size + 30);
+                ctx.stroke();
+            });
+        }
+
+        function updateTimer() {
+            if (!showRunning) return;
+            
+            timeLeft--;
+            if (timeLeft <= 0) {
+                endShow();
+            }
+        }
+
+        function endShow() {
+            showRunning = false;
+            clearInterval(gameTimer);
+            
+            let result = '';
+            if (laughter >= 200) {
+                result = '🎉 대성공! 관객들이 배꼽을 잡고 웃었어요!';
+            } else if (laughter >= 100) {
+                result = '👏 성공! 즐거운 쇼였어요!';
+            } else if (laughter >= 50) {
+                result = '😊 보통! 조금 더 재미있게 해보세요!';
+            } else {
+                result = '😴 실패... 관객들이 지루해했어요.';
+            }
+            
+            alert(`${result}\n총 웃음: ${Math.floor(laughter)}점`);
+        }
+
+        function update() {
+            if (!showRunning) return;
+            
+            updateClown();
+            updateAudience();
+            updateParticles();
+            updateBalloons();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawClown();
+            drawAudience();
+            drawParticles();
+            drawBalloons();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('laughter').textContent = Math.floor(laughter);
+            document.getElementById('audience').textContent = audienceCount;
+            document.getElementById('time').textContent = timeLeft;
+        }
+
+        function startShow() {
+            showRunning = true;
+            laughter = 0;
+            timeLeft = 60;
+            
+            clown.action = 'idle';
+            clown.actionTimer = 0;
+            
+            initializeAudience();
+            particles = [];
+            balloons = [];
+            
+            // 타이머 시작
+            clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            updateDisplay();
+        }
+
+        function resetShow() {
+            showRunning = false;
+            clearInterval(gameTimer);
+            laughter = 0;
+            timeLeft = 60;
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetShow();
+        gameLoop();
+    </script>
+</body>
+</html>

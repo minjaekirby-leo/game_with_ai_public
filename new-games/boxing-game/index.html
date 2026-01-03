@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>복싱 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #4169E1 0%, #1E90FF 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🥊 복싱 게임</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">내 체력: <span id="playerHealth">100</span></div>
+            <div class="info-box">적 체력: <span id="enemyHealth">100</span></div>
+            <div class="info-box">라운드: <span id="round">1</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> A/D = 이동, J = 왼손 펀치, K = 오른손 펀치, S = 가드</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let round = 1;
+
+        // 플레이어
+        const player = {
+            x: 150,
+            y: 300,
+            width: 60,
+            height: 100,
+            health: 100,
+            maxHealth: 100,
+            speed: 4,
+            punching: false,
+            guarding: false,
+            punchCooldown: 0,
+            punchType: 'none', // 'left', 'right', 'none'
+            stamina: 100,
+            maxStamina: 100
+        };
+
+        // 적
+        const enemy = {
+            x: 600,
+            y: 300,
+            width: 60,
+            height: 100,
+            health: 100,
+            maxHealth: 100,
+            speed: 2,
+            punching: false,
+            guarding: false,
+            punchCooldown: 0,
+            punchType: 'none',
+            aiTimer: 0,
+            aggressiveness: 0.02
+        };
+
+        let particles = [];
+        let keys = {};
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            if (e.code === 'KeyJ') {
+                playerPunch('left');
+            }
+            if (e.code === 'KeyK') {
+                playerPunch('right');
+            }
+            if (e.code === 'KeyS') {
+                player.guarding = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'KeyS') {
+                player.guarding = false;
+            }
+        });
+
+        function playerPunch(type) {
+            if (player.punchCooldown <= 0 && !player.punching && gameRunning && !gamePaused && player.stamina >= 10) {
+                player.punching = true;
+                player.punchType = type;
+                player.punchCooldown = 30;
+                player.stamina -= 10;
+                
+                // 공격 범위 체크
+                const distance = Math.abs(player.x - enemy.x);
+                if (distance < 120) {
+                    let damage = type === 'right' ? 20 : 15; // 오른손이 더 강함
+                    
+                    if (!enemy.guarding) {
+                        enemy.health -= damage;
+                        createHitEffect(enemy.x, enemy.y);
+                        createBloodParticles(enemy.x, enemy.y);
+                    } else {
+                        enemy.health -= damage * 0.3; // 가드 시 데미지 감소
+                        createBlockEffect(enemy.x, enemy.y);
+                    }
+                }
+                
+                setTimeout(() => {
+                    player.punching = false;
+                    player.punchType = 'none';
+                }, 200);
+            }
+        }
+
+        function enemyAI() {
+            enemy.aiTimer++;
+            
+            const distance = Math.abs(player.x - enemy.x);
+            
+            // 플레이어에게 접근
+            if (distance > 100) {
+                if (player.x < enemy.x) {
+                    enemy.x -= enemy.speed;
+                } else {
+                    enemy.x += enemy.speed;
+                }
+            }
+            
+            // 공격 패턴
+            if (distance < 120 && enemy.punchCooldown <= 0 && !enemy.punching) {
+                if (Math.random() < enemy.aggressiveness) {
+                    enemyPunch();
+                }
+            }
+            
+            // 가드 패턴
+            if (player.punching && distance < 140) {
+                enemy.guarding = Math.random() < 0.6;
+            } else {
+                enemy.guarding = false;
+            }
+            
+            // 가끔 뒤로 물러나기
+            if (Math.random() < 0.005 && distance < 80) {
+                enemy.x += enemy.speed * 2;
+            }
+        }
+
+        function enemyPunch() {
+            enemy.punching = true;
+            enemy.punchType = Math.random() < 0.6 ? 'left' : 'right';
+            enemy.punchCooldown = 40;
+            
+            const distance = Math.abs(player.x - enemy.x);
+            if (distance < 120) {
+                let damage = enemy.punchType === 'right' ? 18 : 12;
+                
+                if (!player.guarding) {
+                    player.health -= damage;
+                    createHitEffect(player.x, player.y);
+                    createBloodParticles(player.x, player.y);
+                } else {
+                    player.health -= damage * 0.3;
+                    createBlockEffect(player.x, player.y);
+                }
+            }
+            
+            setTimeout(() => {
+                enemy.punching = false;
+                enemy.punchType = 'none';
+            }, 200);
+        }
+
+        function updatePlayer() {
+            // 이동
+            if (keys['KeyA'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['KeyD'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+
+            // 쿨다운 감소
+            if (player.punchCooldown > 0) {
+                player.punchCooldown--;
+            }
+            
+            // 스태미나 회복
+            if (player.stamina < player.maxStamina) {
+                player.stamina += 0.5;
+            }
+        }
+
+        function updateEnemy() {
+            enemyAI();
+            
+            if (enemy.punchCooldown > 0) {
+                enemy.punchCooldown--;
+            }
+            
+            // 경계 체크
+            if (enemy.x < 0) enemy.x = 0;
+            if (enemy.x > canvas.width - enemy.width) enemy.x = canvas.width - enemy.width;
+        }
+
+        function createHitEffect(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x + Math.random() * 60,
+                    y: y + Math.random() * 60,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    color: '#FFD700',
+                    type: 'star'
+                });
+            }
+        }
+
+        function createBlockEffect(x, y) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: x + Math.random() * 40,
+                    y: y + Math.random() * 40,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 20,
+                    color: '#FFFFFF',
+                    type: 'spark'
+                });
+            }
+        }
+
+        function createBloodParticles(x, y) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x + Math.random() * 50,
+                    y: y + Math.random() * 50,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 40,
+                    color: '#8B0000',
+                    type: 'blood'
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.type === 'blood') {
+                    particle.vy += 0.2; // 중력
+                }
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawBoxer(boxer, isPlayer) {
+            // 몸
+            ctx.fillStyle = isPlayer ? '#FF6B6B' : '#4ECDC4';
+            ctx.fillRect(boxer.x, boxer.y, boxer.width, boxer.height);
+            
+            // 복싱 글러브
+            ctx.fillStyle = isPlayer ? '#8B0000' : '#2F4F4F';
+            
+            // 왼손 글러브
+            let leftGloveX = boxer.x - 15;
+            let leftGloveY = boxer.y + 30;
+            if (boxer.punching && boxer.punchType === 'left') {
+                leftGloveX += isPlayer ? 20 : -20;
+            }
+            ctx.fillRect(leftGloveX, leftGloveY, 20, 20);
+            
+            // 오른손 글러브
+            let rightGloveX = boxer.x + boxer.width - 5;
+            let rightGloveY = boxer.y + 30;
+            if (boxer.punching && boxer.punchType === 'right') {
+                rightGloveX += isPlayer ? 20 : -20;
+            }
+            ctx.fillRect(rightGloveX, rightGloveY, 20, 20);
+            
+            // 헤드기어
+            ctx.fillStyle = isPlayer ? '#4169E1' : '#32CD32';
+            ctx.fillRect(boxer.x + 5, boxer.y, boxer.width - 10, 25);
+            
+            // 얼굴
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(boxer.x + 10, boxer.y + 8, boxer.width - 20, 15);
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(boxer.x + 15, boxer.y + 12, 3, 3);
+            ctx.fillRect(boxer.x + boxer.width - 18, boxer.y + 12, 3, 3);
+            
+            // 가드 자세
+            if (boxer.guarding) {
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(boxer.x - 10, boxer.y + 20, boxer.width + 20, 40);
+            }
+            
+            // 체력바
+            const barWidth = boxer.width;
+            const barHeight = 8;
+            const barY = boxer.y - 15;
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(boxer.x, barY, barWidth, barHeight);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(boxer.x, barY, (boxer.health / boxer.maxHealth) * barWidth, barHeight);
+            
+            // 플레이어 스태미나바
+            if (isPlayer) {
+                ctx.fillStyle = '#0000FF';
+                ctx.fillRect(boxer.x, barY - 12, barWidth, 6);
+                ctx.fillStyle = '#00BFFF';
+                ctx.fillRect(boxer.x, barY - 12, (boxer.stamina / boxer.maxStamina) * barWidth, 6);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 40;
+                ctx.fillStyle = particle.color;
+                
+                if (particle.type === 'star') {
+                    // 별 모양
+                    ctx.fillRect(particle.x, particle.y, 4, 4);
+                    ctx.fillRect(particle.x + 2, particle.y - 2, 2, 8);
+                    ctx.fillRect(particle.x - 2, particle.y + 2, 8, 2);
+                } else {
+                    ctx.fillRect(particle.x, particle.y, 3, 3);
+                }
+                
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBackground() {
+            // 링 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#4169E1');
+            gradient.addColorStop(1, '#1E90FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 링 바닥
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+            
+            // 링 로프
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 5;
+            for (let i = 1; i <= 3; i++) {
+                const y = 50 + i * 30;
+                ctx.beginPath();
+                ctx.moveTo(50, y);
+                ctx.lineTo(canvas.width - 50, y);
+                ctx.stroke();
+            }
+            
+            // 코너 포스트
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(45, 50, 10, 140);
+            ctx.fillRect(canvas.width - 55, 50, 10, 140);
+            
+            // 관중 (간단한 점들)
+            ctx.fillStyle = '#000';
+            for (let i = 0; i < 30; i++) {
+                const x = Math.random() * canvas.width;
+                const y = 20 + Math.random() * 30;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+
+        function checkGameEnd() {
+            if (player.health <= 0) {
+                gameRunning = false;
+                alert('KO! 패배했습니다!');
+                return;
+            }
+            
+            if (enemy.health <= 0) {
+                round++;
+                if (round > 5) {
+                    gameRunning = false;
+                    alert('🏆 챔피언! 모든 라운드를 승리했습니다!');
+                } else {
+                    // 다음 라운드
+                    enemy.health = enemy.maxHealth + (round - 1) * 20;
+                    enemy.maxHealth = enemy.health;
+                    enemy.speed = Math.min(4, 2 + (round - 1) * 0.3);
+                    enemy.aggressiveness = Math.min(0.05, 0.02 + (round - 1) * 0.005);
+                    enemy.x = 600;
+                    player.health = Math.min(player.maxHealth, player.health + 30);
+                    player.stamina = player.maxStamina;
+                    alert(`라운드 ${round} 시작!`);
+                }
+            }
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updatePlayer();
+            updateEnemy();
+            updateParticles();
+            checkGameEnd();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawBoxer(player, true);
+            drawBoxer(enemy, false);
+            drawParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('playerHealth').textContent = Math.max(0, Math.floor(player.health));
+            document.getElementById('enemyHealth').textContent = Math.max(0, Math.floor(enemy.health));
+            document.getElementById('round').textContent = round;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            round = 1;
+            
+            player.x = 150;
+            player.health = 100;
+            player.stamina = 100;
+            player.punching = false;
+            player.guarding = false;
+            player.punchCooldown = 0;
+            
+            enemy.x = 600;
+            enemy.health = 100;
+            enemy.maxHealth = 100;
+            enemy.speed = 2;
+            enemy.aggressiveness = 0.02;
+            enemy.punching = false;
+            enemy.guarding = false;
+            enemy.punchCooldown = 0;
+            
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

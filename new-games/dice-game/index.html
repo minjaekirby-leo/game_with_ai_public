@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>주사위 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0,0,0,0.5); }
+            to { text-shadow: 3px 3px 20px rgba(255,255,255,0.5); }
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px auto;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .dice-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+        
+        .dice {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #333;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .dice:hover {
+            transform: scale(1.05);
+        }
+        
+        .dice.rolling {
+            animation: roll 1s ease-in-out;
+        }
+        
+        @keyframes roll {
+            0% { transform: rotateX(0deg) rotateY(0deg); }
+            25% { transform: rotateX(90deg) rotateY(90deg); }
+            50% { transform: rotateX(180deg) rotateY(180deg); }
+            75% { transform: rotateX(270deg) rotateY(270deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg); }
+        }
+        
+        .prediction-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .prediction-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .prediction-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .prediction-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .prediction-btn.selected {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            transform: scale(1.1);
+        }
+        
+        .prediction-btn.correct {
+            background: #4CAF50;
+            animation: correct 0.5s ease;
+        }
+        
+        .prediction-btn.wrong {
+            background: #f44336;
+            animation: wrong 0.5s ease;
+        }
+        
+        @keyframes correct {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        @keyframes wrong {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .game-modes {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: #2196F3;
+            border-color: #2196F3;
+        }
+        
+        .result-message {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎲 주사위 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>주사위 결과를 예측하고 "주사위 굴리기" 버튼을 누르세요!</p>
+        <p>정확히 맞추면 점수를 얻습니다!</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">연속 성공: <span id="streak">0</span></div>
+            <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+        </div>
+        
+        <div class="game-modes">
+            <div class="mode-btn active" onclick="setGameMode('single')">🎲 단일 주사위</div>
+            <div class="mode-btn" onclick="setGameMode('double')">🎲🎲 두 주사위 합</div>
+            <div class="mode-btn" onclick="setGameMode('triple')">🎲🎲🎲 세 주사위 합</div>
+        </div>
+        
+        <div class="dice-container" id="diceContainer">
+            <div class="dice" id="dice1">🎲</div>
+        </div>
+        
+        <div class="prediction-area">
+            <h3>예측하세요:</h3>
+            <div class="prediction-buttons" id="predictionButtons">
+                <!-- 예측 버튼들이 여기에 생성됩니다 -->
+            </div>
+        </div>
+        
+        <div class="result-message" id="resultMessage"></div>
+        
+        <div class="controls">
+            <button id="rollBtn" onclick="rollDice()">🎲 주사위 굴리기</button>
+            <button onclick="resetGame()">🔄 게임 리셋</button>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let score = 0;
+        let streak = 0;
+        let bestScore = localStorage.getItem('diceBestScore') || 0;
+        let currentMode = 'single';
+        let selectedPrediction = null;
+        let isRolling = false;
+        let diceValues = [];
+
+        // 주사위 면 이모지
+        const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+        // 게임 모드 설정
+        function setGameMode(mode) {
+            currentMode = mode;
+            
+            // 모드 버튼 업데이트
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 주사위 컨테이너 업데이트
+            updateDiceContainer();
+            updatePredictionButtons();
+            resetPrediction();
+        }
+
+        // 주사위 컨테이너 업데이트
+        function updateDiceContainer() {
+            const container = document.getElementById('diceContainer');
+            container.innerHTML = '';
+            
+            const diceCount = currentMode === 'single' ? 1 : currentMode === 'double' ? 2 : 3;
+            
+            for (let i = 0; i < diceCount; i++) {
+                const dice = document.createElement('div');
+                dice.className = 'dice';
+                dice.id = `dice${i + 1}`;
+                dice.textContent = '🎲';
+                container.appendChild(dice);
+            }
+        }
+
+        // 예측 버튼 업데이트
+        function updatePredictionButtons() {
+            const container = document.getElementById('predictionButtons');
+            container.innerHTML = '';
+            
+            let min, max;
+            if (currentMode === 'single') {
+                min = 1; max = 6;
+            } else if (currentMode === 'double') {
+                min = 2; max = 12;
+            } else {
+                min = 3; max = 18;
+            }
+            
+            for (let i = min; i <= max; i++) {
+                const btn = document.createElement('div');
+                btn.className = 'prediction-btn';
+                btn.textContent = i;
+                btn.onclick = () => selectPrediction(i);
+                container.appendChild(btn);
+            }
+        }
+
+        // 예측 선택
+        function selectPrediction(value) {
+            if (isRolling) return;
+            
+            // 이전 선택 해제
+            document.querySelectorAll('.prediction-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 새 선택 설정
+            event.target.classList.add('selected');
+            selectedPrediction = value;
+        }
+
+        // 주사위 굴리기
+        function rollDice() {
+            if (isRolling || selectedPrediction === null) {
+                if (selectedPrediction === null) {
+                    document.getElementById('resultMessage').textContent = '먼저 예측을 선택하세요!';
+                }
+                return;
+            }
+            
+            isRolling = true;
+            document.getElementById('rollBtn').disabled = true;
+            document.getElementById('resultMessage').textContent = '주사위를 굴리는 중...';
+            
+            // 주사위 애니메이션
+            const diceElements = document.querySelectorAll('.dice');
+            diceElements.forEach(dice => {
+                dice.classList.add('rolling');
+            });
+            
+            // 랜덤 값 생성 (애니메이션 중)
+            const rollInterval = setInterval(() => {
+                diceElements.forEach((dice, index) => {
+                    const randomValue = Math.floor(Math.random() * 6) + 1;
+                    dice.textContent = DICE_FACES[randomValue - 1];
+                });
+            }, 100);
+            
+            // 1초 후 최종 결과
+            setTimeout(() => {
+                clearInterval(rollInterval);
+                
+                // 최종 주사위 값 결정
+                diceValues = [];
+                diceElements.forEach((dice, index) => {
+                    const finalValue = Math.floor(Math.random() * 6) + 1;
+                    diceValues.push(finalValue);
+                    dice.textContent = DICE_FACES[finalValue - 1];
+                    dice.classList.remove('rolling');
+                });
+                
+                // 결과 계산
+                const result = diceValues.reduce((sum, value) => sum + value, 0);
+                checkPrediction(result);
+                
+                isRolling = false;
+                document.getElementById('rollBtn').disabled = false;
+            }, 1000);
+        }
+
+        // 예측 확인
+        function checkPrediction(result) {
+            const isCorrect = selectedPrediction === result;
+            
+            // 예측 버튼 색상 업데이트
+            document.querySelectorAll('.prediction-btn').forEach(btn => {
+                btn.classList.remove('correct', 'wrong', 'selected');
+                
+                if (parseInt(btn.textContent) === selectedPrediction) {
+                    btn.classList.add(isCorrect ? 'correct' : 'wrong');
+                }
+                
+                if (parseInt(btn.textContent) === result && !isCorrect) {
+                    btn.classList.add('correct');
+                }
+            });
+            
+            // 점수 업데이트
+            if (isCorrect) {
+                const points = currentMode === 'single' ? 10 : currentMode === 'double' ? 20 : 30;
+                score += points + (streak * 5); // 연속 성공 보너스
+                streak++;
+                document.getElementById('resultMessage').textContent = 
+                    `🎉 정답! +${points + (streak - 1) * 5}점 (연속 ${streak}회)`;
+            } else {
+                streak = 0;
+                document.getElementById('resultMessage').textContent = 
+                    `❌ 틀렸습니다! 정답은 ${result}이었습니다.`;
+            }
+            
+            // 최고 기록 업데이트
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('diceBestScore', bestScore);
+            }
+            
+            updateDisplay();
+            
+            // 3초 후 다음 라운드 준비
+            setTimeout(() => {
+                resetPrediction();
+                document.getElementById('resultMessage').textContent = '';
+            }, 3000);
+        }
+
+        // 예측 리셋
+        function resetPrediction() {
+            selectedPrediction = null;
+            document.querySelectorAll('.prediction-btn').forEach(btn => {
+                btn.classList.remove('selected', 'correct', 'wrong');
+            });
+        }
+
+        // 게임 리셋
+        function resetGame() {
+            score = 0;
+            streak = 0;
+            resetPrediction();
+            document.getElementById('resultMessage').textContent = '';
+            updateDisplay();
+            
+            // 주사위 초기화
+            document.querySelectorAll('.dice').forEach(dice => {
+                dice.textContent = '🎲';
+                dice.classList.remove('rolling');
+            });
+        }
+
+        // 디스플레이 업데이트
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('streak').textContent = streak;
+            document.getElementById('bestScore').textContent = bestScore;
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                rollDice();
+            } else if (e.key >= '1' && e.key <= '9') {
+                const value = parseInt(e.key);
+                const btn = Array.from(document.querySelectorAll('.prediction-btn'))
+                    .find(b => parseInt(b.textContent) === value);
+                if (btn) {
+                    btn.click();
+                }
+            }
+        });
+
+        // 초기화
+        updateDiceContainer();
+        updatePredictionButtons();
+        updateDisplay();
+        
+        console.log('주사위 게임이 로드되었습니다!');
+    </script>
+</body>
+</html>

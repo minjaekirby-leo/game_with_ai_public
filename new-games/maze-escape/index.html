@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>미로 탈출</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: #000;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌀 미로 탈출</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">시간: <span id="time">00:00</span></div>
+            <div class="info-box">레벨: <span id="level">1</span></div>
+            <div class="info-box">점수: <span id="score">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="nextLevel()">⏭️ 다음 레벨</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> 화살표 키 또는 WASD로 이동</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let startTime = 0;
+        let gameTimer = null;
+        let score = 0;
+        let level = 1;
+
+        const CELL_SIZE = 20;
+        const MAZE_WIDTH = 30;
+        const MAZE_HEIGHT = 30;
+
+        let maze = [];
+        let player = { x: 1, y: 1 };
+        let exit = { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 };
+        let collectibles = [];
+
+        // 키 입력
+        let keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            if (gameRunning) {
+                switch(e.code) {
+                    case 'ArrowUp':
+                    case 'KeyW':
+                        movePlayer(0, -1);
+                        break;
+                    case 'ArrowDown':
+                    case 'KeyS':
+                        movePlayer(0, 1);
+                        break;
+                    case 'ArrowLeft':
+                    case 'KeyA':
+                        movePlayer(-1, 0);
+                        break;
+                    case 'ArrowRight':
+                    case 'KeyD':
+                        movePlayer(1, 0);
+                        break;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        function generateMaze() {
+            // 미로 초기화 (모든 벽)
+            maze = [];
+            for (let y = 0; y < MAZE_HEIGHT; y++) {
+                maze[y] = [];
+                for (let x = 0; x < MAZE_WIDTH; x++) {
+                    maze[y][x] = 1; // 1 = 벽, 0 = 길
+                }
+            }
+
+            // 재귀적 백트래킹으로 미로 생성
+            function carvePassage(x, y) {
+                maze[y][x] = 0;
+                
+                const directions = [
+                    [0, -2], [2, 0], [0, 2], [-2, 0]
+                ];
+                
+                // 방향 섞기
+                for (let i = directions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [directions[i], directions[j]] = [directions[j], directions[i]];
+                }
+                
+                for (let [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx > 0 && nx < MAZE_WIDTH - 1 && ny > 0 && ny < MAZE_HEIGHT - 1 && maze[ny][nx] === 1) {
+                        maze[y + dy/2][x + dx/2] = 0; // 중간 벽 제거
+                        carvePassage(nx, ny);
+                    }
+                }
+            }
+
+            carvePassage(1, 1);
+            
+            // 출구 확보
+            maze[exit.y][exit.x] = 0;
+            
+            // 수집 아이템 배치
+            placeCollectibles();
+        }
+
+        function placeCollectibles() {
+            collectibles = [];
+            const itemCount = 3 + level;
+            
+            for (let i = 0; i < itemCount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+                    y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+                } while (maze[y][x] === 1 || (x === player.x && y === player.y) || (x === exit.x && y === exit.y));
+                
+                collectibles.push({ x, y, collected: false });
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            // 경계 체크
+            if (newX < 0 || newX >= MAZE_WIDTH || newY < 0 || newY >= MAZE_HEIGHT) {
+                return;
+            }
+            
+            // 벽 체크
+            if (maze[newY][newX] === 1) {
+                return;
+            }
+            
+            player.x = newX;
+            player.y = newY;
+            
+            // 수집 아이템 체크
+            collectibles.forEach(item => {
+                if (!item.collected && item.x === player.x && item.y === player.y) {
+                    item.collected = true;
+                    score += 50;
+                }
+            });
+            
+            // 출구 도달 체크
+            if (player.x === exit.x && player.y === exit.y) {
+                levelComplete();
+            }
+        }
+
+        function levelComplete() {
+            const timeBonus = Math.max(0, 60 - Math.floor((Date.now() - startTime) / 1000)) * 10;
+            const collectedItems = collectibles.filter(item => item.collected).length;
+            const itemBonus = collectedItems * 100;
+            
+            score += timeBonus + itemBonus + (level * 200);
+            
+            alert(`레벨 ${level} 완료!\n시간 보너스: ${timeBonus}점\n아이템 보너스: ${itemBonus}점`);
+            
+            level++;
+            nextLevel();
+        }
+
+        function drawMaze() {
+            // 미로 그리기
+            for (let y = 0; y < MAZE_HEIGHT; y++) {
+                for (let x = 0; x < MAZE_WIDTH; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = '#34495e';
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                        
+                        // 벽 테두리
+                        ctx.strokeStyle = '#2c3e50';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    } else {
+                        ctx.fillStyle = '#ecf0f1';
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+            
+            // 수집 아이템 그리기
+            collectibles.forEach(item => {
+                if (!item.collected) {
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.beginPath();
+                    ctx.arc(
+                        item.x * CELL_SIZE + CELL_SIZE/2,
+                        item.y * CELL_SIZE + CELL_SIZE/2,
+                        CELL_SIZE/3,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                    
+                    // 반짝이는 효과
+                    const time = Date.now() * 0.005;
+                    ctx.fillStyle = `rgba(241, 196, 15, ${0.5 + 0.5 * Math.sin(time + item.x + item.y)})`;
+                    ctx.beginPath();
+                    ctx.arc(
+                        item.x * CELL_SIZE + CELL_SIZE/2,
+                        item.y * CELL_SIZE + CELL_SIZE/2,
+                        CELL_SIZE/4,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+            });
+            
+            // 출구 그리기
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(exit.x * CELL_SIZE, exit.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            
+            // 출구 표시
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🚪', exit.x * CELL_SIZE + CELL_SIZE/2, exit.y * CELL_SIZE + CELL_SIZE/2 + 5);
+            
+            // 플레이어 그리기
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(
+                player.x * CELL_SIZE + CELL_SIZE/2,
+                player.y * CELL_SIZE + CELL_SIZE/2,
+                CELL_SIZE/2 - 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            
+            // 플레이어 얼굴
+            ctx.fillStyle = '#c0392b';
+            ctx.beginPath();
+            ctx.arc(
+                player.x * CELL_SIZE + CELL_SIZE/2,
+                player.y * CELL_SIZE + CELL_SIZE/2,
+                CELL_SIZE/3,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            
+            // 눈
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x * CELL_SIZE + 6, player.y * CELL_SIZE + 6, 3, 3);
+            ctx.fillRect(player.x * CELL_SIZE + 11, player.y * CELL_SIZE + 6, 3, 3);
+        }
+
+        function updateTimer() {
+            if (!gameRunning) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                drawMaze();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            startTime = Date.now();
+            
+            player = { x: 1, y: 1 };
+            exit = { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 };
+            
+            generateMaze();
+            
+            // 타이머 시작
+            clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            updateDisplay();
+            document.getElementById('time').textContent = '00:00';
+        }
+
+        function nextLevel() {
+            if (level > 10) {
+                gameRunning = false;
+                clearInterval(gameTimer);
+                alert(`🎉 게임 완료! 최종 점수: ${score}점`);
+                return;
+            }
+            
+            startGame();
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            clearInterval(gameTimer);
+            score = 0;
+            level = 1;
+            
+            updateDisplay();
+            document.getElementById('time').textContent = '00:00';
+            
+            // 빈 화면
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧟‍♂️ 좀비 서바이벌</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2c1810, #4a2c1a);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #8B4513;
+        }
+        
+        canvas {
+            border: 3px solid #654321;
+            border-radius: 10px;
+            background: #1a1a1a;
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(139, 69, 19, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .game-over-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .game-over-content {
+            background: rgba(139, 69, 19, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 3px solid #8B4513;
+            max-width: 400px;
+        }
+        
+        .game-over-title {
+            font-size: 36px;
+            color: #E74C3C;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .game-over-stats {
+            font-size: 18px;
+            margin: 15px 0;
+            color: #FFD700;
+        }
+        
+        .restart-btn {
+            background: #E74C3C;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .restart-btn:hover {
+            background: #C0392B;
+            transform: scale(1.05);
+        }
+        
+        .weapon-selector {
+            margin: 10px 0;
+        }
+        
+        .weapon-btn {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .weapon-btn:hover {
+            background: #A0522D;
+        }
+        
+        .weapon-btn.active {
+            background: #CD853F;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧟‍♂️ 좀비 서바이벌</h1>
+        
+        <div class="ui">
+            <div class="stat">❤️ 체력: <span id="health">100</span></div>
+            <div class="stat">🎯 점수: <span id="score">0</span></div>
+            <div class="stat">🌊 웨이브: <span id="wave">1</span></div>
+            <div class="stat">🧟‍♂️ 좀비: <span id="zombieCount">0</span></div>
+        </div>
+        
+        <div class="weapon-selector">
+            <button class="weapon-btn active" onclick="selectWeapon('pistol')">🔫 권총</button>
+            <button class="weapon-btn" onclick="selectWeapon('shotgun')">💥 샷건</button>
+            <button class="weapon-btn" onclick="selectWeapon('rifle')">🎯 라이플</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: WASD로 이동, 마우스로 조준 및 클릭으로 사격</p>
+            <p>💡 팁: 좀비들을 피하면서 사격하세요! 웨이브마다 더 많은 좀비가 나타납니다!</p>
+        </div>
+    </div>
+
+    <!-- 게임 오버 화면 -->
+    <div class="game-over-screen" id="gameOverScreen">
+        <div class="game-over-content">
+            <div class="game-over-title">💀 게임 오버!</div>
+            <div class="game-over-stats">
+                <div>🎯 최종 점수: <span id="finalScore">0</span></div>
+                <div>🌊 도달 웨이브: <span id="finalWave">1</span></div>
+                <div>🧟‍♂️ 처치한 좀비: <span id="finalKills">0</span></div>
+            </div>
+            <button class="restart-btn" onclick="restartGame()">🔄 다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            health: 100,
+            score: 0,
+            wave: 1,
+            zombieCount: 0,
+            currentWeapon: 'pistol',
+            zombiesKilled: 0,
+            gameRunning: true
+        };
+        
+        // 플레이어
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 20,
+            speed: 3,
+            angle: 0
+        };
+        
+        // 무기 설정
+        const weapons = {
+            pistol: { damage: 25, fireRate: 300, range: 200, spread: 0.1 },
+            shotgun: { damage: 15, fireRate: 800, range: 150, spread: 0.3, pellets: 5 },
+            rifle: { damage: 50, fireRate: 600, range: 300, spread: 0.05 }
+        };
+        
+        // 게임 객체들
+        let zombies = [];
+        let bullets = [];
+        let particles = [];
+        let lastShot = 0;
+        
+        // 키 입력
+        const keys = {};
+        let mouseX = 0, mouseY = 0;
+        
+        // 이벤트 리스너
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('click', shoot);
+        
+        // 무기 선택
+        function selectWeapon(weapon) {
+            gameState.currentWeapon = weapon;
+            document.querySelectorAll('.weapon-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // 좀비 생성
+        function spawnZombie() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            
+            switch(side) {
+                case 0: x = Math.random() * canvas.width; y = -30; break;
+                case 1: x = canvas.width + 30; y = Math.random() * canvas.height; break;
+                case 2: x = Math.random() * canvas.width; y = canvas.height + 30; break;
+                case 3: x = -30; y = Math.random() * canvas.height; break;
+            }
+            
+            zombies.push({
+                x: x,
+                y: y,
+                size: 15 + Math.random() * 10,
+                speed: 0.5 + Math.random() * 1.5,
+                health: 50 + gameState.wave * 10,
+                maxHealth: 50 + gameState.wave * 10,
+                angle: 0
+            });
+        }
+        
+        // 사격
+        function shoot() {
+            const now = Date.now();
+            const weapon = weapons[gameState.currentWeapon];
+            
+            if (now - lastShot < weapon.fireRate) return;
+            lastShot = now;
+            
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            
+            if (gameState.currentWeapon === 'shotgun') {
+                for (let i = 0; i < weapon.pellets; i++) {
+                    const spreadAngle = angle + (Math.random() - 0.5) * weapon.spread;
+                    bullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(spreadAngle) * 8,
+                        vy: Math.sin(spreadAngle) * 8,
+                        damage: weapon.damage,
+                        range: weapon.range,
+                        distance: 0
+                    });
+                }
+            } else {
+                const spreadAngle = angle + (Math.random() - 0.5) * weapon.spread;
+                bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(spreadAngle) * 10,
+                    vy: Math.sin(spreadAngle) * 10,
+                    damage: weapon.damage,
+                    range: weapon.range,
+                    distance: 0
+                });
+            }
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        // 업데이트
+        function update() {
+            if (!gameState.gameRunning) return;
+            // 플레이어 이동
+            if (keys['w'] || keys['ㅈ']) player.y -= player.speed;
+            if (keys['s'] || keys['ㄴ']) player.y += player.speed;
+            if (keys['a'] || keys['ㅁ']) player.x -= player.speed;
+            if (keys['d'] || keys['ㅇ']) player.x += player.speed;
+            
+            // 플레이어 경계 체크
+            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
+            
+            // 플레이어 각도 계산
+            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            
+            // 좀비 업데이트
+            zombies.forEach((zombie, zIndex) => {
+                const dx = player.x - zombie.x;
+                const dy = player.y - zombie.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    zombie.x += (dx / distance) * zombie.speed;
+                    zombie.y += (dy / distance) * zombie.speed;
+                    zombie.angle = Math.atan2(dy, dx);
+                }
+                
+                // 플레이어와 충돌 체크
+                if (distance < player.size + zombie.size) {
+                    gameState.health -= 1;
+                    createParticles(player.x, player.y, '#ff0000');
+                }
+            });
+            
+            // 총알 업데이트
+            bullets.forEach((bullet, bIndex) => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                bullet.distance += Math.sqrt(bullet.vx * bullet.vx + bullet.vy * bullet.vy);
+                
+                // 범위 체크
+                if (bullet.distance > bullet.range || 
+                    bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(bIndex, 1);
+                    return;
+                }
+                
+                // 좀비와 충돌 체크
+                zombies.forEach((zombie, zIndex) => {
+                    const dx = bullet.x - zombie.x;
+                    const dy = bullet.y - zombie.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < zombie.size) {
+                        zombie.health -= bullet.damage;
+                        bullets.splice(bIndex, 1);
+                        createParticles(zombie.x, zombie.y, '#00ff00');
+                        
+                        if (zombie.health <= 0) {
+                            zombies.splice(zIndex, 1);
+                            gameState.score += 10;
+                            gameState.zombiesKilled++;
+                            createParticles(zombie.x, zombie.y, '#ffff00', 8);
+                        }
+                    }
+                });
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, pIndex) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(pIndex, 1);
+                }
+            });
+            
+            // 좀비 스폰
+            if (Math.random() < 0.02 + gameState.wave * 0.005) {
+                spawnZombie();
+            }
+            
+            // 웨이브 체크
+            if (gameState.score > gameState.wave * 100) {
+                gameState.wave++;
+            }
+            
+            // 게임 오버 체크
+            if (gameState.health <= 0) {
+                gameState.gameRunning = false;
+                showGameOver();
+                return;
+            }
+            
+            // UI 업데이트
+            gameState.zombieCount = zombies.length;
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 플레이어 그리기
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.fillStyle = '#2E7D32';
+            ctx.fillRect(player.size/2 - 5, -3, 15, 6);
+            ctx.restore();
+            
+            // 좀비 그리기
+            zombies.forEach(zombie => {
+                ctx.save();
+                ctx.translate(zombie.x, zombie.y);
+                ctx.rotate(zombie.angle);
+                
+                // 좀비 몸체
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-zombie.size/2, -zombie.size/2, zombie.size, zombie.size);
+                
+                // 좀비 눈
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(-zombie.size/4, -zombie.size/4, 4, 4);
+                ctx.fillRect(zombie.size/4 - 4, -zombie.size/4, 4, 4);
+                
+                ctx.restore();
+                
+                // 체력바
+                const barWidth = zombie.size * 1.5;
+                const barHeight = 4;
+                const healthPercent = zombie.health / zombie.maxHealth;
+                
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(zombie.x - barWidth/2, zombie.y - zombie.size - 10, barWidth, barHeight);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(zombie.x - barWidth/2, zombie.y - zombie.size - 10, barWidth * healthPercent, barHeight);
+            });
+            
+            // 총알 그리기
+            bullets.forEach(bullet => {
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 파티클 그리기
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('health').textContent = Math.max(0, gameState.health);
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('wave').textContent = gameState.wave;
+            document.getElementById('zombieCount').textContent = gameState.zombieCount;
+        }
+        
+        // 게임 오버 화면 표시
+        function showGameOver() {
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalWave').textContent = gameState.wave;
+            document.getElementById('finalKills').textContent = gameState.zombiesKilled;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+        
+        // 게임 재시작
+        function restartGame() {
+            // 게임 상태 초기화
+            gameState = {
+                health: 100,
+                score: 0,
+                wave: 1,
+                zombieCount: 0,
+                currentWeapon: 'pistol',
+                zombiesKilled: 0,
+                gameRunning: true
+            };
+            
+            // 플레이어 위치 초기화
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            
+            // 게임 객체들 초기화
+            zombies = [];
+            bullets = [];
+            particles = [];
+            lastShot = 0;
+            
+            // 게임 오버 화면 숨기기
+            document.getElementById('gameOverScreen').style.display = 'none';
+            
+            // UI 업데이트
+            updateUI();
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            if (gameState.gameRunning) {
+                update();
+            }
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        gameLoop();
+    </script>
+</body>
+</html>

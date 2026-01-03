@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>동물 소리 맞추기 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: wiggle 2s ease-in-out infinite;
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .game-area {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-width: 500px;
+        }
+        
+        .sound-display {
+            font-size: 4rem;
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            border-radius: 15px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .animals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .animal-card {
+            background: white;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 2rem;
+        }
+        
+        .animal-card:hover {
+            transform: scale(1.05);
+            border-color: #4ecdc4;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .animal-card.correct {
+            background: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+        }
+        
+        .animal-card.wrong {
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 200px;
+            color: #333;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #a8edea, #fed6e3);
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: #333;
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .play-sound-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            font-size: 1.5rem;
+            padding: 15px 30px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐾 동물 소리 맞추기</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>동물 소리를 보고 어떤 동물인지 맞춰보세요!</p>
+        <p>정답을 맞추면 점수를 얻습니다!</p>
+        <p>연속으로 맞추면 콤보 보너스가 있어요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-area">
+            <div class="sound-display" id="soundDisplay">
+                🎵 시작하려면 소리 재생을 클릭하세요!
+            </div>
+            
+            <button class="play-sound-btn" onclick="playCurrentSound()">🔊 소리 재생</button>
+            
+            <div class="animals-grid" id="animalsGrid">
+                <!-- 동물 카드들이 여기에 생성됩니다 -->
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">콤보: <span id="combo">0</span></div>
+            <div class="info-item">정답률: <span id="accuracy">0</span>%</div>
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>힌트 모드 ON! 💖
+            </div>
+            
+            <button onclick="nextQuestion()">다음 문제</button>
+            <button onclick="resetGame()">새 게임</button>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let score = 0;
+        let combo = 0;
+        let questionsAnswered = 0;
+        let correctAnswers = 0;
+        let bestScore = localStorage.getItem('animalSoundsBestScore') || 0;
+        let currentAnimal = null;
+        let gameStarted = false;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 동물 데이터
+        const animals = [
+            { name: '강아지', emoji: '🐕', sound: '멍멍!', color: '#ff6b6b' },
+            { name: '고양이', emoji: '🐱', sound: '야옹~', color: '#4ecdc4' },
+            { name: '소', emoji: '🐄', sound: '음메~', color: '#45b7d1' },
+            { name: '돼지', emoji: '🐷', sound: '꿀꿀!', color: '#96ceb4' },
+            { name: '닭', emoji: '🐔', sound: '꼬끼오!', color: '#feca57' },
+            { name: '양', emoji: '🐑', sound: '메에~', color: '#ff9ff3' },
+            { name: '말', emoji: '🐴', sound: '히히힝!', color: '#54a0ff' },
+            { name: '오리', emoji: '🦆', sound: '꽥꽥!', color: '#5f27cd' },
+            { name: '사자', emoji: '🦁', sound: '어흥!', color: '#ff7675' },
+            { name: '코끼리', emoji: '🐘', sound: '뿌우~', color: '#a29bfe' },
+            { name: '원숭이', emoji: '🐵', sound: '우끼끼!', color: '#fd79a8' },
+            { name: '개구리', emoji: '🐸', sound: '개굴개굴!', color: '#00b894' }
+        ];
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        
+        // 키보드 이벤트 (비밀 암호)
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                    
+                    if (gameStarted) {
+                        createAnimalsGrid(); // 힌트 모드 적용
+                    }
+                }
+            }
+        });
+        
+        function getRandomAnimals(correctAnimal, count = 6) {
+            const otherAnimals = animals.filter(animal => animal !== correctAnimal);
+            const shuffled = otherAnimals.sort(() => Math.random() - 0.5);
+            const selected = shuffled.slice(0, count - 1);
+            selected.push(correctAnimal);
+            return selected.sort(() => Math.random() - 0.5);
+        }
+        
+        function createAnimalsGrid() {
+            const grid = document.getElementById('animalsGrid');
+            grid.innerHTML = '';
+            
+            const animalOptions = getRandomAnimals(currentAnimal);
+            
+            animalOptions.forEach(animal => {
+                const card = document.createElement('div');
+                card.className = 'animal-card';
+                card.onclick = () => selectAnimal(animal, card);
+                
+                if (secretMode) {
+                    // 힌트 모드: 정답에 미묘한 힌트 제공
+                    if (animal === currentAnimal) {
+                        card.innerHTML = `${animal.emoji}<br>${animal.name}<br><small style="color: gold;">⭐</small>`;
+                    } else {
+                        card.innerHTML = `${animal.emoji}<br>${animal.name}`;
+                    }
+                } else {
+                    card.innerHTML = `${animal.emoji}<br>${animal.name}`;
+                }
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function selectAnimal(selectedAnimal, cardElement) {
+            const allCards = document.querySelectorAll('.animal-card');
+            allCards.forEach(card => card.style.pointerEvents = 'none');
+            
+            questionsAnswered++;
+            
+            if (selectedAnimal === currentAnimal) {
+                // 정답
+                cardElement.classList.add('correct');
+                correctAnswers++;
+                combo++;
+                
+                const points = combo * (secretMode ? 20 : 10);
+                score += points;
+                
+                // 성공 파티클 효과
+                createSuccessEffect(cardElement);
+                
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1500);
+            } else {
+                // 오답
+                cardElement.classList.add('wrong');
+                combo = 0;
+                
+                // 정답 표시
+                allCards.forEach(card => {
+                    if (card.innerHTML.includes(currentAnimal.name)) {
+                        card.classList.add('correct');
+                    }
+                });
+                
+                setTimeout(() => {
+                    nextQuestion();
+                }, 2000);
+            }
+            
+            updateDisplay();
+        }
+        
+        function createSuccessEffect(element) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 10; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'fixed';
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
+                particle.style.width = '10px';
+                particle.style.height = '10px';
+                particle.style.background = secretMode ? '#ffd700' : '#2ecc71';
+                particle.style.borderRadius = '50%';
+                particle.style.pointerEvents = 'none';
+                particle.style.zIndex = '1000';
+                
+                document.body.appendChild(particle);
+                
+                const angle = (i / 10) * Math.PI * 2;
+                const distance = 100;
+                const endX = centerX + Math.cos(angle) * distance;
+                const endY = centerY + Math.sin(angle) * distance;
+                
+                particle.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${endX - centerX}px, ${endY - centerY}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 1000,
+                    easing: 'ease-out'
+                }).onfinish = () => {
+                    document.body.removeChild(particle);
+                };
+            }
+        }
+        
+        function playCurrentSound() {
+            if (currentAnimal) {
+                const soundDisplay = document.getElementById('soundDisplay');
+                soundDisplay.textContent = currentAnimal.sound;
+                soundDisplay.style.background = `linear-gradient(45deg, ${currentAnimal.color}, #fecfef)`;
+                
+                // 소리 애니메이션
+                soundDisplay.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    soundDisplay.style.transform = 'scale(1)';
+                }, 300);
+            }
+        }
+        
+        function nextQuestion() {
+            currentAnimal = animals[Math.floor(Math.random() * animals.length)];
+            gameStarted = true;
+            
+            const soundDisplay = document.getElementById('soundDisplay');
+            soundDisplay.textContent = '🎵 소리 재생 버튼을 클릭하세요!';
+            soundDisplay.style.background = 'linear-gradient(45deg, #ff9a9e, #fecfef)';
+            
+            createAnimalsGrid();
+            
+            // 카드 클릭 가능하게 복원
+            setTimeout(() => {
+                const allCards = document.querySelectorAll('.animal-card');
+                allCards.forEach(card => {
+                    card.style.pointerEvents = 'auto';
+                    card.classList.remove('correct', 'wrong');
+                });
+            }, 100);
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('combo').textContent = combo;
+            
+            const accuracy = questionsAnswered > 0 ? Math.round((correctAnswers / questionsAnswered) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy;
+            
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('animalSoundsBestScore', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+        }
+        
+        function resetGame() {
+            score = 0;
+            combo = 0;
+            questionsAnswered = 0;
+            correctAnswers = 0;
+            gameStarted = false;
+            
+            updateDisplay();
+            
+            const soundDisplay = document.getElementById('soundDisplay');
+            soundDisplay.textContent = '🎵 시작하려면 소리 재생을 클릭하세요!';
+            soundDisplay.style.background = 'linear-gradient(45deg, #ff9a9e, #fecfef)';
+            
+            document.getElementById('animalsGrid').innerHTML = '';
+            currentAnimal = null;
+        }
+        
+        // 게임 시작
+        nextQuestion();
+    </script>
+</body>
+</html>

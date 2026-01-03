@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥷 닌자 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2C3E50, #34495E);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #E74C3C;
+        }
+        
+        canvas {
+            border: 3px solid #C0392B;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #34495E 0%, #2C3E50 50%, #1A252F 100%);
+        }
+        
+        .ui {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: rgba(231, 76, 60, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .abilities {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .ability-btn {
+            background: #8E44AD;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .ability-btn:hover {
+            background: #9B59B6;
+            transform: scale(1.05);
+        }
+        
+        .ability-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .stealth-indicator {
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .stealth-indicator.hidden {
+            color: #3498DB;
+        }
+        
+        .stealth-indicator.visible {
+            color: #E74C3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🥷 닌자 게임</h1>
+        
+        <div class="ui">
+            <div class="stat">❤️ 체력: <span id="health">100</span></div>
+            <div class="stat">⭐ 점수: <span id="score">0</span></div>
+            <div class="stat">🎯 적 처치: <span id="enemiesKilled">0</span></div>
+            <div class="stat">💎 수리검: <span id="shurikens">10</span></div>
+        </div>
+        
+        <div class="stealth-indicator hidden" id="stealthIndicator">
+            🌙 은신 상태
+        </div>
+        
+        <div class="abilities">
+            <button class="ability-btn" onclick="useAbility('dash')" id="dashBtn">⚡ 대쉬 (E)</button>
+            <button class="ability-btn" onclick="useAbility('stealth')" id="stealthBtn">👻 은신 (Q)</button>
+            <button class="ability-btn" onclick="useAbility('wallJump')" id="wallJumpBtn">🧗 벽타기 (W)</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <p>🎮 조작법: WASD로 이동, 마우스 클릭으로 수리검 던지기, 스페이스바로 점프</p>
+            <p>🥷 닌자 기술: E(대쉬), Q(은신), W(벽타기) - 적들을 피하며 임무를 완수하세요!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameState = {
+            health: 100,
+            score: 0,
+            enemiesKilled: 0,
+            shurikens: 10,
+            isStealthed: false,
+            stealthTime: 0
+        };
+        
+        // 닌자 플레이어
+        const ninja = {
+            x: 100,
+            y: 400,
+            width: 20,
+            height: 30,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpPower: 15,
+            onGround: false,
+            onWall: false,
+            facing: 1, // 1: 오른쪽, -1: 왼쪽
+            dashCooldown: 0,
+            stealthCooldown: 0,
+            wallJumpCooldown: 0
+        };
+        
+        // 게임 객체들
+        let enemies = [];
+        let shurikens = [];
+        let particles = [];
+        let platforms = [];
+        let walls = [];
+        
+        // 키 입력
+        const keys = {};
+        let mouseX = 0, mouseY = 0;
+        
+        // 이벤트 리스너
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            // 능력 단축키
+            if (e.key.toLowerCase() === 'e') useAbility('dash');
+            if (e.key.toLowerCase() === 'q') useAbility('stealth');
+            if (e.key.toLowerCase() === 'w') useAbility('wallJump');
+        });
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('click', throwShuriken);
+        
+        // 레벨 생성
+        function createLevel() {
+            platforms = [
+                { x: 0, y: canvas.height - 20, width: canvas.width, height: 20 }, // 바닥
+                { x: 200, y: 450, width: 150, height: 20 },
+                { x: 400, y: 350, width: 150, height: 20 },
+                { x: 600, y: 250, width: 150, height: 20 },
+                { x: 100, y: 200, width: 100, height: 20 },
+                { x: 500, y: 150, width: 100, height: 20 }
+            ];
+            
+            walls = [
+                { x: 0, y: 0, width: 20, height: canvas.height },
+                { x: canvas.width - 20, y: 0, width: 20, height: canvas.height },
+                { x: 300, y: 300, width: 20, height: 150 },
+                { x: 550, y: 100, width: 20, height: 200 }
+            ];
+            
+            // 적 생성
+            enemies = [
+                { x: 250, y: 420, width: 25, height: 25, vx: 1, health: 50, maxHealth: 50, patrol: { start: 200, end: 350 }, type: 'guard' },
+                { x: 450, y: 320, width: 25, height: 25, vx: -1, health: 50, maxHealth: 50, patrol: { start: 400, end: 550 }, type: 'guard' },
+                { x: 650, y: 220, width: 25, height: 25, vx: 1, health: 75, maxHealth: 75, patrol: { start: 600, end: 750 }, type: 'samurai' },
+                { x: 150, y: 170, width: 20, height: 20, vx: 0, health: 30, maxHealth: 30, alertRadius: 100, type: 'archer' }
+            ];
+        }
+        
+        // 수리검 던지기
+        function throwShuriken() {
+            if (gameState.shurikens <= 0) return;
+            
+            gameState.shurikens--;
+            
+            const angle = Math.atan2(mouseY - ninja.y, mouseX - ninja.x);
+            const speed = 12;
+            
+            shurikens.push({
+                x: ninja.x + ninja.width / 2,
+                y: ninja.y + ninja.height / 2,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                rotation: 0,
+                damage: 25
+            });
+        }
+        
+        // 능력 사용
+        function useAbility(ability) {
+            switch(ability) {
+                case 'dash':
+                    if (ninja.dashCooldown <= 0) {
+                        ninja.vx = ninja.facing * 15;
+                        ninja.dashCooldown = 120; // 2초
+                        createParticles(ninja.x, ninja.y, '#3498DB', 8);
+                    }
+                    break;
+                    
+                case 'stealth':
+                    if (ninja.stealthCooldown <= 0) {
+                        gameState.isStealthed = true;
+                        gameState.stealthTime = 180; // 3초
+                        ninja.stealthCooldown = 600; // 10초
+                        updateStealthIndicator();
+                    }
+                    break;
+                    
+                case 'wallJump':
+                    if (ninja.wallJumpCooldown <= 0 && ninja.onWall) {
+                        ninja.vy = -ninja.jumpPower;
+                        ninja.vx = -ninja.facing * 8;
+                        ninja.wallJumpCooldown = 60; // 1초
+                        createParticles(ninja.x, ninja.y, '#E67E22', 5);
+                    }
+                    break;
+            }
+        }
+        
+        // 은신 상태 표시 업데이트
+        function updateStealthIndicator() {
+            const indicator = document.getElementById('stealthIndicator');
+            if (gameState.isStealthed) {
+                indicator.className = 'stealth-indicator hidden';
+                indicator.textContent = '🌙 은신 상태';
+            } else {
+                indicator.className = 'stealth-indicator visible';
+                indicator.textContent = '👁️ 발각됨';
+            }
+        }
+        
+        // 파티클 생성
+        function createParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // 업데이트
+        function update() {
+            // 닌자 이동
+            if (keys['a'] || keys['ㅁ']) {
+                ninja.vx = -ninja.speed;
+                ninja.facing = -1;
+            } else if (keys['d'] || keys['ㅇ']) {
+                ninja.vx = ninja.speed;
+                ninja.facing = 1;
+            } else {
+                ninja.vx *= 0.8; // 마찰
+            }
+            
+            // 점프
+            if ((keys[' '] || keys['w'] || keys['ㅈ']) && ninja.onGround) {
+                ninja.vy = -ninja.jumpPower;
+                ninja.onGround = false;
+            }
+            
+            // 중력
+            ninja.vy += 0.8;
+            
+            // 닌자 위치 업데이트
+            ninja.x += ninja.vx;
+            ninja.y += ninja.vy;
+            
+            // 플랫폼 충돌
+            ninja.onGround = false;
+            ninja.onWall = false;
+            
+            platforms.forEach(platform => {
+                if (checkCollision(ninja, platform)) {
+                    if (ninja.vy > 0 && ninja.y < platform.y) {
+                        ninja.y = platform.y - ninja.height;
+                        ninja.vy = 0;
+                        ninja.onGround = true;
+                    }
+                }
+            });
+            
+            // 벽 충돌
+            walls.forEach(wall => {
+                if (checkCollision(ninja, wall)) {
+                    if (ninja.vx > 0) {
+                        ninja.x = wall.x - ninja.width;
+                        ninja.onWall = true;
+                    } else if (ninja.vx < 0) {
+                        ninja.x = wall.x + wall.width;
+                        ninja.onWall = true;
+                    }
+                    ninja.vx = 0;
+                }
+            });
+            
+            // 경계 체크
+            if (ninja.x < 0) ninja.x = 0;
+            if (ninja.x + ninja.width > canvas.width) ninja.x = canvas.width - ninja.width;
+            if (ninja.y > canvas.height) {
+                ninja.y = 100;
+                ninja.x = 100;
+                gameState.health -= 20;
+            }
+            
+            // 적 업데이트
+            enemies.forEach((enemy, enemyIndex) => {
+                if (enemy.type === 'guard' || enemy.type === 'samurai') {
+                    // 순찰
+                    enemy.x += enemy.vx;
+                    if (enemy.x <= enemy.patrol.start || enemy.x >= enemy.patrol.end) {
+                        enemy.vx *= -1;
+                    }
+                } else if (enemy.type === 'archer') {
+                    // 닌자 감지
+                    const distance = Math.sqrt((ninja.x - enemy.x) ** 2 + (ninja.y - enemy.y) ** 2);
+                    if (distance < enemy.alertRadius && !gameState.isStealthed) {
+                        // 화살 발사 (간단히 수리검으로 대체)
+                        if (Math.random() < 0.02) {
+                            const angle = Math.atan2(ninja.y - enemy.y, ninja.x - enemy.x);
+                            shurikens.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                vx: Math.cos(angle) * 6,
+                                vy: Math.sin(angle) * 6,
+                                rotation: 0,
+                                damage: 15,
+                                isEnemyProjectile: true
+                            });
+                        }
+                    }
+                }
+                
+                // 닌자와 적 충돌
+                if (checkCollision(ninja, enemy) && !gameState.isStealthed) {
+                    gameState.health -= 1;
+                    createParticles(ninja.x, ninja.y, '#E74C3C');
+                }
+            });
+            
+            // 수리검 업데이트
+            shurikens.forEach((shuriken, sIndex) => {
+                shuriken.x += shuriken.vx;
+                shuriken.y += shuriken.vy;
+                shuriken.rotation += 0.3;
+                
+                // 경계 체크
+                if (shuriken.x < 0 || shuriken.x > canvas.width || 
+                    shuriken.y < 0 || shuriken.y > canvas.height) {
+                    shurikens.splice(sIndex, 1);
+                    return;
+                }
+                
+                // 플랫폼 충돌
+                platforms.forEach(platform => {
+                    if (checkCollision(shuriken, platform)) {
+                        shurikens.splice(sIndex, 1);
+                        createParticles(shuriken.x, shuriken.y, '#95A5A6');
+                    }
+                });
+                
+                // 적과 충돌 (플레이어 수리검만)
+                if (!shuriken.isEnemyProjectile) {
+                    enemies.forEach((enemy, eIndex) => {
+                        if (checkCollision(shuriken, enemy)) {
+                            enemy.health -= shuriken.damage;
+                            shurikens.splice(sIndex, 1);
+                            createParticles(enemy.x, enemy.y, '#E74C3C');
+                            
+                            if (enemy.health <= 0) {
+                                enemies.splice(eIndex, 1);
+                                gameState.enemiesKilled++;
+                                gameState.score += 100;
+                                gameState.shurikens += 2; // 보상
+                            }
+                        }
+                    });
+                } else {
+                    // 적 수리검과 닌자 충돌
+                    if (checkCollision(shuriken, ninja)) {
+                        gameState.health -= shuriken.damage;
+                        shurikens.splice(sIndex, 1);
+                        createParticles(ninja.x, ninja.y, '#E74C3C');
+                    }
+                }
+            });
+            
+            // 파티클 업데이트
+            particles.forEach((particle, pIndex) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(pIndex, 1);
+                }
+            });
+            
+            // 쿨다운 업데이트
+            if (ninja.dashCooldown > 0) ninja.dashCooldown--;
+            if (ninja.stealthCooldown > 0) ninja.stealthCooldown--;
+            if (ninja.wallJumpCooldown > 0) ninja.wallJumpCooldown--;
+            
+            // 은신 시간 업데이트
+            if (gameState.stealthTime > 0) {
+                gameState.stealthTime--;
+                if (gameState.stealthTime <= 0) {
+                    gameState.isStealthed = false;
+                    updateStealthIndicator();
+                }
+            }
+            
+            // 능력 버튼 상태 업데이트
+            document.getElementById('dashBtn').disabled = ninja.dashCooldown > 0;
+            document.getElementById('stealthBtn').disabled = ninja.stealthCooldown > 0;
+            document.getElementById('wallJumpBtn').disabled = ninja.wallJumpCooldown > 0 || !ninja.onWall;
+            
+            // 게임 오버 체크
+            if (gameState.health <= 0) {
+                alert(`게임 오버! 최종 점수: ${gameState.score}`);
+                location.reload();
+            }
+            
+            // 승리 조건 (모든 적 처치)
+            if (enemies.length === 0) {
+                alert(`미션 완료! 모든 적을 처치했습니다!\n최종 점수: ${gameState.score}`);
+                createLevel(); // 새 레벨 생성
+            }
+            
+            updateUI();
+        }
+        
+        // 렌더링
+        function render() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#34495E');
+            gradient.addColorStop(0.5, '#2C3E50');
+            gradient.addColorStop(1, '#1A252F');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 달과 별들
+            ctx.fillStyle = '#F39C12';
+            ctx.beginPath();
+            ctx.arc(700, 80, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            for (let i = 0; i < 20; i++) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(Math.random() * canvas.width, Math.random() * 200, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 플랫폼
+            ctx.fillStyle = '#7F8C8D';
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+            
+            // 벽
+            ctx.fillStyle = '#95A5A6';
+            walls.forEach(wall => {
+                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            });
+            
+            // 닌자
+            ctx.save();
+            if (gameState.isStealthed) {
+                ctx.globalAlpha = 0.5;
+            }
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(ninja.x, ninja.y, ninja.width, ninja.height);
+            
+            // 닌자 얼굴
+            ctx.fillStyle = '#E8E8E8';
+            ctx.fillRect(ninja.x + 2, ninja.y + 2, ninja.width - 4, 8);
+            
+            // 닌자 눈
+            ctx.fillStyle = '#E74C3C';
+            ctx.fillRect(ninja.x + 4, ninja.y + 4, 3, 2);
+            ctx.fillRect(ninja.x + ninja.width - 7, ninja.y + 4, 3, 2);
+            ctx.restore();
+            
+            // 적들
+            enemies.forEach(enemy => {
+                let color = '#8E44AD';
+                if (enemy.type === 'samurai') color = '#E74C3C';
+                if (enemy.type === 'archer') color = '#27AE60';
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // 체력바
+                const barWidth = enemy.width;
+                const barHeight = 4;
+                const healthPercent = enemy.health / enemy.maxHealth;
+                
+                ctx.fillStyle = '#E74C3C';
+                ctx.fillRect(enemy.x, enemy.y - 8, barWidth, barHeight);
+                ctx.fillStyle = '#27AE60';
+                ctx.fillRect(enemy.x, enemy.y - 8, barWidth * healthPercent, barHeight);
+                
+                // 감지 범위 (궁수)
+                if (enemy.type === 'archer' && !gameState.isStealthed) {
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.alertRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+            
+            // 수리검
+            shurikens.forEach(shuriken => {
+                ctx.save();
+                ctx.translate(shuriken.x, shuriken.y);
+                ctx.rotate(shuriken.rotation);
+                
+                ctx.fillStyle = shuriken.isEnemyProjectile ? '#E74C3C' : '#BDC3C7';
+                ctx.beginPath();
+                ctx.moveTo(-6, 0);
+                ctx.lineTo(0, -6);
+                ctx.lineTo(6, 0);
+                ctx.lineTo(0, 6);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            });
+            
+            // 파티클
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('health').textContent = Math.max(0, gameState.health);
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('enemiesKilled').textContent = gameState.enemiesKilled;
+            document.getElementById('shurikens').textContent = gameState.shurikens;
+        }
+        
+        // 게임 루프
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        createLevel();
+        updateStealthIndicator();
+        gameLoop();
+    </script>
+</body>
+</html>

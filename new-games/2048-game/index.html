@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>2048 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #776e65;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #776e65;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .game-container {
+            background: #bbada0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            width: 500px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .score-container {
+            background: #bbada0;
+            border-radius: 5px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: bold;
+            min-width: 80px;
+        }
+        
+        .score-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .score-value {
+            font-size: 1.5rem;
+        }
+        
+        .grid-container {
+            background: #bbada0;
+            border-radius: 10px;
+            padding: 10px;
+            position: relative;
+        }
+        
+        .grid-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .grid-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .grid-cell {
+            width: 100px;
+            height: 100px;
+            background: rgba(238, 228, 218, 0.35);
+            border-radius: 5px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            position: relative;
+        }
+        
+        .grid-cell:last-child {
+            margin-right: 0;
+        }
+        
+        .tile {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            transition: all 0.15s ease-in-out;
+            z-index: 10;
+        }
+        
+        .tile-2 { background: #eee4da; color: #776e65; }
+        .tile-4 { background: #ede0c8; color: #776e65; }
+        .tile-8 { background: #f2b179; color: #f9f6f2; }
+        .tile-16 { background: #f59563; color: #f9f6f2; }
+        .tile-32 { background: #f67c5f; color: #f9f6f2; }
+        .tile-64 { background: #f65e3b; color: #f9f6f2; }
+        .tile-128 { background: #edcf72; color: #f9f6f2; font-size: 1.8rem; }
+        .tile-256 { background: #edcc61; color: #f9f6f2; font-size: 1.8rem; }
+        .tile-512 { background: #edc850; color: #f9f6f2; font-size: 1.8rem; }
+        .tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 1.5rem; }
+        .tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 1.5rem; box-shadow: 0 0 20px rgba(237, 194, 46, 0.5); }
+        
+        .tile-new {
+            animation: appear 0.2s ease-in-out;
+        }
+        
+        .tile-merged {
+            animation: merge 0.15s ease-in-out;
+        }
+        
+        @keyframes appear {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes merge {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #8f7a66;
+            color: #f9f6f2;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #9f8a76;
+            transform: scale(1.05);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 500px;
+            color: #776e65;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+        
+        .game-won {
+            background: rgba(237, 194, 46, 0.9);
+            color: #f9f6f2;
+        }
+        
+        .arrow-keys {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 5px;
+            margin: 20px auto;
+            width: 160px;
+        }
+        
+        .arrow-key {
+            background: #8f7a66;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .arrow-key:hover {
+            background: #9f8a76;
+        }
+        
+        .arrow-up { grid-column: 2; grid-row: 1; }
+        .arrow-left { grid-column: 1; grid-row: 2; }
+        .arrow-down { grid-column: 2; grid-row: 2; }
+        .arrow-right { grid-column: 3; grid-row: 2; }
+    </style>
+</head>
+<body>
+    <h1>2048</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>화살표 키를 사용해서 타일을 움직이세요!</p>
+        <p>같은 숫자의 타일이 만나면 합쳐집니다!</p>
+        <p><strong>🎯 목표:</strong> 2048 타일을 만드세요!</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-info">
+            <div class="score-container">
+                <div class="score-label">점수</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-container">
+                <div class="score-label">최고 점수</div>
+                <div class="score-value" id="bestScore">0</div>
+            </div>
+        </div>
+        
+        <div class="grid-container" id="gridContainer">
+            <!-- 그리드가 여기에 생성됩니다 -->
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2 id="gameOverTitle">게임 오버!</h2>
+            <p id="gameOverMessage">더 이상 움직일 수 없습니다!</p>
+            <button onclick="newGame()">다시 시작</button>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="newGame()">🎮 새 게임</button>
+        <button onclick="undoMove()" id="undoBtn">↶ 되돌리기</button>
+    </div>
+    
+    <div class="arrow-keys">
+        <button class="arrow-key arrow-up" onclick="move('up')">↑</button>
+        <button class="arrow-key arrow-left" onclick="move('left')">←</button>
+        <button class="arrow-key arrow-down" onclick="move('down')">↓</button>
+        <button class="arrow-key arrow-right" onclick="move('right')">→</button>
+    </div>
+
+    <script>
+        // 게임 상태
+        let board = [];
+        let score = 0;
+        let bestScore = localStorage.getItem('2048BestScore') || 0;
+        let previousBoard = [];
+        let previousScore = 0;
+        let gameWon = false;
+        let gameEnded = false;
+
+        // 게임 초기화
+        function initGame() {
+            board = [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0]
+            ];
+            score = 0;
+            gameWon = false;
+            gameEnded = false;
+            
+            createGrid();
+            addRandomTile();
+            addRandomTile();
+            updateDisplay();
+        }
+
+        // 그리드 생성
+        function createGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+            
+            for (let row = 0; row < 4; row++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'grid-row';
+                
+                for (let col = 0; col < 4; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.id = `cell-${row}-${col}`;
+                    rowDiv.appendChild(cell);
+                }
+                
+                container.appendChild(rowDiv);
+            }
+        }
+
+        // 랜덤 타일 추가
+        function addRandomTile() {
+            const emptyCells = [];
+            
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    if (board[row][col] === 0) {
+                        emptyCells.push({row, col});
+                    }
+                }
+            }
+            
+            if (emptyCells.length > 0) {
+                const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                const value = Math.random() < 0.9 ? 2 : 4;
+                board[randomCell.row][randomCell.col] = value;
+                
+                // 새 타일 애니메이션
+                setTimeout(() => {
+                    const tile = document.querySelector(`[data-row="${randomCell.row}"][data-col="${randomCell.col}"]`);
+                    if (tile) {
+                        tile.classList.add('tile-new');
+                        setTimeout(() => tile.classList.remove('tile-new'), 200);
+                    }
+                }, 50);
+            }
+        }
+
+        // 보드 복사
+        function copyBoard(board) {
+            return board.map(row => [...row]);
+        }
+
+        // 이전 상태 저장
+        function savePreviousState() {
+            previousBoard = copyBoard(board);
+            previousScore = score;
+        }
+
+        // 되돌리기
+        function undoMove() {
+            if (previousBoard.length > 0) {
+                board = copyBoard(previousBoard);
+                score = previousScore;
+                updateDisplay();
+                previousBoard = [];
+            }
+        }
+
+        // 타일 이동 로직
+        function move(direction) {
+            if (gameEnded) return;
+            
+            savePreviousState();
+            let moved = false;
+            let newBoard = copyBoard(board);
+            
+            if (direction === 'left') {
+                for (let row = 0; row < 4; row++) {
+                    const line = newBoard[row].filter(val => val !== 0);
+                    const merged = mergeLine(line);
+                    const newLine = merged.concat(Array(4 - merged.length).fill(0));
+                    
+                    for (let col = 0; col < 4; col++) {
+                        if (newBoard[row][col] !== newLine[col]) {
+                            moved = true;
+                        }
+                        newBoard[row][col] = newLine[col];
+                    }
+                }
+            } else if (direction === 'right') {
+                for (let row = 0; row < 4; row++) {
+                    const line = newBoard[row].filter(val => val !== 0);
+                    const merged = mergeLine(line.reverse()).reverse();
+                    const newLine = Array(4 - merged.length).fill(0).concat(merged);
+                    
+                    for (let col = 0; col < 4; col++) {
+                        if (newBoard[row][col] !== newLine[col]) {
+                            moved = true;
+                        }
+                        newBoard[row][col] = newLine[col];
+                    }
+                }
+            } else if (direction === 'up') {
+                for (let col = 0; col < 4; col++) {
+                    const line = [];
+                    for (let row = 0; row < 4; row++) {
+                        if (newBoard[row][col] !== 0) {
+                            line.push(newBoard[row][col]);
+                        }
+                    }
+                    
+                    const merged = mergeLine(line);
+                    const newLine = merged.concat(Array(4 - merged.length).fill(0));
+                    
+                    for (let row = 0; row < 4; row++) {
+                        if (newBoard[row][col] !== newLine[row]) {
+                            moved = true;
+                        }
+                        newBoard[row][col] = newLine[row];
+                    }
+                }
+            } else if (direction === 'down') {
+                for (let col = 0; col < 4; col++) {
+                    const line = [];
+                    for (let row = 3; row >= 0; row--) {
+                        if (newBoard[row][col] !== 0) {
+                            line.push(newBoard[row][col]);
+                        }
+                    }
+                    
+                    const merged = mergeLine(line);
+                    const newLine = merged.concat(Array(4 - merged.length).fill(0));
+                    
+                    for (let row = 0; row < 4; row++) {
+                        if (newBoard[3-row][col] !== newLine[row]) {
+                            moved = true;
+                        }
+                        newBoard[3-row][col] = newLine[row];
+                    }
+                }
+            }
+            
+            if (moved) {
+                board = newBoard;
+                addRandomTile();
+                updateDisplay();
+                
+                if (checkWin() && !gameWon) {
+                    gameWon = true;
+                    showGameOver(true);
+                } else if (checkGameOver()) {
+                    gameEnded = true;
+                    showGameOver(false);
+                }
+            }
+        }
+
+        // 라인 합치기
+        function mergeLine(line) {
+            const result = [];
+            let i = 0;
+            
+            while (i < line.length) {
+                if (i < line.length - 1 && line[i] === line[i + 1]) {
+                    // 합치기
+                    const mergedValue = line[i] * 2;
+                    result.push(mergedValue);
+                    score += mergedValue;
+                    i += 2;
+                } else {
+                    result.push(line[i]);
+                    i++;
+                }
+            }
+            
+            return result;
+        }
+
+        // 승리 확인
+        function checkWin() {
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    if (board[row][col] === 2048) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 게임 오버 확인
+        function checkGameOver() {
+            // 빈 칸이 있으면 게임 계속
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    if (board[row][col] === 0) {
+                        return false;
+                    }
+                }
+            }
+            
+            // 합칠 수 있는 타일이 있으면 게임 계속
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const current = board[row][col];
+                    
+                    if ((row < 3 && board[row + 1][col] === current) ||
+                        (col < 3 && board[row][col + 1] === current)) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        // 게임 오버 화면 표시
+        function showGameOver(won) {
+            const gameOverDiv = document.getElementById('gameOver');
+            const title = document.getElementById('gameOverTitle');
+            const message = document.getElementById('gameOverMessage');
+            
+            if (won) {
+                gameOverDiv.classList.add('game-won');
+                title.textContent = '🎉 축하합니다!';
+                message.textContent = '2048을 달성했습니다!';
+            } else {
+                gameOverDiv.classList.remove('game-won');
+                title.textContent = '💥 게임 오버!';
+                message.textContent = '더 이상 움직일 수 없습니다!';
+            }
+            
+            gameOverDiv.style.display = 'flex';
+        }
+
+        // 디스플레이 업데이트
+        function updateDisplay() {
+            // 점수 업데이트
+            document.getElementById('score').textContent = score;
+            
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('2048BestScore', bestScore);
+            }
+            document.getElementById('bestScore').textContent = bestScore;
+            
+            // 보드 업데이트
+            const container = document.getElementById('gridContainer');
+            
+            // 기존 타일 제거
+            const existingTiles = container.querySelectorAll('.tile');
+            existingTiles.forEach(tile => tile.remove());
+            
+            // 새 타일 생성
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    if (board[row][col] !== 0) {
+                        const tile = document.createElement('div');
+                        tile.className = `tile tile-${board[row][col]}`;
+                        tile.textContent = board[row][col];
+                        tile.dataset.row = row;
+                        tile.dataset.col = col;
+                        
+                        // 위치 설정
+                        tile.style.left = (col * 110 + 10) + 'px';
+                        tile.style.top = (row * 110 + 10) + 'px';
+                        
+                        container.appendChild(tile);
+                    }
+                }
+            }
+        }
+
+        // 새 게임
+        function newGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            initGame();
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    move('up');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'KeyZ':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        undoMove();
+                    }
+                    break;
+            }
+        });
+
+        // 터치 이벤트 (모바일 지원)
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            if (!touchStartX || !touchStartY) return;
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+            
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    move('left');
+                } else {
+                    move('right');
+                }
+            } else {
+                if (diffY > 0) {
+                    move('up');
+                } else {
+                    move('down');
+                }
+            }
+            
+            touchStartX = 0;
+            touchStartY = 0;
+        });
+
+        // 게임 시작
+        initGame();
+        
+        console.log('2048 게임이 로드되었습니다!');
+    </script>
+</body>
+</html>

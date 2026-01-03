@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 줄타기</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: 'Comic Sans MS', cursive; background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white; text-align: center; min-height: 100vh; }
+        h1 { font-size: 3rem; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .game-container { background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin: 20px auto; max-width: 900px; backdrop-filter: blur(10px); }
+        canvas { border: 5px solid #fff; border-radius: 15px; background: linear-gradient(180deg, #74b9ff 0%, #00b894 100%); }
+        button { background: linear-gradient(45deg, #6c5ce7, #a29bfe); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 5px; transition: all 0.3s; }
+        button:hover { transform: scale(1.05); }
+        .info { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }
+        .info-box { background: rgba(255, 255, 255, 0.2); padding: 15px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 줄타기</h1>
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">균형: <span id="balance">50</span>%</div>
+            <div class="info-box">거리: <span id="distance">0</span>m</div>
+            <div class="info-box">점수: <span id="score">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        <p><strong>조작법:</strong> A/D = 균형 조절, 스페이스 = 앞으로</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false, gamePaused = false, balance = 50, distance = 0, score = 0;
+        let walker = { x: 100, y: 200, tilt: 0, moving: false };
+        let wind = 0, windTimer = 0;
+        let particles = [];
+        let keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameRunning && !gamePaused) {
+                    walker.moving = true;
+                    walker.x += 2;
+                    distance += 0.1;
+                    score += 1;
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'Space') {
+                walker.moving = false;
+            }
+        });
+        
+        function updateWalker() {
+            if (!gameRunning || gamePaused) return;
+            
+            // 균형 조절
+            if (keys['KeyA']) {
+                balance = Math.min(100, balance + 2);
+                walker.tilt = Math.max(-0.3, walker.tilt - 0.05);
+            }
+            if (keys['KeyD']) {
+                balance = Math.max(0, balance - 2);
+                walker.tilt = Math.min(0.3, walker.tilt + 0.05);
+            }
+            
+            // 바람 효과
+            windTimer++;
+            if (windTimer > 120) {
+                wind = (Math.random() - 0.5) * 4;
+                windTimer = 0;
+            }
+            
+            balance += wind * 0.5;
+            walker.tilt += wind * 0.01;
+            
+            // 자연스러운 균형 복원
+            if (!keys['KeyA'] && !keys['KeyD']) {
+                walker.tilt *= 0.95;
+                if (balance < 50) balance += 0.5;
+                else if (balance > 50) balance -= 0.5;
+            }
+            
+            // 게임 오버 체크
+            if (balance <= 0 || balance >= 100) {
+                gameOver();
+            }
+            
+            // 성공 체크
+            if (walker.x > 700) {
+                success();
+            }
+            
+            // 파티클 생성 (발걸음)
+            if (walker.moving && Math.random() < 0.3) {
+                particles.push({
+                    x: walker.x,
+                    y: walker.y + 40,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: -Math.random() * 3,
+                    life: 30,
+                    color: '#FFD700'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+        }
+        
+        function draw() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#74b9ff');
+            gradient.addColorStop(1, '#00b894');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 줄
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(50, walker.y + 40);
+            ctx.lineTo(750, walker.y + 40);
+            ctx.stroke();
+            
+            // 지지대
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(45, walker.y + 40, 10, 200);
+            ctx.fillRect(745, walker.y + 40, 10, 200);
+            
+            // 줄타기 사람
+            ctx.save();
+            ctx.translate(walker.x, walker.y);
+            ctx.rotate(walker.tilt);
+            
+            // 몸
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(-15, 0, 30, 60);
+            
+            // 머리
+            ctx.fillStyle = '#f4d03f';
+            ctx.beginPath();
+            ctx.arc(0, -10, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 균형봉
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-50, 20);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            ctx.restore();
+            
+            // 바람 표시
+            if (Math.abs(wind) > 1) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                const windText = wind > 0 ? '💨→' : '←💨';
+                ctx.fillText(windText, canvas.width / 2, 50);
+            }
+            
+            // 파티클
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+            
+            // 균형 표시기
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(50, 50, 200, 20);
+            
+            const balanceColor = balance < 20 || balance > 80 ? '#e74c3c' : 
+                                balance < 35 || balance > 65 ? '#f39c12' : '#27ae60';
+            ctx.fillStyle = balanceColor;
+            ctx.fillRect(50 + balance * 2, 50, 10, 20);
+        }
+        
+        function gameLoop() {
+            updateWalker();
+            updateParticles();
+            updateDisplay();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function updateDisplay() {
+            document.getElementById('balance').textContent = Math.floor(balance);
+            document.getElementById('distance').textContent = Math.floor(distance);
+            document.getElementById('score').textContent = score;
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+        
+        function pauseGame() {
+            if (gameRunning) gamePaused = !gamePaused;
+        }
+        
+        function resetGame() {
+            gameRunning = false; gamePaused = false;
+            balance = 50; distance = 0; score = 0;
+            walker = { x: 100, y: 200, tilt: 0, moving: false };
+            wind = 0; windTimer = 0; particles = [];
+            updateDisplay();
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            alert(`떨어졌습니다! 최종 점수: ${score}점, 거리: ${Math.floor(distance)}m`);
+        }
+        
+        function success() {
+            gameRunning = false;
+            alert(`성공! 줄을 완주했습니다! 최종 점수: ${score}점`);
+        }
+        
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

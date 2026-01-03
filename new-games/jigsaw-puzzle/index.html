@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>직소 퍼즐</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 1000px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .puzzle-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .puzzle-board {
+            width: 400px;
+            height: 400px;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 2px;
+        }
+        
+        .pieces-area {
+            width: 400px;
+            height: 400px;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 10px;
+            gap: 5px;
+        }
+        
+        .puzzle-piece {
+            width: 90px;
+            height: 90px;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-size: 400px 400px;
+            position: relative;
+        }
+        
+        .puzzle-piece:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .puzzle-piece.selected {
+            border-color: #FFD700;
+            transform: scale(1.1);
+        }
+        
+        .puzzle-slot {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .puzzle-slot.highlight {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+        }
+        
+        .puzzle-slot.filled {
+            border: 2px solid #00FF00;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-selector button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            margin: 0 5px;
+        }
+        
+        .difficulty-selector button.active {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧩 직소 퍼즐</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">완성도: <span id="progress">0</span>%</div>
+            <div class="info-box">시간: <span id="time">00:00</span></div>
+            <div class="info-box">이동: <span id="moves">0</span></div>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button onclick="setDifficulty(3)" id="easy">쉬움 (3x3)</button>
+            <button onclick="setDifficulty(4)" id="medium" class="active">보통 (4x4)</button>
+            <button onclick="setDifficulty(5)" id="hard">어려움 (5x5)</button>
+        </div>
+        
+        <div class="puzzle-area">
+            <div class="puzzle-board" id="puzzleBoard"></div>
+            <div class="pieces-area" id="piecesArea"></div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 새 게임</button>
+            <button onclick="shufflePieces()">🔀 섞기</button>
+            <button onclick="showHint()">💡 힌트</button>
+            <button onclick="autoSolve()">🤖 자동 완성</button>
+        </div>
+    </div>
+
+    <script>
+        let gameRunning = false;
+        let startTime = 0;
+        let moves = 0;
+        let selectedPiece = null;
+        let difficulty = 4; // 4x4 기본
+        let gameTimer = null;
+        
+        // 퍼즐 이미지들
+        const puzzleImages = [
+            'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZjZiNmIiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0ZWNkYzQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNhKSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwMCIgcj0iMTUwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMykiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIyMDAiIHI9IjEwMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjUpIi8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjAwIiByPSI1MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjcpIi8+PC9zdmc+',
+            'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2NjdlZWEiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM3NjRiYTIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNiKSIvPjxwb2x5Z29uIHBvaW50cz0iMjAwLDUwIDM1MCwzNTAgNTAsMzUwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz48cG9seWdvbiBwb2ludHM9IjIwMCwxMDAgMzAwLDMwMCAxMDAsMzAwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNikiLz48L3N2Zz4='
+        ];
+        
+        let currentImage = 0;
+        let puzzlePieces = [];
+        let puzzleBoard = [];
+
+        function setDifficulty(level) {
+            difficulty = level;
+            
+            // 버튼 활성화 상태 업데이트
+            document.querySelectorAll('.difficulty-selector button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (level === 3) document.getElementById('easy').classList.add('active');
+            else if (level === 4) document.getElementById('medium').classList.add('active');
+            else if (level === 5) document.getElementById('hard').classList.add('active');
+            
+            if (gameRunning) {
+                startGame();
+            }
+        }
+
+        function createPuzzlePieces() {
+            puzzlePieces = [];
+            puzzleBoard = [];
+            
+            const pieceSize = 400 / difficulty;
+            
+            // 퍼즐 조각 생성
+            for (let row = 0; row < difficulty; row++) {
+                for (let col = 0; col < difficulty; col++) {
+                    const piece = {
+                        id: row * difficulty + col,
+                        correctRow: row,
+                        correctCol: col,
+                        currentRow: -1,
+                        currentCol: -1,
+                        backgroundPosition: `-${col * pieceSize}px -${row * pieceSize}px`
+                    };
+                    puzzlePieces.push(piece);
+                }
+            }
+            
+            // 퍼즐 보드 초기화
+            for (let i = 0; i < difficulty * difficulty; i++) {
+                puzzleBoard.push(null);
+            }
+            
+            shufflePieces();
+        }
+
+        function shufflePieces() {
+            // 피셔-예이츠 셔플
+            for (let i = puzzlePieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [puzzlePieces[i], puzzlePieces[j]] = [puzzlePieces[j], puzzlePieces[i]];
+            }
+            
+            // 모든 조각을 조각 영역으로 이동
+            puzzlePieces.forEach(piece => {
+                piece.currentRow = -1;
+                piece.currentCol = -1;
+            });
+            
+            // 보드 초기화
+            puzzleBoard.fill(null);
+            
+            renderPuzzle();
+        }
+
+        function renderPuzzle() {
+            const boardElement = document.getElementById('puzzleBoard');
+            const piecesElement = document.getElementById('piecesArea');
+            
+            // 보드 스타일 업데이트
+            boardElement.style.gridTemplateColumns = `repeat(${difficulty}, 1fr)`;
+            boardElement.style.gridTemplateRows = `repeat(${difficulty}, 1fr)`;
+            
+            // 보드 클리어
+            boardElement.innerHTML = '';
+            piecesElement.innerHTML = '';
+            
+            const pieceSize = 400 / difficulty;
+            
+            // 퍼즐 보드 슬롯 생성
+            for (let i = 0; i < difficulty * difficulty; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'puzzle-slot';
+                slot.dataset.position = i;
+                slot.addEventListener('click', () => placePiece(i));
+                
+                if (puzzleBoard[i]) {
+                    slot.classList.add('filled');
+                    const piece = puzzleBoard[i];
+                    slot.style.backgroundImage = `url(${puzzleImages[currentImage]})`;
+                    slot.style.backgroundPosition = piece.backgroundPosition;
+                    slot.style.backgroundSize = '400px 400px';
+                }
+                
+                boardElement.appendChild(slot);
+            }
+            
+            // 조각 영역의 조각들 생성
+            puzzlePieces.forEach((piece, index) => {
+                if (piece.currentRow === -1) { // 보드에 없는 조각들만
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = 'puzzle-piece';
+                    pieceElement.dataset.pieceId = piece.id;
+                    pieceElement.style.backgroundImage = `url(${puzzleImages[currentImage]})`;
+                    pieceElement.style.backgroundPosition = piece.backgroundPosition;
+                    pieceElement.style.backgroundSize = '400px 400px';
+                    pieceElement.style.width = `${pieceSize}px`;
+                    pieceElement.style.height = `${pieceSize}px`;
+                    
+                    pieceElement.addEventListener('click', () => selectPiece(piece));
+                    
+                    piecesElement.appendChild(pieceElement);
+                }
+            });
+        }
+
+        function selectPiece(piece) {
+            // 이전 선택 해제
+            document.querySelectorAll('.puzzle-piece').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // 새로운 조각 선택
+            selectedPiece = piece;
+            document.querySelector(`[data-piece-id="${piece.id}"]`).classList.add('selected');
+        }
+
+        function placePiece(position) {
+            if (!selectedPiece || !gameRunning) return;
+            
+            const row = Math.floor(position / difficulty);
+            const col = position % difficulty;
+            
+            // 이미 조각이 있는 위치인지 확인
+            if (puzzleBoard[position]) return;
+            
+            // 조각 배치
+            puzzleBoard[position] = selectedPiece;
+            selectedPiece.currentRow = row;
+            selectedPiece.currentCol = col;
+            
+            moves++;
+            selectedPiece = null;
+            
+            renderPuzzle();
+            updateDisplay();
+            checkCompletion();
+        }
+
+        function checkCompletion() {
+            let correctPieces = 0;
+            
+            puzzleBoard.forEach((piece, index) => {
+                if (piece) {
+                    const correctPosition = piece.correctRow * difficulty + piece.correctCol;
+                    if (index === correctPosition) {
+                        correctPieces++;
+                    }
+                }
+            });
+            
+            const progress = Math.floor((correctPieces / (difficulty * difficulty)) * 100);
+            document.getElementById('progress').textContent = progress;
+            
+            if (progress === 100) {
+                gameRunning = false;
+                clearInterval(gameTimer);
+                
+                // 완성 효과
+                setTimeout(() => {
+                    alert(`🎉 퍼즐 완성! 시간: ${document.getElementById('time').textContent}, 이동: ${moves}번`);
+                }, 500);
+            }
+        }
+
+        function showHint() {
+            if (!gameRunning) return;
+            
+            // 잘못 배치된 조각들을 강조
+            document.querySelectorAll('.puzzle-slot').forEach((slot, index) => {
+                const piece = puzzleBoard[index];
+                if (piece) {
+                    const correctPosition = piece.correctRow * difficulty + piece.correctCol;
+                    if (index !== correctPosition) {
+                        slot.style.border = '3px solid #FF0000';
+                        setTimeout(() => {
+                            slot.style.border = '2px solid #00FF00';
+                        }, 2000);
+                    }
+                }
+            });
+        }
+
+        function autoSolve() {
+            if (!gameRunning) return;
+            
+            // 모든 조각을 올바른 위치에 배치
+            puzzlePieces.forEach(piece => {
+                const correctPosition = piece.correctRow * difficulty + piece.correctCol;
+                puzzleBoard[correctPosition] = piece;
+                piece.currentRow = piece.correctRow;
+                piece.currentCol = piece.correctCol;
+            });
+            
+            moves += 50; // 자동 완성 페널티
+            renderPuzzle();
+            updateDisplay();
+            checkCompletion();
+        }
+
+        function updateTimer() {
+            if (!gameRunning) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('moves').textContent = moves;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            startTime = Date.now();
+            moves = 0;
+            selectedPiece = null;
+            
+            // 랜덤 이미지 선택
+            currentImage = Math.floor(Math.random() * puzzleImages.length);
+            
+            createPuzzlePieces();
+            
+            // 타이머 시작
+            clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            updateDisplay();
+            document.getElementById('progress').textContent = '0';
+            document.getElementById('time').textContent = '00:00';
+        }
+
+        // 초기화
+        startGame();
+    </script>
+</body>
+</html>

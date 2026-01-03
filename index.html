@@ -71,10 +71,11 @@
         }
 
         .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 30px;
             margin-top: 40px;
+            justify-content: center;
         }
 
         .game-card {
@@ -89,6 +90,8 @@
             overflow: hidden;
             animation: slideUp 0.6s ease-out;
             animation-fill-mode: both;
+            width: 350px;
+            flex-shrink: 0;
         }
 
         .game-card:nth-child(1) { animation-delay: 0.1s; }
@@ -273,11 +276,11 @@
     <div class="container">
         <div class="header">
             <h1>🎮 게임 모음</h1>
-            <div class="subtitle">10살 어린이를 위한 코딩 학습 게임 - 총 22개!</div>
+            <div class="subtitle">10살 어린이를 위한 코딩 학습 게임 - 총 100개!</div>div>
             <div class="description">
                 AI와 함께 만든 재미있는 게임들로 코딩을 배워보세요!<br>
                 각 게임은 다른 기술로 만들어져서 다양한 프로그래밍 방식을 경험할 수 있어요.<br>
-                <strong>총 22개의 게임이 준비되어 있습니다! 🎮</strong>
+                <strong>총 100개의 게임이 준비되어 있습니다! 🎮</strong>
             </div>
         </div>
 
@@ -523,6 +526,831 @@
                 <div class="game-tech">물리 시뮬레이션</div>
                 <a href="new-games/flappy-bird/index.html" class="play-button">게임 시작 🚀</a>
             </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎯</span>
+                <h2 class="game-title">두더지 잡기</h2>
+                <p class="game-description">
+                    구멍에서 나오는 두더지를 빠르게 클릭하세요!<br>
+                    시간이 끝나기 전에 최대한 많은 두더지를 잡아보세요!
+                </p>
+                <div class="game-tech">반응 속도 게임</div>
+                <a href="new-games/whack-a-mole/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎲</span>
+                <h2 class="game-title">주사위 게임</h2>
+                <p class="game-description">
+                    주사위 결과를 예측하고 점수를 얻으세요!<br>
+                    단일, 두 개, 세 개 주사위 모드로 즐겨보세요!
+                </p>
+                <div class="game-tech">확률과 예측</div>
+                <a href="new-games/dice-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏃‍♂️</span>
+                <h2 class="game-title">서브웨이 서퍼</h2>
+                <p class="game-description">
+                    좌우로 움직이며 장애물을 피하고 코인을 모으세요!<br>
+                    파워업을 사용해서 더 멀리 달려보세요!
+                </p>
+                <div class="game-tech">무한 러너</div>
+                <a href="new-games/subway-surfer/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧩</span>
+                <h2 class="game-title">2048</h2>
+                <p class="game-description">
+                    숫자 타일을 합쳐서 2048을 만드세요!<br>
+                    전략적 사고가 필요한 퍼즐 게임입니다!
+                </p>
+                <div class="game-tech">퍼즐 게임</div>
+                <a href="new-games/2048-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 곡예사</h2>
+                <p class="game-description">
+                    줄타기하는 곡예사의 균형을 맞춰주세요!<br>
+                    바람의 영향을 받으니 조심하세요!
+                </p>
+                <div class="game-tech">균형 게임</div>
+                <a href="new-games/circus-acrobat/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏰</span>
+                <h2 class="game-title">미니 RPG 던전</h2>
+                <p class="game-description">
+                    던전을 탐험하고 몬스터를 물리치며 레벨업하세요!<br>
+                    아이템을 수집하고 강해져보세요!
+                </p>
+                <div class="game-tech">RPG 어드벤처</div>
+                <a href="new-games/mini-rpg/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎮</span>
+                <h2 class="game-title">플랫포머 어드벤처</h2>
+                <p class="game-description">
+                    점프하고 달려서 코인을 모으고 골에 도달하세요!<br>
+                    적을 피하고 여러 레벨을 클리어해보세요!
+                </p>
+                <div class="game-tech">플랫폼 액션</div>
+                <a href="new-games/platformer/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧟‍♂️</span>
+                <h2 class="game-title">좀비 서바이벌</h2>
+                <p class="game-description">
+                    좀비들을 피하면서 무기로 사격하세요!<br>
+                    웨이브마다 더 많은 좀비가 나타납니다!
+                </p>
+                <div class="game-tech">액션 서바이벌</div>
+                <a href="new-games/zombie-survival/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎣</span>
+                <h2 class="game-title">낚시 게임</h2>
+                <p class="game-description">
+                    파워를 조절해서 낚시줄을 던지고 물고기를 잡으세요!<br>
+                    다양한 종류의 물고기를 수집해보세요!
+                </p>
+                <div class="game-tech">타이밍 게임</div>
+                <a href="new-games/fishing-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏠</span>
+                <h2 class="game-title">집 꾸미기</h2>
+                <p class="game-description">
+                    다양한 가구로 방을 꾸며보세요!<br>
+                    거실, 침실, 부엌을 예쁘게 꾸며보세요!
+                </p>
+                <div class="game-tech">인테리어 시뮬레이션</div>
+                <a href="new-games/house-decorator/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎵</span>
+                <h2 class="game-title">음악 만들기</h2>
+                <p class="game-description">
+                    드럼과 신스로 나만의 비트를 만들어보세요!<br>
+                    다양한 패턴으로 멋진 음악을 작곡하세요!
+                </p>
+                <div class="game-tech">음악 시퀀서</div>
+                <a href="new-games/music-maker/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🔍</span>
+                <h2 class="game-title">숨은 그림 찾기</h2>
+                <p class="game-description">
+                    복잡한 그림에서 숨어있는 물건들을 찾아보세요!<br>
+                    힌트를 사용해서 더 쉽게 찾을 수 있어요!
+                </p>
+                <div class="game-tech">관찰력 게임</div>
+                <a href="new-games/hidden-object/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧮</span>
+                <h2 class="game-title">수학 퍼즐</h2>
+                <p class="game-description">
+                    다양한 수학 문제를 풀어보세요!<br>
+                    사칙연산부터 패턴 찾기까지 도전해보세요!
+                </p>
+                <div class="game-tech">교육용 퍼즐</div>
+                <a href="new-games/math-puzzle/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🥷</span>
+                <h2 class="game-title">닌자 게임</h2>
+                <p class="game-description">
+                    닌자가 되어 적들을 물리치고 임무를 완수하세요!<br>
+                    대쉬, 은신, 벽타기 등 다양한 기술을 사용하세요!
+                </p>
+                <div class="game-tech">액션 어드벤처</div>
+                <a href="new-games/ninja-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🥷</span>
+                <h2 class="game-title">닌자 스텔스</h2>
+                <p class="game-description">
+                    경비를 피해 조용히 보물을 훔치세요!<br>
+                    연막탄, 투명화 등 닌자 기술을 활용하세요!
+                </p>
+                <div class="game-tech">스텔스 액션</div>
+                <a href="new-games/ninja-stealth/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎯</span>
+                <h2 class="game-title">풍선 터뜨리기</h2>
+                <p class="game-description">
+                    마우스로 떠다니는 풍선을 클릭해서 터뜨리세요!<br>
+                    연속으로 터뜨리면 콤보 보너스를 받아요!
+                </p>
+                <div class="game-tech">반응속도 게임</div>
+                <a href="new-games/balloon-pop/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🌈</span>
+                <h2 class="game-title">색깔 맞추기</h2>
+                <p class="game-description">
+                    글자의 색깔을 맞춰보세요!<br>
+                    스트룹 효과로 뇌를 속이는 재미있는 게임이에요!
+                </p>
+                <div class="game-tech">인지능력 테스트</div>
+                <a href="new-games/color-match/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 공 받기</h2>
+                <p class="game-description">
+                    떨어지는 공들을 바구니로 받으세요!<br>
+                    물리 시뮬레이션과 파워업으로 더욱 재미있어요!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="new-games/circus-catch/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🚗</span>
+                <h2 class="game-title">자동차 주차</h2>
+                <p class="game-description">
+                    좁은 공간에 자동차를 주차해보세요!<br>
+                    4개 레벨의 다양한 주차 도전이 기다려요!
+                </p>
+                <div class="game-tech">물리 엔진</div>
+                <a href="new-games/car-parking/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎭</span>
+                <h2 class="game-title">표정 맞추기</h2>
+                <p class="game-description">
+                    이모지 표정을 보고 감정을 맞춰보세요!<br>
+                    감정 인식 능력을 기를 수 있어요!
+                </p>
+                <div class="game-tech">감정 인식</div>
+                <a href="new-games/emotion-match/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏰</span>
+                <h2 class="game-title">성 건설</h2>
+                <p class="game-description">
+                    다양한 블록으로 멋진 성을 건설하세요!<br>
+                    중력과 균형을 고려한 물리 시뮬레이션!
+                </p>
+                <div class="game-tech">건축 시뮬레이션</div>
+                <a href="new-games/castle-builder/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🌍</span>
+                <h2 class="game-title">행성 탐험</h2>
+                <p class="game-description">
+                    우주선으로 행성들을 탐험하고 자원을 수집하세요!<br>
+                    중력 시뮬레이션과 업그레이드 시스템!
+                </p>
+                <div class="game-tech">우주 시뮬레이션</div>
+                <a href="new-games/planet-explorer/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧪</span>
+                <h2 class="game-title">화학 실험실</h2>
+                <p class="game-description">
+                    원소들을 조합해서 새로운 화합물을 만드세요!<br>
+                    실제 화학 반응을 배울 수 있는 교육 게임!
+                </p>
+                <div class="game-tech">교육용 시뮬레이션</div>
+                <a href="new-games/chemistry-lab/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎨</span>
+                <h2 class="game-title">AI 그림 맞추기</h2>
+                <p class="game-description">
+                    그림을 그리면 AI가 맞춰보는 게임!<br>
+                    창의성과 기술이 만나는 재미있는 경험!
+                </p>
+                <div class="game-tech">AI 상호작용</div>
+                <a href="new-games/ai-drawing/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎯</span>
+                <h2 class="game-title">다트 게임</h2>
+                <p class="game-description">
+                    마우스로 조준하고 클릭해서 다트를 던지세요!<br>
+                    과녁의 중심에 가까울수록 높은 점수!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="new-games/dart-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🍎</span>
+                <h2 class="game-title">사과 떨어뜨리기</h2>
+                <p class="game-description">
+                    중력 시뮬레이션으로 사과를 바구니에 넣으세요!<br>
+                    물리 법칙을 이용한 재미있는 게임!
+                </p>
+                <div class="game-tech">중력 물리학</div>
+                <a href="new-games/apple-drop/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 저글링</h2>
+                <p class="game-description">
+                    마우스로 공을 공중에 띄워 저글링하세요!<br>
+                    더 많은 공을 동시에 저글링할수록 높은 점수!
+                </p>
+                <div class="game-tech">저글링 시뮬레이션</div>
+                <a href="new-games/circus-juggling/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🐾</span>
+                <h2 class="game-title">동물 소리 맞추기</h2>
+                <p class="game-description">
+                    동물 소리를 보고 어떤 동물인지 맞춰보세요!<br>
+                    연속으로 맞추면 콤보 보너스가 있어요!
+                </p>
+                <div class="game-tech">교육용 퀴즈</div>
+                <a href="new-games/animal-sounds/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏰</span>
+                <h2 class="game-title">성 방어 게임</h2>
+                <p class="game-description">
+                    적들이 성에 도달하기 전에 타워를 설치해서 막으세요!<br>
+                    4가지 타워와 업그레이드 시스템!
+                </p>
+                <div class="game-tech">타워 디펜스</div>
+                <a href="new-games/castle-defense/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🌊</span>
+                <h2 class="game-title">파도타기 서핑</h2>
+                <p class="game-description">
+                    파도를 타면서 장애물을 피하고 트릭을 성공시키세요!<br>
+                    스페이스바로 점프해서 멋진 트릭을 해보세요!
+                </p>
+                <div class="game-tech">서핑 시뮬레이션</div>
+                <a href="new-games/wave-surfing/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h2 class="game-title">우주 탐험</h2>
+                <p class="game-description">
+                    우주선으로 행성들을 탐험하고 자원을 수집하세요!<br>
+                    연료와 산소를 관리하면서 우주를 탐험해보세요!
+                </p>
+                <div class="game-tech">우주 시뮬레이션</div>
+                <a href="new-games/space-exploration/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎭</span>
+                <h2 class="game-title">연극 무대</h2>
+                <p class="game-description">
+                    배우들을 조종해서 연극 공연을 성공시키세요!<br>
+                    각 장면의 지시사항에 따라 배우들을 배치하세요!
+                </p>
+                <div class="game-tech">연극 시뮬레이션</div>
+                <a href="new-games/theater-stage/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏙️</span>
+                <h2 class="game-title">도시 건설</h2>
+                <p class="game-description">
+                    건물을 짓고 도시를 발전시키세요!<br>
+                    주민들이 행복하도록 균형있게 건설하세요!
+                </p>
+                <div class="game-tech">도시 시뮬레이션</div>
+                <a href="new-games/city-builder/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧬</span>
+                <h2 class="game-title">DNA 퍼즐</h2>
+                <p class="game-description">
+                    DNA 염기를 조합해서 목표 서열을 만드세요!<br>
+                    A-T, G-C 결합 규칙을 이용한 과학 퍼즐!
+                </p>
+                <div class="game-tech">생물학 교육</div>
+                <a href="new-games/dna-puzzle/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏃‍♂️</span>
+                <h2 class="game-title">무한 러너</h2>
+                <p class="game-description">
+                    끝없이 달리면서 장애물을 피하고 코인을 모으세요!<br>
+                    점프와 슬라이딩으로 다양한 장애물을 극복하세요!
+                </p>
+                <div class="game-tech">무한 러너</div>
+                <a href="new-games/infinite-runner/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🦸‍♂️</span>
+                <h2 class="game-title">슈퍼히어로 게임</h2>
+                <p class="game-description">
+                    슈퍼히어로가 되어 도시를 구하세요!<br>
+                    다양한 초능력을 사용해서 악역들을 물리치세요!
+                </p>
+                <div class="game-tech">액션 어드벤처</div>
+                <a href="new-games/superhero/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">⚔️</span>
+                <h2 class="game-title">검투사 배틀</h2>
+                <p class="game-description">
+                    고대 로마의 검투사가 되어 콜로세움에서 싸우세요!<br>
+                    다양한 무기와 방어구로 적들을 물리치세요!
+                </p>
+                <div class="game-tech">전투 시뮬레이션</div>
+                <a href="new-games/gladiator-battle/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🧩</span>
+                <h2 class="game-title">직소 퍼즐</h2>
+                <p class="game-description">
+                    조각난 퍼즐을 맞춰서 완성된 그림을 만드세요!<br>
+                    다양한 난이도와 아름다운 그림들이 준비되어 있어요!
+                </p>
+                <div class="game-tech">퍼즐 게임</div>
+                <a href="new-games/jigsaw-puzzle/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🔢</span>
+                <h2 class="game-title">스도쿠</h2>
+                <p class="game-description">
+                    9x9 격자에 1부터 9까지 숫자를 채워보세요!<br>
+                    논리적 사고력을 기를 수 있는 클래식 퍼즐!
+                </p>
+                <div class="game-tech">논리 퍼즐</div>
+                <a href="new-games/sudoku/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🥊</span>
+                <h2 class="game-title">복싱 게임</h2>
+                <p class="game-description">
+                    권투 선수가 되어 상대방과 대결하세요!<br>
+                    펀치와 가드를 적절히 사용해서 승리하세요!
+                </p>
+                <div class="game-tech">격투 게임</div>
+                <a href="new-games/boxing-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏹</span>
+                <h2 class="game-title">궁수 마스터</h2>
+                <p class="game-description">
+                    바람과 거리를 계산해서 정확하게 화살을 쏘세요!<br>
+                    움직이는 과녁과 다양한 장애물에 도전하세요!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="new-games/archery-master/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🔍</span>
+                <h2 class="game-title">단어 찾기</h2>
+                <p class="game-description">
+                    글자 격자에서 숨어있는 단어들을 찾아보세요!<br>
+                    가로, 세로, 대각선 방향으로 단어가 숨어있어요!
+                </p>
+                <div class="game-tech">단어 퍼즐</div>
+                <a href="new-games/word-search/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🌀</span>
+                <h2 class="game-title">미로 탈출</h2>
+                <p class="game-description">
+                    복잡한 미로에서 출구를 찾아 탈출하세요!<br>
+                    시간 제한이 있으니 빠르게 길을 찾아보세요!
+                </p>
+                <div class="game-tech">미로 알고리즘</div>
+                <a href="new-games/maze-escape/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 공연</h2>
+                <p class="game-description">
+                    서커스 단원이 되어 다양한 공연을 펼치세요!<br>
+                    줄타기, 저글링, 공중그네 등 화려한 공연!
+                </p>
+                <div class="game-tech">서커스 시뮬레이션</div>
+                <a href="new-games/circus-performance/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎳</span>
+                <h2 class="game-title">볼링 게임</h2>
+                <p class="game-description">
+                    마우스로 방향과 힘을 조절해서 볼링핀을 쓰러뜨리세요!<br>
+                    스트라이크와 스페어로 높은 점수를 노려보세요!
+                </p>
+                <div class="game-tech">물리 시뮬레이션</div>
+                <a href="new-games/bowling/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">마술 쇼</h2>
+                <p class="game-description">
+                    마술사가 되어 관객들을 놀라게 하세요!<br>
+                    카드 트릭, 사라지기 마술 등 다양한 마술을 배워보세요!
+                </p>
+                <div class="game-tech">마술 시뮬레이션</div>
+                <a href="new-games/magic-show/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🏖️</span>
+                <h2 class="game-title">해변 배구</h2>
+                <p class="game-description">
+                    모래사장에서 배구 경기를 즐겨보세요!<br>
+                    스파이크와 블로킹으로 상대팀을 이겨보세요!
+                </p>
+                <div class="game-tech">스포츠 시뮬레이션</div>
+                <a href="new-games/beach-volleyball/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎨</span>
+                <h2 class="game-title">색칠하기 게임</h2>
+                <p class="game-description">
+                    다양한 그림에 예쁜 색깔을 칠해보세요!<br>
+                    동물, 꽃, 자동차 등 재미있는 그림들이 가득해요!
+                </p>
+                <div class="game-tech">디지털 아트</div>
+                <a href="new-games/coloring-book/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">트램펄린 점프</h2>
+                <p class="game-description">
+                    트램펄린에서 높이 점프해서 공중 묘기를 해보세요!<br>
+                    회전과 플립으로 멋진 기술을 선보이세요!
+                </p>
+                <div class="game-tech">점프 시뮬레이션</div>
+                <a href="new-games/trampoline-jump/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎯</span>
+                <h2 class="game-title">농구 슛</h2>
+                <p class="game-description">
+                    농구공을 골대에 넣어보세요!<br>
+                    각도와 힘을 조절해서 완벽한 슛을 날려보세요!
+                </p>
+                <div class="game-tech">스포츠 시뮬레이션</div>
+                <a href="new-games/basketball-shot/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 동물 쇼</h2>
+                <p class="game-description">
+                    서커스 동물들을 훈련시켜 멋진 공연을 만들어보세요!<br>
+                    사자, 코끼리, 원숭이와 함께 쇼를 준비하세요!
+                </p>
+                <div class="game-tech">동물 시뮬레이션</div>
+                <a href="new-games/circus-animals/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎮</span>
+                <h2 class="game-title">레트로 아케이드</h2>
+                <p class="game-description">
+                    80년대 아케이드 게임의 향수를 느껴보세요!<br>
+                    픽셀 그래픽과 8비트 사운드로 추억을 되살려보세요!
+                </p>
+                <div class="game-tech">레트로 게임</div>
+                <a href="new-games/retro-arcade/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">광대 게임</h2>
+                <p class="game-description">
+                    재미있는 광대가 되어 사람들을 웃게 만드세요!<br>
+                    풍선 만들기, 마술, 개그로 관객들을 즐겁게 하세요!
+                </p>
+                <div class="game-tech">엔터테인먼트</div>
+                <a href="new-games/clown-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 대포</h2>
+                <p class="game-description">
+                    대포에서 발사되어 정확한 위치에 착지하세요!<br>
+                    각도와 파워를 조절해서 안전망에 떨어지세요!
+                </p>
+                <div class="game-tech">발사체 물리학</div>
+                <a href="new-games/circus-cannon/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 줄타기</h2>
+                <p class="game-description">
+                    높은 줄 위에서 균형을 잡으며 건너편으로 가세요!<br>
+                    바람과 진동을 이겨내고 안전하게 도착하세요!
+                </p>
+                <div class="game-tech">균형 시뮬레이션</div>
+                <a href="new-games/tightrope-walk/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 공중그네</h2>
+                <p class="game-description">
+                    공중그네를 타고 화려한 공중 묘기를 펼치세요!<br>
+                    타이밍을 맞춰 다른 그네로 넘어가세요!
+                </p>
+                <div class="game-tech">타이밍 게임</div>
+                <a href="new-games/trapeze/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 불쇼</h2>
+                <p class="game-description">
+                    불을 다루는 곡예사가 되어 화려한 불쇼를 펼치세요!<br>
+                    안전하게 불을 조작해서 멋진 공연을 만들어보세요!
+                </p>
+                <div class="game-tech">불 시뮬레이션</div>
+                <a href="new-games/fire-show/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 칼 던지기</h2>
+                <p class="game-description">
+                    회전하는 원판에 칼을 정확하게 던져보세요!<br>
+                    사람을 다치게 하지 않고 과녁에만 맞춰야 해요!
+                </p>
+                <div class="game-tech">정밀도 게임</div>
+                <a href="new-games/knife-throwing/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 마술상자</h2>
+                <p class="game-description">
+                    마술상자에서 사람이 사라지고 나타나는 마술을 해보세요!<br>
+                    관객들을 놀라게 할 환상적인 마술을 연출하세요!
+                </p>
+                <div class="game-tech">마술 시뮬레이션</div>
+                <a href="new-games/magic-box/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 풍선 아트</h2>
+                <p class="game-description">
+                    풍선을 비틀어서 다양한 모양을 만들어보세요!<br>
+                    강아지, 꽃, 칼 등 창의적인 풍선 작품을 만들어보세요!
+                </p>
+                <div class="game-tech">창작 시뮬레이션</div>
+                <a href="new-games/balloon-art/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 인간대포</h2>
+                <p class="game-description">
+                    인간대포가 되어 하늘을 날아보세요!<br>
+                    바람의 저항과 중력을 이겨내고 목표지점에 착지하세요!
+                </p>
+                <div class="game-tech">비행 시뮬레이션</div>
+                <a href="new-games/human-cannonball/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 링 마스터</h2>
+                <p class="game-description">
+                    서커스의 링 마스터가 되어 전체 공연을 지휘하세요!<br>
+                    각 공연자들의 타이밍을 맞춰 완벽한 쇼를 만들어보세요!
+                </p>
+                <div class="game-tech">관리 시뮬레이션</div>
+                <a href="new-games/ringmaster/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 텐트 설치</h2>
+                <p class="game-description">
+                    서커스 텐트를 올바르게 설치해보세요!<br>
+                    기둥과 로프를 적절히 배치해서 안전한 텐트를 만드세요!
+                </p>
+                <div class="game-tech">건설 시뮬레이션</div>
+                <a href="new-games/tent-setup/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 티켓 판매</h2>
+                <p class="game-description">
+                    서커스 티켓을 판매하고 관객들을 맞이하세요!<br>
+                    빠르고 정확하게 계산해서 고객들을 만족시키세요!
+                </p>
+                <div class="game-tech">경영 시뮬레이션</div>
+                <a href="new-games/ticket-sales/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 의상 디자인</h2>
+                <p class="game-description">
+                    서커스 공연자들의 화려한 의상을 디자인해보세요!<br>
+                    색상과 장식을 조합해서 멋진 의상을 만들어보세요!
+                </p>
+                <div class="game-tech">패션 디자인</div>
+                <a href="new-games/costume-design/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 음향 효과</h2>
+                <p class="game-description">
+                    서커스 공연에 맞는 음향 효과를 만들어보세요!<br>
+                    드럼롤, 팡파르, 박수 소리 등을 적절한 타이밍에 재생하세요!
+                </p>
+                <div class="game-tech">사운드 엔지니어링</div>
+                <a href="new-games/sound-effects/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 조명 쇼</h2>
+                <p class="game-description">
+                    서커스 공연을 위한 조명을 조작해보세요!<br>
+                    스포트라이트와 컬러 조명으로 환상적인 분위기를 만들어보세요!
+                </p>
+                <div class="game-tech">조명 시뮬레이션</div>
+                <a href="new-games/lighting-show/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 팝콘 만들기</h2>
+                <p class="game-description">
+                    관객들을 위한 맛있는 팝콘을 만들어보세요!<br>
+                    다양한 맛과 토핑으로 특별한 팝콘을 만들어보세요!
+                </p>
+                <div class="game-tech">요리 시뮬레이션</div>
+                <a href="new-games/popcorn-maker/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 솜사탕 만들기</h2>
+                <p class="game-description">
+                    달콤한 솜사탕을 만들어 관객들에게 판매하세요!<br>
+                    설탕을 회전시켜 부드러운 솜사탕을 만들어보세요!
+                </p>
+                <div class="game-tech">제조 시뮬레이션</div>
+                <a href="new-games/cotton-candy/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 페이스 페인팅</h2>
+                <p class="game-description">
+                    아이들의 얼굴에 예쁜 그림을 그려주세요!<br>
+                    나비, 호랑이, 공주 등 다양한 디자인으로 꾸며주세요!
+                </p>
+                <div class="game-tech">아트 시뮬레이션</div>
+                <a href="new-games/face-painting/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 게임 부스</h2>
+                <p class="game-description">
+                    서커스장의 게임 부스를 운영해보세요!<br>
+                    링 던지기, 인형 뽑기 등 재미있는 게임으로 상품을 주세요!
+                </p>
+                <div class="game-tech">게임 운영</div>
+                <a href="new-games/game-booth/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 동물 돌보기</h2>
+                <p class="game-description">
+                    서커스 동물들을 돌보고 훈련시켜보세요!<br>
+                    먹이주기, 목욕시키기, 놀아주기로 동물들을 행복하게 하세요!
+                </p>
+                <div class="game-tech">펫 시뮬레이션</div>
+                <a href="new-games/animal-care/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 무대 디자인</h2>
+                <p class="game-description">
+                    서커스 무대를 멋지게 꾸며보세요!<br>
+                    배경, 소품, 장식을 배치해서 환상적인 무대를 만들어보세요!
+                </p>
+                <div class="game-tech">무대 디자인</div>
+                <a href="new-games/stage-design/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 관객 안내</h2>
+                <p class="game-description">
+                    관객들을 올바른 좌석으로 안내해주세요!<br>
+                    티켓을 확인하고 빠르게 좌석을 찾아주세요!
+                </p>
+                <div class="game-tech">서비스 시뮬레이션</div>
+                <a href="new-games/usher-game/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <div class="game-card">
+                <span class="game-icon">🎪</span>
+                <h2 class="game-title">서커스 기념품 가게</h2>
+                <p class="game-description">
+                    서커스 기념품을 판매하는 가게를 운영하세요!<br>
+                    인형, 포스터, 티셔츠 등을 관객들에게 판매해보세요!
+                </p>
+                <div class="game-tech">상점 운영</div>
+                <a href="new-games/souvenir-shop/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
         </div>
 
         <div class="footer">
@@ -563,6 +1391,20 @@
 
         // 페이지 로드 시 별 생성
         window.addEventListener('load', createStars);
+
+        // 게임 카드 개수 확인
+        window.addEventListener('load', () => {
+            const gameCards = document.querySelectorAll('.game-card');
+            console.log('총 게임 카드 개수:', gameCards.length);
+            
+            // 각 게임 카드에 번호 표시 (디버깅용)
+            gameCards.forEach((card, index) => {
+                const title = card.querySelector('.game-title');
+                if (title) {
+                    console.log(`${index + 1}. ${title.textContent}`);
+                }
+            });
+        });
 
         // 게임 카드 클릭 효과
         document.querySelectorAll('.game-card').forEach(card => {

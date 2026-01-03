@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>우주 탐험 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+            50% { text-shadow: 0 0 30px rgba(255, 255, 255, 0.8), 0 0 40px rgba(0, 255, 255, 0.5); }
+        }
+        
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #000;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .info-item {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .resource-bar {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            height: 20px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        
+        .resource-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .fuel-fill { background: linear-gradient(90deg, #ff6b6b, #ff9ff3); }
+        .oxygen-fill { background: linear-gradient(90deg, #74b9ff, #0984e3); }
+        
+        button {
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #secretMessage {
+            display: none;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 우주 탐험</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>화살표 키로 우주선을 조종해서 행성들을 탐험하세요!</p>
+        <p>자원을 수집하고 연료와 산소를 관리하세요!</p>
+        <p>스페이스바로 부스터를 사용할 수 있어요!</p>
+        <p>💖 비밀: "서민재사랑해"를 입력하면 특별한 일이...?</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="game-info">
+            <div class="info-item">점수: <span id="score">0</span></div>
+            <div class="info-item">자원: <span id="resources">0</span></div>
+            
+            <div class="info-item">
+                연료: <span id="fuel">100</span>%
+                <div class="resource-bar">
+                    <div class="resource-fill fuel-fill" id="fuelBar" style="width: 100%"></div>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                산소: <span id="oxygen">100</span>%
+                <div class="resource-bar">
+                    <div class="resource-fill oxygen-fill" id="oxygenBar" style="width: 100%"></div>
+                </div>
+            </div>
+            
+            <div class="info-item">최고 기록: <span id="bestScore">0</span></div>
+            
+            <div id="secretMessage">
+                💖 비밀 암호 활성화!<br>무한 연료 모드 ON! 💖
+            </div>
+            
+            <button onclick="resetGame()">새 게임</button>
+            <button onclick="togglePause()">일시정지</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 게임 상태
+        let gameRunning = true;
+        let gamePaused = false;
+        let score = 0;
+        let resources = 0;
+        let fuel = 100;
+        let oxygen = 100;
+        let bestScore = localStorage.getItem('spaceExplorationBestScore') || 0;
+        
+        // 비밀 암호 관련 변수
+        let secretMode = false;
+        let secretInput = '';
+        const secretPassword = '서민재사랑해';
+        
+        // 우주선 설정
+        const spaceship = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            thrust: false,
+            size: 15
+        };
+        
+        // 게임 객체들
+        let stars = [];
+        let planets = [];
+        let asteroids = [];
+        let resources_items = [];
+        let particles = [];
+        
+        // 키 입력 상태
+        const keys = {};
+        
+        // 별 생성
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        // 행성 클래스
+        class Planet {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.radius = Math.random() * 40 + 20;
+                this.color = this.getRandomColor();
+                this.hasResources = Math.random() < 0.7;
+                this.resourcesLeft = this.hasResources ? Math.floor(Math.random() * 5) + 3 : 0;
+                this.atmosphere = Math.random() < 0.3;
+            }
+            
+            getRandomColor() {
+                const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            draw() {
+                // 대기권 효과
+                if (this.atmosphere) {
+                    ctx.fillStyle = 'rgba(135, 206, 235, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 행성 본체
+                const gradient = ctx.createRadialGradient(
+                    this.x - this.radius/3, this.y - this.radius/3, 0,
+                    this.x, this.y, this.radius
+                );
+                gradient.addColorStop(0, 'white');
+                gradient.addColorStop(1, this.color);
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 자원 표시
+                if (this.hasResources && this.resourcesLeft > 0) {
+                    ctx.fillStyle = secretMode ? '#ffd700' : '#00ff00';
+                    for (let i = 0; i < this.resourcesLeft; i++) {
+                        const angle = (i / this.resourcesLeft) * Math.PI * 2;
+                        const x = this.x + Math.cos(angle) * (this.radius + 15);
+                        const y = this.y + Math.sin(angle) * (this.radius + 15);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            checkCollision(ship) {
+                const distance = Math.sqrt((ship.x - this.x)**2 + (ship.y - this.y)**2);
+                return distance < this.radius + ship.size;
+            }
+            
+            collectResources() {
+                if (this.resourcesLeft > 0) {
+                    this.resourcesLeft--;
+                    resources++;
+                    score += secretMode ? 100 : 50;
+                    
+                    // 연료와 산소 보충
+                    fuel = Math.min(100, fuel + 10);
+                    oxygen = Math.min(100, oxygen + 5);
+                    
+                    createResourceParticles(this.x, this.y);
+                    return true;
+                }
+                return false;
+            }
+        }
+        
+        // 소행성 클래스
+        class Asteroid {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.radius = Math.random() * 15 + 10;
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed;
+                
+                // 화면 경계 처리
+                if (this.x < -this.radius) this.x = canvas.width + this.radius;
+                if (this.x > canvas.width + this.radius) this.x = -this.radius;
+                if (this.y < -this.radius) this.y = canvas.height + this.radius;
+                if (this.y > canvas.height + this.radius) this.y = -this.radius;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                ctx.fillStyle = secretMode ? '#ff6b6b' : '#8b4513';
+                ctx.beginPath();
+                
+                // 불규칙한 소행성 모양
+                const points = 8;
+                for (let i = 0; i < points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    const radius = this.radius + Math.sin(angle * 3) * 5;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            checkCollision(ship) {
+                const distance = Math.sqrt((ship.x - this.x)**2 + (ship.y - this.y)**2);
+                return distance < this.radius + ship.size;
+            }
+        }
+        
+        // 파티클 효과
+        function createThrustParticles(x, y, angle) {
+            for (let i = 0; i < 3; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle + Math.PI) * (Math.random() * 3 + 2) + (Math.random() - 0.5),
+                    vy: Math.sin(angle + Math.PI) * (Math.random() * 3 + 2) + (Math.random() - 0.5),
+                    life: 20,
+                    color: secretMode ? '#ffd700' : '#ff6b6b'
+                });
+            }
+        }
+        
+        function createResourceParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 40,
+                    color: secretMode ? '#ff6b6b' : '#00ff00'
+                });
+            }
+        }
+        
+        function createExplosionParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    life: 30,
+                    color: '#ff6b6b'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // 초기화
+        document.getElementById('bestScore').textContent = bestScore;
+        createStars();
+        
+        // 행성과 소행성 생성
+        for (let i = 0; i < 8; i++) {
+            planets.push(new Planet());
+        }
+        for (let i = 0; i < 12; i++) {
+            asteroids.push(new Asteroid());
+        }
+        
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            // 비밀 암호 입력 처리
+            if (e.key.length === 1) {
+                secretInput += e.key;
+                if (secretInput.length > secretPassword.length) {
+                    secretInput = secretInput.slice(-secretPassword.length);
+                }
+                
+                if (secretInput === secretPassword) {
+                    secretMode = !secretMode;
+                    document.getElementById('secretMessage').style.display = secretMode ? 'block' : 'none';
+                    secretInput = '';
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        
+        function updateSpaceship() {
+            // 회전
+            if (keys['ArrowLeft']) {
+                spaceship.angle -= 0.1;
+            }
+            if (keys['ArrowRight']) {
+                spaceship.angle += 0.1;
+            }
+            
+            // 추진
+            spaceship.thrust = keys['ArrowUp'] || keys['Space'];
+            if (spaceship.thrust && (secretMode || fuel > 0)) {
+                const thrustPower = secretMode ? 0.3 : 0.2;
+                spaceship.vx += Math.cos(spaceship.angle) * thrustPower;
+                spaceship.vy += Math.sin(spaceship.angle) * thrustPower;
+                
+                if (!secretMode) fuel -= 0.2;
+                
+                // 추진 파티클
+                createThrustParticles(
+                    spaceship.x - Math.cos(spaceship.angle) * 20,
+                    spaceship.y - Math.sin(spaceship.angle) * 20,
+                    spaceship.angle
+                );
+            }
+            
+            // 속도 제한
+            const maxSpeed = secretMode ? 8 : 6;
+            const speed = Math.sqrt(spaceship.vx**2 + spaceship.vy**2);
+            if (speed > maxSpeed) {
+                spaceship.vx = (spaceship.vx / speed) * maxSpeed;
+                spaceship.vy = (spaceship.vy / speed) * maxSpeed;
+            }
+            
+            // 위치 업데이트
+            spaceship.x += spaceship.vx;
+            spaceship.y += spaceship.vy;
+            
+            // 마찰
+            spaceship.vx *= 0.99;
+            spaceship.vy *= 0.99;
+            
+            // 화면 경계 처리
+            if (spaceship.x < 0) spaceship.x = canvas.width;
+            if (spaceship.x > canvas.width) spaceship.x = 0;
+            if (spaceship.y < 0) spaceship.y = canvas.height;
+            if (spaceship.y > canvas.height) spaceship.y = 0;
+        }
+        
+        function updateGame() {
+            if (!gameRunning || gamePaused) return;
+            
+            updateSpaceship();
+            
+            // 소행성 업데이트
+            for (let asteroid of asteroids) {
+                asteroid.update();
+                
+                // 충돌 검사
+                if (!secretMode && asteroid.checkCollision(spaceship)) {
+                    createExplosionParticles(spaceship.x, spaceship.y);
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // 행성과의 상호작용
+            for (let planet of planets) {
+                if (planet.checkCollision(spaceship)) {
+                    planet.collectResources();
+                }
+            }
+            
+            updateParticles();
+            
+            // 자원 소모
+            if (!secretMode) {
+                oxygen -= 0.05;
+                if (fuel <= 0 || oxygen <= 0) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // 점수 증가
+            score += 1;
+            
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('resources').textContent = resources;
+            document.getElementById('fuel').textContent = Math.floor(fuel);
+            document.getElementById('oxygen').textContent = Math.floor(oxygen);
+            
+            document.getElementById('fuelBar').style.width = fuel + '%';
+            document.getElementById('oxygenBar').style.width = oxygen + '%';
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            
+            if (score > bestScore) {
+                bestScore = Math.floor(score);
+                localStorage.setItem('spaceExplorationBestScore', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+        }
+        
+        function resetGame() {
+            gameRunning = true;
+            gamePaused = false;
+            score = 0;
+            resources = 0;
+            fuel = 100;
+            oxygen = 100;
+            
+            spaceship.x = canvas.width / 2;
+            spaceship.y = canvas.height / 2;
+            spaceship.vx = 0;
+            spaceship.vy = 0;
+            spaceship.angle = 0;
+            
+            particles = [];
+            
+            // 새로운 행성들 생성
+            planets = [];
+            for (let i = 0; i < 8; i++) {
+                planets.push(new Planet());
+            }
+            
+            updateDisplay();
+        }
+        
+        function togglePause() {
+            gamePaused = !gamePaused;
+        }
+        
+        function draw() {
+            // 배경 그리기
+            ctx.fillStyle = secretMode ? '#1a1a2e' : '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 별들 그리기
+            for (let star of stars) {
+                star.twinkle += 0.1;
+                const alpha = (Math.sin(star.twinkle) + 1) / 2;
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 행성들 그리기
+            for (let planet of planets) {
+                planet.draw();
+            }
+            
+            // 소행성들 그리기
+            for (let asteroid of asteroids) {
+                asteroid.draw();
+            }
+            
+            // 우주선 그리기
+            ctx.save();
+            ctx.translate(spaceship.x, spaceship.y);
+            ctx.rotate(spaceship.angle);
+            
+            // 우주선 본체
+            ctx.fillStyle = secretMode ? '#ffd700' : '#74b9ff';
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(-10, -8);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(-10, 8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 추진 효과
+            if (spaceship.thrust) {
+                ctx.fillStyle = secretMode ? '#ff6b6b' : '#ff6b6b';
+                ctx.beginPath();
+                ctx.moveTo(-5, -3);
+                ctx.lineTo(-15, 0);
+                ctx.lineTo(-5, 3);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            ctx.restore();
+            
+            // 파티클 그리기
+            for (let p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // 게임 오버 화면
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('게임 오버!', canvas.width/2, canvas.height/2 - 50);
+                
+                ctx.font = '24px Arial';
+                ctx.fillText(`최종 점수: ${Math.floor(score)}`, canvas.width/2, canvas.height/2);
+                ctx.fillText(`수집한 자원: ${resources}`, canvas.width/2, canvas.height/2 + 30);
+            }
+        }
+        
+        function gameLoop() {
+            updateGame();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 게임 시작
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

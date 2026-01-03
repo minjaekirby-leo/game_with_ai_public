@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>검투사 배틀</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #8B4513;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #F4A460 0%, #DEB887 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚔️ 검투사 배틀</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">체력: <span id="playerHealth">100</span></div>
+            <div class="info-box">적 체력: <span id="enemyHealth">100</span></div>
+            <div class="info-box">라운드: <span id="round">1</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> A/D = 이동, 스페이스 = 공격, S = 방어</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let round = 1;
+
+        // 플레이어 검투사
+        const player = {
+            x: 150,
+            y: 350,
+            width: 50,
+            height: 80,
+            health: 100,
+            maxHealth: 100,
+            speed: 4,
+            attacking: false,
+            defending: false,
+            attackCooldown: 0,
+            direction: 1
+        };
+
+        // 적 검투사
+        const enemy = {
+            x: 600,
+            y: 350,
+            width: 50,
+            height: 80,
+            health: 100,
+            maxHealth: 100,
+            speed: 2,
+            attacking: false,
+            defending: false,
+            attackCooldown: 0,
+            aiTimer: 0,
+            direction: -1
+        };
+
+        // 게임 객체들
+        let particles = [];
+        let bloodEffects = [];
+
+        // 키 입력
+        let keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                playerAttack();
+            }
+            if (e.code === 'KeyS') {
+                player.defending = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'KeyS') {
+                player.defending = false;
+            }
+        });
+
+        function playerAttack() {
+            if (player.attackCooldown <= 0 && !player.attacking && gameRunning && !gamePaused) {
+                player.attacking = true;
+                player.attackCooldown = 60; // 1초
+                
+                // 공격 범위 체크
+                const distance = Math.abs(player.x - enemy.x);
+                if (distance < 100) {
+                    if (!enemy.defending) {
+                        enemy.health -= 25;
+                        createBloodEffect(enemy.x, enemy.y);
+                        createHitParticles(enemy.x, enemy.y);
+                    } else {
+                        enemy.health -= 5; // 방어 시 데미지 감소
+                        createSparkEffect(enemy.x, enemy.y);
+                    }
+                }
+                
+                setTimeout(() => {
+                    player.attacking = false;
+                }, 300);
+            }
+        }
+
+        function enemyAI() {
+            enemy.aiTimer++;
+            
+            const distance = Math.abs(player.x - enemy.x);
+            
+            // 플레이어에게 접근
+            if (distance > 80) {
+                if (player.x < enemy.x) {
+                    enemy.x -= enemy.speed;
+                    enemy.direction = -1;
+                } else {
+                    enemy.x += enemy.speed;
+                    enemy.direction = 1;
+                }
+            }
+            
+            // 공격 패턴
+            if (distance < 100 && enemy.attackCooldown <= 0 && !enemy.attacking) {
+                if (Math.random() < 0.02) { // 2% 확률로 공격
+                    enemyAttack();
+                }
+            }
+            
+            // 방어 패턴
+            if (player.attacking && distance < 120) {
+                enemy.defending = Math.random() < 0.7; // 70% 확률로 방어
+            } else {
+                enemy.defending = false;
+            }
+        }
+
+        function enemyAttack() {
+            enemy.attacking = true;
+            enemy.attackCooldown = 80; // 적은 조금 더 느림
+            
+            const distance = Math.abs(player.x - enemy.x);
+            if (distance < 100) {
+                if (!player.defending) {
+                    player.health -= 20;
+                    createBloodEffect(player.x, player.y);
+                    createHitParticles(player.x, player.y);
+                } else {
+                    player.health -= 3; // 방어 시 데미지 감소
+                    createSparkEffect(player.x, player.y);
+                }
+            }
+            
+            setTimeout(() => {
+                enemy.attacking = false;
+            }, 300);
+        }
+
+        function updatePlayer() {
+            // 이동
+            if (keys['KeyA'] && player.x > 0) {
+                player.x -= player.speed;
+                player.direction = -1;
+            }
+            if (keys['KeyD'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+                player.direction = 1;
+            }
+
+            // 쿨다운 감소
+            if (player.attackCooldown > 0) {
+                player.attackCooldown--;
+            }
+        }
+
+        function updateEnemy() {
+            enemyAI();
+            
+            // 쿨다운 감소
+            if (enemy.attackCooldown > 0) {
+                enemy.attackCooldown--;
+            }
+            
+            // 경계 체크
+            if (enemy.x < 0) enemy.x = 0;
+            if (enemy.x > canvas.width - enemy.width) enemy.x = canvas.width - enemy.width;
+        }
+
+        function createBloodEffect(x, y) {
+            for (let i = 0; i < 8; i++) {
+                bloodEffects.push({
+                    x: x + Math.random() * 50,
+                    y: y + Math.random() * 50,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 60,
+                    size: Math.random() * 5 + 2
+                });
+            }
+        }
+
+        function createHitParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color: '#FFD700'
+                });
+            }
+        }
+
+        function createSparkEffect(x, y) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 20,
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
+        function updateEffects() {
+            // 파티클 업데이트
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            // 피 효과 업데이트
+            bloodEffects.forEach((blood, index) => {
+                blood.x += blood.vx;
+                blood.y += blood.vy;
+                blood.vy += 0.2; // 중력
+                blood.life--;
+                
+                if (blood.life <= 0) {
+                    bloodEffects.splice(index, 1);
+                }
+            });
+        }
+
+        function drawGladiator(gladiator, isPlayer) {
+            // 몸
+            ctx.fillStyle = isPlayer ? '#8B4513' : '#2F4F4F';
+            ctx.fillRect(gladiator.x, gladiator.y, gladiator.width, gladiator.height);
+            
+            // 갑옷
+            ctx.fillStyle = isPlayer ? '#CD853F' : '#696969';
+            ctx.fillRect(gladiator.x + 5, gladiator.y + 20, gladiator.width - 10, 40);
+            
+            // 헬멧
+            ctx.fillStyle = isPlayer ? '#B8860B' : '#A9A9A9';
+            ctx.fillRect(gladiator.x + 5, gladiator.y, gladiator.width - 10, 25);
+            
+            // 얼굴
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(gladiator.x + 10, gladiator.y + 8, gladiator.width - 20, 15);
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(gladiator.x + 15, gladiator.y + 12, 2, 2);
+            ctx.fillRect(gladiator.x + 25, gladiator.y + 12, 2, 2);
+            
+            // 검
+            if (gladiator.attacking) {
+                ctx.fillStyle = '#C0C0C0';
+                if (gladiator.direction > 0) {
+                    ctx.fillRect(gladiator.x + gladiator.width, gladiator.y + 30, 30, 5);
+                } else {
+                    ctx.fillRect(gladiator.x - 30, gladiator.y + 30, 30, 5);
+                }
+            }
+            
+            // 방패
+            if (gladiator.defending) {
+                ctx.fillStyle = '#8B4513';
+                if (gladiator.direction > 0) {
+                    ctx.fillRect(gladiator.x - 15, gladiator.y + 20, 10, 30);
+                } else {
+                    ctx.fillRect(gladiator.x + gladiator.width + 5, gladiator.y + 20, 10, 30);
+                }
+            }
+            
+            // 체력바
+            const barWidth = gladiator.width;
+            const barHeight = 8;
+            const barY = gladiator.y - 15;
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(gladiator.x, barY, barWidth, barHeight);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(gladiator.x, barY, (gladiator.health / gladiator.maxHealth) * barWidth, barHeight);
+        }
+
+        function drawEffects() {
+            // 파티클
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 30;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x, particle.y, 3, 3);
+                ctx.globalAlpha = 1;
+            });
+            
+            // 피 효과
+            bloodEffects.forEach(blood => {
+                ctx.globalAlpha = blood.life / 60;
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath();
+                ctx.arc(blood.x, blood.y, blood.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBackground() {
+            // 콜로세움 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#F4A460');
+            gradient.addColorStop(1, '#DEB887');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 모래
+            ctx.fillStyle = '#F5DEB3';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // 관중석
+            ctx.fillStyle = '#8B4513';
+            for (let i = 0; i < 10; i++) {
+                ctx.fillRect(i * 80, 50, 60, 30);
+            }
+            
+            // 관중들 (간단한 점들)
+            ctx.fillStyle = '#000';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * canvas.width;
+                const y = 55 + Math.random() * 20;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+
+        function checkGameEnd() {
+            if (player.health <= 0) {
+                gameRunning = false;
+                alert('패배! 검투사가 쓰러졌습니다.');
+                return;
+            }
+            
+            if (enemy.health <= 0) {
+                round++;
+                if (round > 5) {
+                    gameRunning = false;
+                    alert('승리! 모든 라운드를 클리어했습니다!');
+                } else {
+                    // 다음 라운드
+                    enemy.health = enemy.maxHealth + (round - 1) * 20; // 라운드마다 체력 증가
+                    enemy.maxHealth = enemy.health;
+                    enemy.speed = Math.min(4, 2 + (round - 1) * 0.5); // 속도 증가
+                    enemy.x = 600;
+                    player.health = Math.min(player.maxHealth, player.health + 30); // 체력 회복
+                    alert(`라운드 ${round} 시작!`);
+                }
+            }
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updatePlayer();
+            updateEnemy();
+            updateEffects();
+            checkGameEnd();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            drawBackground();
+            drawGladiator(player, true);
+            drawGladiator(enemy, false);
+            drawEffects();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('playerHealth').textContent = Math.max(0, Math.floor(player.health));
+            document.getElementById('enemyHealth').textContent = Math.max(0, Math.floor(enemy.health));
+            document.getElementById('round').textContent = round;
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            round = 1;
+            
+            player.x = 150;
+            player.health = 100;
+            player.attacking = false;
+            player.defending = false;
+            player.attackCooldown = 0;
+            
+            enemy.x = 600;
+            enemy.health = 100;
+            enemy.maxHealth = 100;
+            enemy.speed = 2;
+            enemy.attacking = false;
+            enemy.defending = false;
+            enemy.attackCooldown = 0;
+            
+            particles = [];
+            bloodEffects = [];
+            
+            updateDisplay();
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

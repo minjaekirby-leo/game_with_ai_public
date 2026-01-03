@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 곡예사 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: circus 3s ease-in-out infinite;
+        }
+        
+        @keyframes circus {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #87CEEB 0%, #DDA0DD 100%);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .balance-meter {
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .balance-indicator {
+            width: 20px;
+            height: 16px;
+            background: #FFD700;
+            border-radius: 8px;
+            position: absolute;
+            top: 2px;
+            transition: left 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .balance-zones {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+        }
+        
+        .danger-zone {
+            background: rgba(255, 0, 0, 0.3);
+            flex: 1;
+        }
+        
+        .safe-zone {
+            background: rgba(0, 255, 0, 0.3);
+            flex: 2;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .audience {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            animation: cheer 2s ease-in-out infinite;
+        }
+        
+        @keyframes cheer {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 3px solid #FF6B35;
+        }
+        
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-btn.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+        
+        .wind-indicator {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 곡예사</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 방법:</strong></p>
+        <p>← → 키로 곡예사의 균형을 맞춰주세요!</p>
+        <p>균형 미터가 빨간 구역에 너무 오래 있으면 떨어집니다!</p>
+        <p>바람의 영향을 받으니 주의하세요!</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">시간: <span id="time">0</span>초</div>
+            <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">🟢 쉬움</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">🟡 보통</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">🔴 어려움</button>
+        </div>
+        
+        <div class="wind-indicator" id="windIndicator">🌬️ 바람: 없음</div>
+        
+        <div class="balance-meter">
+            <div class="balance-zones">
+                <div class="danger-zone"></div>
+                <div class="safe-zone"></div>
+                <div class="danger-zone"></div>
+            </div>
+            <div class="balance-indicator" id="balanceIndicator"></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="700" height="400"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎪 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <div class="audience">👏 👏 👏</div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>🎪 공연 종료!</h2>
+            <p>생존 시간: <span id="finalTime">0</span>초</p>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p id="newRecord" style="display: none; color: #FFD700;">🏆 새로운 기록!</p>
+            <button onclick="resetGame()">다시 도전하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 캔버스 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let gameTime = 0;
+        let bestScore = localStorage.getItem('circusBestScore') || 0;
+        let difficulty = 'easy';
+
+        // 곡예사 설정
+        const acrobat = {
+            x: canvas.width / 2,
+            y: 200,
+            width: 30,
+            height: 40,
+            balance: 0, // -100 ~ 100
+            balanceVelocity: 0,
+            angle: 0
+        };
+
+        // 줄타기 줄 설정
+        const rope = {
+            y: 240,
+            sway: 0,
+            swayVelocity: 0
+        };
+
+        // 게임 설정
+        let balanceDecay = 0.5; // 균형이 중앙으로 돌아가는 속도
+        let windForce = 0;
+        let windDirection = 0;
+        let windChangeTimer = 0;
+        let dangerTime = 0; // 위험 구역에 있는 시간
+        const maxDangerTime = 180; // 3초 (60fps 기준)
+
+        // 난이도 설정
+        const difficultySettings = {
+            easy: { balanceDecay: 0.3, windStrength: 0.2, dangerLimit: 240 },
+            medium: { balanceDecay: 0.5, windStrength: 0.4, dangerLimit: 180 },
+            hard: { balanceDecay: 0.7, windStrength: 0.6, dangerLimit: 120 }
+        };
+
+        // 파티클 시스템
+        let particles = [];
+
+        class Particle {
+            constructor(x, y, color, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.dx = (Math.random() - 0.5) * 4;
+                this.dy = (Math.random() - 0.5) * 4;
+                this.color = color;
+                this.life = 60;
+                this.maxLife = 60;
+                this.size = Math.random() * 3 + 1;
+                this.type = type;
+            }
+            
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.life--;
+                
+                if (this.type === 'sparkle') {
+                    this.dy -= 0.1; // 위로 올라감
+                } else {
+                    this.dy += 0.1; // 중력
+                }
+                
+                this.dx *= 0.99; // 공기 저항
+            }
+            
+            draw() {
+                const alpha = this.life / this.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'sparkle') {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(this.x, this.y, this.size, this.size);
+                }
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // 난이도 설정
+        function setDifficulty(newDifficulty) {
+            difficulty = newDifficulty;
+            
+            // 버튼 상태 업데이트
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 설정 적용
+            const settings = difficultySettings[difficulty];
+            balanceDecay = settings.balanceDecay;
+        }
+
+        // 배경 그리기
+        function drawBackground() {
+            // 하늘 그라데이션
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#DDA0DD');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 서커스 텐트 배경
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // 관중석
+            for (let i = 0; i < 10; i++) {
+                ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                ctx.fillRect(i * 70 + 10, canvas.height - 40, 20, 30);
+            }
+        }
+
+        // 줄 그리기
+        function drawRope() {
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            
+            // 줄의 흔들림 효과
+            const segments = 20;
+            for (let i = 0; i <= segments; i++) {
+                const x = (canvas.width / segments) * i;
+                const sway = Math.sin((i / segments) * Math.PI * 2 + rope.sway) * 5;
+                const y = rope.y + sway;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // 줄 지지대
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(-10, rope.y - 20, 20, 40);
+            ctx.fillRect(canvas.width - 10, rope.y - 20, 20, 40);
+        }
+
+        // 곡예사 그리기
+        function drawAcrobat() {
+            ctx.save();
+            ctx.translate(acrobat.x, acrobat.y);
+            ctx.rotate(acrobat.angle);
+            
+            // 몸체
+            ctx.fillStyle = '#FF1493';
+            ctx.fillRect(-acrobat.width/2, -acrobat.height/2, acrobat.width, acrobat.height);
+            
+            // 머리
+            ctx.fillStyle = '#FFE4B5';
+            ctx.beginPath();
+            ctx.arc(0, -acrobat.height/2 - 10, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 팔 (균형 잡기)
+            ctx.strokeStyle = '#FFE4B5';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-acrobat.width/2 - 15, -10);
+            ctx.lineTo(-acrobat.width/2, -5);
+            ctx.moveTo(acrobat.width/2 + 15, -10);
+            ctx.lineTo(acrobat.width/2, -5);
+            ctx.stroke();
+            
+            // 다리
+            ctx.beginPath();
+            ctx.moveTo(-5, acrobat.height/2);
+            ctx.lineTo(-8, acrobat.height/2 + 15);
+            ctx.moveTo(5, acrobat.height/2);
+            ctx.lineTo(8, acrobat.height/2 + 15);
+            ctx.stroke();
+            
+            ctx.restore();
+            
+            // 균형 막대
+            ctx.save();
+            ctx.translate(acrobat.x, acrobat.y - 20);
+            ctx.rotate(acrobat.balance * 0.01);
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-50, 0);
+            ctx.lineTo(50, 0);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 바람 업데이트
+        function updateWind() {
+            windChangeTimer++;
+            
+            if (windChangeTimer > 180) { // 3초마다 바람 변경
+                windDirection = (Math.random() - 0.5) * 2; // -1 ~ 1
+                windForce = Math.random() * difficultySettings[difficulty].windStrength;
+                windChangeTimer = 0;
+            }
+            
+            // 바람 표시 업데이트
+            let windText = '🌬️ 바람: ';
+            if (Math.abs(windForce) < 0.1) {
+                windText += '없음';
+            } else if (windDirection > 0) {
+                windText += `오른쪽 ${windForce.toFixed(1)}`;
+            } else {
+                windText += `왼쪽 ${Math.abs(windForce).toFixed(1)}`;
+            }
+            
+            document.getElementById('windIndicator').textContent = windText;
+        }
+
+        // 곡예사 업데이트
+        function updateAcrobat() {
+            // 바람 영향
+            acrobat.balanceVelocity += windDirection * windForce;
+            
+            // 균형 업데이트
+            acrobat.balance += acrobat.balanceVelocity;
+            
+            // 균형이 중앙으로 돌아가는 힘
+            acrobat.balanceVelocity -= acrobat.balance * 0.01;
+            
+            // 마찰
+            acrobat.balanceVelocity *= 0.95;
+            
+            // 균형 제한
+            acrobat.balance = Math.max(-100, Math.min(100, acrobat.balance));
+            
+            // 각도 업데이트
+            acrobat.angle = acrobat.balance * 0.02;
+            
+            // 줄 흔들림
+            rope.swayVelocity += acrobat.balance * 0.001;
+            rope.sway += rope.swayVelocity;
+            rope.swayVelocity *= 0.98;
+            
+            // 위험 구역 확인
+            if (Math.abs(acrobat.balance) > 60) {
+                dangerTime++;
+                
+                // 위험 파티클
+                if (Math.random() < 0.3) {
+                    particles.push(new Particle(
+                        acrobat.x + (Math.random() - 0.5) * 40,
+                        acrobat.y + (Math.random() - 0.5) * 40,
+                        '#FF0000'
+                    ));
+                }
+                
+                if (dangerTime > difficultySettings[difficulty].dangerLimit) {
+                    gameOver();
+                }
+            } else {
+                dangerTime = Math.max(0, dangerTime - 2);
+                
+                // 안전 구역 파티클
+                if (Math.random() < 0.1) {
+                    particles.push(new Particle(
+                        acrobat.x + (Math.random() - 0.5) * 40,
+                        acrobat.y + (Math.random() - 0.5) * 40,
+                        '#00FF00',
+                        'sparkle'
+                    ));
+                }
+            }
+            
+            // 균형 미터 업데이트
+            const indicator = document.getElementById('balanceIndicator');
+            const meterWidth = 300;
+            const position = ((acrobat.balance + 100) / 200) * (meterWidth - 20);
+            indicator.style.left = position + 'px';
+            
+            // 위험도에 따른 색상 변경
+            if (Math.abs(acrobat.balance) > 60) {
+                indicator.style.background = '#FF0000';
+            } else if (Math.abs(acrobat.balance) > 30) {
+                indicator.style.background = '#FFA500';
+            } else {
+                indicator.style.background = '#00FF00';
+            }
+        }
+
+        // 게임 업데이트
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            gameTime++;
+            score = Math.floor(gameTime / 60); // 1초마다 1점
+            
+            updateWind();
+            updateAcrobat();
+            
+            // 파티클 업데이트
+            particles.forEach(particle => particle.update());
+            particles = particles.filter(particle => !particle.isDead());
+            
+            updateDisplay();
+        }
+
+        // 게임 그리기
+        function draw() {
+            drawBackground();
+            drawRope();
+            drawAcrobat();
+            
+            // 파티클 그리기
+            particles.forEach(particle => particle.draw());
+            
+            // 위험도 표시
+            if (Math.abs(acrobat.balance) > 60) {
+                ctx.fillStyle = `rgba(255, 0, 0, ${0.1 + (dangerTime / difficultySettings[difficulty].dangerLimit) * 0.3})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 디스플레이 업데이트
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('time').textContent = Math.floor(gameTime / 60);
+            document.getElementById('bestScore').textContent = bestScore;
+        }
+
+        // 게임 시작
+        function startGame() {
+            if (!gameRunning) {
+                gameRunning = true;
+                gamePaused = false;
+                gameTime = 0;
+                score = 0;
+                dangerTime = 0;
+                
+                // 곡예사 초기화
+                acrobat.balance = 0;
+                acrobat.balanceVelocity = 0;
+                acrobat.angle = 0;
+                
+                // 줄 초기화
+                rope.sway = 0;
+                rope.swayVelocity = 0;
+                
+                // 바람 초기화
+                windForce = 0;
+                windDirection = 0;
+                windChangeTimer = 0;
+                
+                particles = [];
+                
+                document.getElementById('gameOver').style.display = 'none';
+                updateDisplay();
+            }
+        }
+
+        // 게임 일시정지
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        // 게임 리셋
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            document.getElementById('gameOver').style.display = 'none';
+            
+            // 초기 상태로 리셋
+            acrobat.balance = 0;
+            acrobat.balanceVelocity = 0;
+            acrobat.angle = 0;
+            rope.sway = 0;
+            rope.swayVelocity = 0;
+            particles = [];
+            
+            updateDisplay();
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            
+            // 최고 기록 확인
+            let isNewRecord = false;
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('circusBestScore', bestScore);
+                isNewRecord = true;
+            }
+            
+            document.getElementById('finalTime').textContent = Math.floor(gameTime / 60);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('newRecord').style.display = isNewRecord ? 'block' : 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            // 낙하 파티클
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(
+                    acrobat.x + (Math.random() - 0.5) * 60,
+                    acrobat.y + (Math.random() - 0.5) * 60,
+                    '#FF6B35'
+                ));
+            }
+            
+            updateDisplay();
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(e.code) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    acrobat.balanceVelocity -= 2;
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    acrobat.balanceVelocity += 2;
+                    break;
+                case 'Space':
+                    e.preventDefault();
+                    if (!gameRunning) {
+                        startGame();
+                    }
+                    break;
+            }
+        });
+
+        // 초기화
+        updateDisplay();
+        gameLoop();
+        
+        console.log('서커스 곡예사 게임이 로드되었습니다!');
+    </script>
+</body>
+</html>

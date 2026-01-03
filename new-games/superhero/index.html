@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>슈퍼히어로 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+        
+        canvas {
+            border: 5px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🦸‍♂️ 슈퍼히어로 게임</h1>
+    
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">체력: <span id="health">100</span></div>
+            <div class="info-box">에너지: <span id="energy">100</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="pauseGame()">⏸️ 일시정지</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        
+        <p><strong>조작법:</strong> WASD = 이동, 스페이스 = 레이저, E = 방패</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+
+        // 플레이어 (슈퍼히어로)
+        const player = {
+            x: 400,
+            y: 500,
+            width: 40,
+            height: 60,
+            speed: 5,
+            health: 100,
+            maxHealth: 100,
+            energy: 100,
+            maxEnergy: 100,
+            shield: false,
+            shieldTimer: 0
+        };
+
+        // 게임 객체들
+        let enemies = [];
+        let lasers = [];
+        let particles = [];
+        let powerups = [];
+
+        // 키 입력
+        let keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                shootLaser();
+            }
+            if (e.code === 'KeyE') {
+                activateShield();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        function shootLaser() {
+            if (player.energy >= 10 && gameRunning && !gamePaused) {
+                lasers.push({
+                    x: player.x + player.width/2,
+                    y: player.y,
+                    width: 5,
+                    height: 20,
+                    speed: 10,
+                    damage: 25
+                });
+                player.energy -= 10;
+            }
+        }
+
+        function activateShield() {
+            if (player.energy >= 30 && !player.shield && gameRunning && !gamePaused) {
+                player.shield = true;
+                player.shieldTimer = 180; // 3초
+                player.energy -= 30;
+            }
+        }
+
+        function spawnEnemy() {
+            if (Math.random() < 0.02) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 40),
+                    y: -40,
+                    width: 40,
+                    height: 40,
+                    speed: 2 + Math.random() * 3,
+                    health: 50,
+                    maxHealth: 50,
+                    type: Math.random() < 0.7 ? 'normal' : 'boss'
+                });
+            }
+        }
+
+        function spawnPowerup() {
+            if (Math.random() < 0.005) {
+                powerups.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: -30,
+                    width: 30,
+                    height: 30,
+                    speed: 3,
+                    type: Math.random() < 0.5 ? 'health' : 'energy'
+                });
+            }
+        }
+
+        function updatePlayer() {
+            // 이동
+            if (keys['KeyA'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['KeyD'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+            if (keys['KeyW'] && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (keys['KeyS'] && player.y < canvas.height - player.height) {
+                player.y += player.speed;
+            }
+
+            // 에너지 회복
+            if (player.energy < player.maxEnergy) {
+                player.energy += 0.5;
+            }
+
+            // 방패 타이머
+            if (player.shield) {
+                player.shieldTimer--;
+                if (player.shieldTimer <= 0) {
+                    player.shield = false;
+                }
+            }
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                enemy.y += enemy.speed;
+                
+                if (enemy.y > canvas.height) {
+                    enemies.splice(index, 1);
+                    return;
+                }
+                
+                // 플레이어와 충돌
+                if (checkCollision(player, enemy)) {
+                    if (!player.shield) {
+                        player.health -= 20;
+                        if (player.health <= 0) {
+                            gameOver();
+                        }
+                    }
+                    enemies.splice(index, 1);
+                    
+                    // 폭발 파티클
+                    createExplosion(enemy.x, enemy.y);
+                }
+            });
+        }
+
+        function updateLasers() {
+            lasers.forEach((laser, laserIndex) => {
+                laser.y -= laser.speed;
+                
+                if (laser.y < 0) {
+                    lasers.splice(laserIndex, 1);
+                    return;
+                }
+                
+                // 적과 충돌
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (checkCollision(laser, enemy)) {
+                        enemy.health -= laser.damage;
+                        lasers.splice(laserIndex, 1);
+                        
+                        if (enemy.health <= 0) {
+                            score += enemy.type === 'boss' ? 100 : 50;
+                            enemies.splice(enemyIndex, 1);
+                            createExplosion(enemy.x, enemy.y);
+                        }
+                    }
+                });
+            });
+        }
+
+        function updatePowerups() {
+            powerups.forEach((powerup, index) => {
+                powerup.y += powerup.speed;
+                
+                if (powerup.y > canvas.height) {
+                    powerups.splice(index, 1);
+                    return;
+                }
+                
+                // 플레이어와 충돌
+                if (checkCollision(player, powerup)) {
+                    if (powerup.type === 'health') {
+                        player.health = Math.min(player.maxHealth, player.health + 30);
+                    } else {
+                        player.energy = Math.min(player.maxEnergy, player.energy + 50);
+                    }
+                    powerups.splice(index, 1);
+                    
+                    // 수집 파티클
+                    for (let i = 0; i < 8; i++) {
+                        particles.push({
+                            x: powerup.x,
+                            y: powerup.y,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: (Math.random() - 0.5) * 6,
+                            life: 30,
+                            color: powerup.type === 'health' ? '#FF4444' : '#4444FF'
+                        });
+                    }
+                }
+            });
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function createExplosion(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 40,
+                    color: '#FF6600'
+                });
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function drawPlayer() {
+            // 방패 효과
+            if (player.shield) {
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(player.x + player.width/2, player.y + player.height/2, 40, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // 슈퍼히어로 몸
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // 망토
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(player.x - 5, player.y + 10, 10, 40);
+            ctx.fillRect(player.x + player.width - 5, player.y + 10, 10, 40);
+            
+            // 얼굴
+            ctx.fillStyle = '#FFE4B5';
+            ctx.fillRect(player.x + 5, player.y + 5, 30, 20);
+            
+            // 눈
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 10, player.y + 10, 3, 3);
+            ctx.fillRect(player.x + 25, player.y + 10, 3, 3);
+            
+            // 로고 (S)
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = '20px Arial';
+            ctx.fillText('S', player.x + 15, player.y + 40);
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                if (enemy.type === 'boss') {
+                    ctx.fillStyle = '#800080';
+                } else {
+                    ctx.fillStyle = '#333333';
+                }
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // 체력바
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / enemy.maxHealth) * enemy.width, 5);
+                
+                // 눈
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(enemy.x + 8, enemy.y + 8, 4, 4);
+                ctx.fillRect(enemy.x + 28, enemy.y + 8, 4, 4);
+            });
+        }
+
+        function drawLasers() {
+            lasers.forEach(laser => {
+                ctx.fillStyle = '#00FFFF';
+                ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+                
+                // 레이저 글로우 효과
+                ctx.shadowColor = '#00FFFF';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function drawPowerups() {
+            powerups.forEach(powerup => {
+                if (powerup.type === 'health') {
+                    ctx.fillStyle = '#FF4444';
+                } else {
+                    ctx.fillStyle = '#4444FF';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(powerup.x + 15, powerup.y + 15, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 아이콘
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '16px Arial';
+                if (powerup.type === 'health') {
+                    ctx.fillText('+', powerup.x + 10, powerup.y + 20);
+                } else {
+                    ctx.fillText('⚡', powerup.x + 8, powerup.y + 20);
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.life / 40;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x, particle.y, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawUI() {
+            // 체력바
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(20, 20, 200, 20);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(20, 20, (player.health / player.maxHealth) * 200, 20);
+            
+            // 에너지바
+            ctx.fillStyle = '#000080';
+            ctx.fillRect(20, 50, 200, 20);
+            ctx.fillStyle = '#0080FF';
+            ctx.fillRect(20, 50, (player.energy / player.maxEnergy) * 200, 20);
+            
+            // 텍스트
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '16px Arial';
+            ctx.fillText('체력', 230, 35);
+            ctx.fillText('에너지', 230, 65);
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            
+            updatePlayer();
+            spawnEnemy();
+            spawnPowerup();
+            updateEnemies();
+            updateLasers();
+            updatePowerups();
+            updateParticles();
+            
+            updateDisplay();
+        }
+
+        function draw() {
+            // 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1e3c72');
+            gradient.addColorStop(1, '#2a5298');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 별들
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 37) % canvas.width;
+                const y = (i * 23) % canvas.height;
+                ctx.fillRect(x, y, 2, 2);
+            }
+            
+            drawEnemies();
+            drawPowerups();
+            drawLasers();
+            drawPlayer();
+            drawParticles();
+            drawUI();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('health').textContent = Math.floor(player.health);
+            document.getElementById('energy').textContent = Math.floor(player.energy);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+            }
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            score = 0;
+            
+            player.x = 400;
+            player.y = 500;
+            player.health = 100;
+            player.energy = 100;
+            player.shield = false;
+            
+            enemies = [];
+            lasers = [];
+            particles = [];
+            powerups = [];
+            
+            updateDisplay();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            alert(`게임 오버! 최종 점수: ${score}`);
+        }
+
+        // 초기화
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>
