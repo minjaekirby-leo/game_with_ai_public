@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👗 서커스 의상 디자인</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FF69B4, #DA70D6, #BA55D3);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.8);
+        }
+
+        .design-studio {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #FFF8DC, #F5F5DC);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mannequin {
+            width: 150px;
+            height: 300px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #F5DEB3;
+            border-radius: 75px 75px 20px 20px;
+            border: 2px solid #DEB887;
+        }
+
+        .mannequin-head {
+            width: 60px;
+            height: 60px;
+            background: #F5DEB3;
+            border-radius: 50%;
+            position: absolute;
+            top: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 2px solid #DEB887;
+        }
+
+        .costume-part {
+            position: absolute;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .costume-part:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-palette {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 120px;
+        }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+            cursor: pointer;
+            margin: 5px;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.2);
+        }
+
+        .color-swatch.selected {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .costume-pieces {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .piece-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .piece-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .piece-item.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .piece-icon {
+            width: 30px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        .design-tools {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .tool-btn.active {
+            background: rgba(255, 215, 0, 0.5);
+            border-color: #FFD700;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #FF69B4, #DA70D6);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .sparkle-effect {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: sparkle 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 1; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">👗 서커스 의상 디자인 👗</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 색상 선택<br>
+            • 의상 부품 선택<br>
+            • 마네킹에 드래그<br>
+            • 화려한 의상을 만드세요!
+        </div>
+
+        <div class="score">작품: <span id="score">0</span></div>
+
+        <div class="design-studio" id="studio">
+            <div class="mannequin" id="mannequin">
+                <div class="mannequin-head"></div>
+            </div>
+
+            <div class="color-palette">
+                <h4>🎨 색상</h4>
+                <div class="color-swatch selected" style="background: #FF69B4;" onclick="selectColor('#FF69B4')"></div>
+                <div class="color-swatch" style="background: #4ECDC4;" onclick="selectColor('#4ECDC4')"></div>
+                <div class="color-swatch" style="background: #45B7D1;" onclick="selectColor('#45B7D1')"></div>
+                <div class="color-swatch" style="background: #F9CA24;" onclick="selectColor('#F9CA24')"></div>
+                <div class="color-swatch" style="background: #6C5CE7;" onclick="selectColor('#6C5CE7')"></div>
+                <div class="color-swatch" style="background: #A29BFE;" onclick="selectColor('#A29BFE')"></div>
+                <div class="color-swatch" style="background: #FD79A8;" onclick="selectColor('#FD79A8')"></div>
+                <div class="color-swatch" style="background: #FDCB6E;" onclick="selectColor('#FDCB6E')"></div>
+            </div>
+
+            <div class="costume-pieces">
+                <h4>👗 의상</h4>
+                <div class="piece-item" data-type="top" onclick="selectPiece('top')">
+                    <div class="piece-icon" style="background: #FF6B6B;"></div>
+                    <span>상의</span>
+                </div>
+                <div class="piece-item" data-type="bottom" onclick="selectPiece('bottom')">
+                    <div class="piece-icon" style="background: #4ECDC4;"></div>
+                    <span>하의</span>
+                </div>
+                <div class="piece-item" data-type="dress" onclick="selectPiece('dress')">
+                    <div class="piece-icon" style="background: #45B7D1;"></div>
+                    <span>드레스</span>
+                </div>
+                <div class="piece-item" data-type="cape" onclick="selectPiece('cape')">
+                    <div class="piece-icon" style="background: #F9CA24;"></div>
+                    <span>망토</span>
+                </div>
+                <div class="piece-item" data-type="hat" onclick="selectPiece('hat')">
+                    <div class="piece-icon" style="background: #6C5CE7;"></div>
+                    <span>모자</span>
+                </div>
+                <div class="piece-item" data-type="accessory" onclick="selectPiece('accessory')">
+                    <div class="piece-icon" style="background: #A29BFE;"></div>
+                    <span>액세서리</span>
+                </div>
+            </div>
+
+            <div class="design-tools">
+                <h4>🛠️ 도구</h4>
+                <button class="tool-btn" onclick="addPattern()">✨ 패턴</button>
+                <button class="tool-btn" onclick="addSparkles()">⭐ 반짝이</button>
+                <button class="tool-btn" onclick="addRuffles()">🌊 프릴</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="saveDesign()">💾 디자인 저장</button>
+            <button class="control-btn" onclick="clearDesign()">🗑️ 지우기</button>
+            <button class="control-btn" onclick="randomDesign()">🎲 랜덤 디자인</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#FF69B4';
+        let selectedPiece = null;
+        let designCount = 0;
+        let costumeParts = [];
+
+        const studio = document.getElementById('studio');
+        const mannequin = document.getElementById('mannequin');
+        const scoreElement = document.getElementById('score');
+
+        function selectColor(color) {
+            selectedColor = color;
+            
+            // 모든 색상에서 selected 클래스 제거
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.remove('selected');
+            });
+            
+            // 선택된 색상에 selected 클래스 추가
+            event.target.classList.add('selected');
+        }
+
+        function selectPiece(type) {
+            selectedPiece = type;
+            
+            // 모든 의상 부품에서 selected 클래스 제거
+            document.querySelectorAll('.piece-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 선택된 부품에 selected 클래스 추가
+            document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+        }
+
+        // 마네킹 클릭 이벤트
+        mannequin.addEventListener('click', (e) => {
+            if (!selectedPiece) return;
+            
+            const rect = mannequin.getBoundingClientRect();
+            const studioRect = studio.getBoundingClientRect();
+            
+            const x = e.clientX - studioRect.left - 275; // 마네킹 중심 기준
+            const y = e.clientY - studioRect.top - 150;
+            
+            addCostumePart(selectedPiece, x, y);
+        });
+
+        function addCostumePart(type, x, y) {
+            const part = document.createElement('div');
+            part.className = 'costume-part';
+            part.style.background = selectedColor;
+            
+            // 부품 타입별 크기와 모양 설정
+            switch(type) {
+                case 'top':
+                    part.style.width = '80px';
+                    part.style.height = '60px';
+                    part.style.left = (x + 275 - 40) + 'px';
+                    part.style.top = (y + 150 - 30) + 'px';
+                    break;
+                case 'bottom':
+                    part.style.width = '70px';
+                    part.style.height = '80px';
+                    part.style.left = (x + 275 - 35) + 'px';
+                    part.style.top = (y + 150 + 20) + 'px';
+                    break;
+                case 'dress':
+                    part.style.width = '90px';
+                    part.style.height = '140px';
+                    part.style.left = (x + 275 - 45) + 'px';
+                    part.style.top = (y + 150 - 20) + 'px';
+                    part.style.borderRadius = '45px 45px 10px 10px';
+                    break;
+                case 'cape':
+                    part.style.width = '120px';
+                    part.style.height = '100px';
+                    part.style.left = (x + 275 - 60) + 'px';
+                    part.style.top = (y + 150 - 50) + 'px';
+                    part.style.borderRadius = '60px 60px 10px 10px';
+                    break;
+                case 'hat':
+                    part.style.width = '60px';
+                    part.style.height = '40px';
+                    part.style.left = (x + 275 - 30) + 'px';
+                    part.style.top = (y + 150 - 120) + 'px';
+                    part.style.borderRadius = '30px 30px 10px 10px';
+                    break;
+                case 'accessory':
+                    part.style.width = '20px';
+                    part.style.height = '20px';
+                    part.style.left = (x + 275 - 10) + 'px';
+                    part.style.top = (y + 150 - 10) + 'px';
+                    part.style.borderRadius = '50%';
+                    break;
+            }
+            
+            // 제거 기능
+            part.addEventListener('click', (e) => {
+                e.stopPropagation();
+                part.remove();
+                const index = costumeParts.indexOf(part);
+                if (index > -1) {
+                    costumeParts.splice(index, 1);
+                }
+            });
+            
+            studio.appendChild(part);
+            costumeParts.push(part);
+            
+            // 배치 효과
+            createSparkleEffect(x + 275, y + 150);
+        }
+
+        function addPattern() {
+            costumeParts.forEach(part => {
+                part.style.background = `linear-gradient(45deg, ${selectedColor}, ${lightenColor(selectedColor)})`;
+            });
+            createSparkleEffect(350, 225);
+        }
+
+        function addSparkles() {
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    createSparkleEffect(
+                        300 + Math.random() * 100,
+                        150 + Math.random() * 200
+                    );
+                }, i * 100);
+            }
+        }
+
+        function addRuffles() {
+            costumeParts.forEach(part => {
+                part.style.border = `3px solid ${selectedColor}`;
+                part.style.borderStyle = 'wavy';
+            });
+            createSparkleEffect(350, 225);
+        }
+
+        function createSparkleEffect(x, y) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle-effect';
+            sparkle.style.left = x + 'px';
+            sparkle.style.top = y + 'px';
+            sparkle.style.background = selectedColor;
+            
+            studio.appendChild(sparkle);
+            
+            setTimeout(() => {
+                if (sparkle.parentNode) {
+                    sparkle.parentNode.removeChild(sparkle);
+                }
+            }, 1000);
+        }
+
+        function lightenColor(color) {
+            // 색상을 밝게 만드는 간단한 함수
+            const colors = {
+                '#FF69B4': '#FFB6C1',
+                '#4ECDC4': '#B0E0E6',
+                '#45B7D1': '#87CEEB',
+                '#F9CA24': '#FFFF99',
+                '#6C5CE7': '#DDA0DD',
+                '#A29BFE': '#E6E6FA',
+                '#FD79A8': '#FFB6C1',
+                '#FDCB6E': '#F0E68C'
+            };
+            return colors[color] || color;
+        }
+
+        function saveDesign() {
+            if (costumeParts.length > 0) {
+                designCount++;
+                updateScore();
+                
+                showResult('💾 디자인 저장됨!');
+                
+                // 저장 후 새 디자인 시작
+                setTimeout(() => {
+                    clearDesign();
+                }, 1500);
+            }
+        }
+
+        function clearDesign() {
+            costumeParts.forEach(part => {
+                if (part.parentNode) {
+                    part.parentNode.removeChild(part);
+                }
+            });
+            costumeParts = [];
+            
+            // 선택 해제
+            document.querySelectorAll('.piece-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            selectedPiece = null;
+        }
+
+        function randomDesign() {
+            clearDesign();
+            
+            const types = ['top', 'bottom', 'cape', 'hat', 'accessory'];
+            const colors = ['#FF69B4', '#4ECDC4', '#45B7D1', '#F9CA24', '#6C5CE7', '#A29BFE'];
+            
+            // 랜덤 의상 생성
+            for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+                setTimeout(() => {
+                    selectedColor = colors[Math.floor(Math.random() * colors.length)];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    const x = Math.random() * 100 - 50;
+                    const y = Math.random() * 100 - 50;
+                    
+                    addCostumePart(type, x, y);
+                }, i * 300);
+            }
+        }
+
+        function showResult(text) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = '#FFD700';
+            result.style.fontSize = '2rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'designPop 2s ease-out forwards';
+            
+            studio.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function updateScore() {
+            scoreElement.textContent = designCount;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 's':
+                case 'S':
+                    saveDesign();
+                    break;
+                case 'c':
+                case 'C':
+                    clearDesign();
+                    break;
+                case 'r':
+                case 'R':
+                    randomDesign();
+                    break;
+                case '1':
+                    selectPiece('top');
+                    break;
+                case '2':
+                    selectPiece('bottom');
+                    break;
+                case '3':
+                    selectPiece('dress');
+                    break;
+                case '4':
+                    selectPiece('cape');
+                    break;
+                case '5':
+                    selectPiece('hat');
+                    break;
+                case '6':
+                    selectPiece('accessory');
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+        });
+    </script>
+
+    <style>
+        @keyframes designPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

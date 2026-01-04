@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎪 서커스 링 마스터</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #8B0000, #DC143C, #FF6347);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(139, 0, 0, 0.8);
+        }
+
+        .stage {
+            width: 700px;
+            height: 450px;
+            background: radial-gradient(circle, #8B4513, #654321);
+            border: 5px solid #FFD700;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ringmaster {
+            width: 60px;
+            height: 80px;
+            background: #000080;
+            position: absolute;
+            left: 50%;
+            bottom: 50px;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .top-hat {
+            width: 50px;
+            height: 30px;
+            background: #000;
+            position: absolute;
+            top: -25px;
+            left: 5px;
+            border-radius: 25px 25px 5px 5px;
+        }
+
+        .performer {
+            width: 40px;
+            height: 60px;
+            position: absolute;
+            border-radius: 8px;
+            transition: all 0.5s ease;
+            cursor: pointer;
+        }
+
+        .performer.active {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px #FFD700;
+        }
+
+        .performance-area {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .performance-area.active {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .timing-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .timing-indicator {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #ffff00, #ff0000);
+            width: 10px;
+            transition: left 0.1s ease;
+            position: relative;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(139, 0, 0, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .show-status {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+        }
+
+        .spotlight {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎪 서커스 링 마스터 🎪</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 공연자 클릭: 선택<br>
+            • 스페이스바: 타이밍 맞추기<br>
+            • 완벽한 쇼를 지휘하세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="show-status" id="showStatus">쇼 준비 중...</div>
+
+        <div class="stage" id="stage">
+            <div class="ringmaster">
+                <div class="top-hat"></div>
+            </div>
+            
+            <div class="spotlight" id="spotlight"></div>
+        </div>
+
+        <div class="timing-bar">
+            <div class="timing-indicator" id="timingIndicator"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startShow()">🎪 쇼 시작</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let currentAct = 0;
+        let performers = [];
+        let timingPosition = 0;
+        let timingDirection = 1;
+        let timingInterval;
+        let selectedPerformer = null;
+
+        const stage = document.getElementById('stage');
+        const scoreElement = document.getElementById('score');
+        const showStatus = document.getElementById('showStatus');
+        const timingIndicator = document.getElementById('timingIndicator');
+        const spotlight = document.getElementById('spotlight');
+
+        const acts = [
+            { name: '공중그네', emoji: '🤸‍♀️', color: '#ff69b4', area: {x: 200, y: 50, w: 300, h: 150} },
+            { name: '저글링', emoji: '🤹‍♂️', color: '#4ecdc4', area: {x: 100, y: 200, w: 150, h: 150} },
+            { name: '줄타기', emoji: '🚶‍♀️', color: '#f9ca24', area: {x: 250, y: 150, w: 200, h: 100} },
+            { name: '동물쇼', emoji: '🦁', color: '#6c5ce7', area: {x: 450, y: 200, w: 150, h: 150} },
+            { name: '마술', emoji: '🎩', color: '#a29bfe', area: {x: 300, y: 250, w: 100, h: 100} }
+        ];
+
+        function startShow() {
+            gameActive = true;
+            currentAct = 0;
+            score = 0;
+            updateScore();
+            createPerformers();
+            startTiming();
+            nextAct();
+        }
+
+        function createPerformers() {
+            // 기존 공연자 제거
+            performers.forEach(p => p.element.remove());
+            performers = [];
+
+            acts.forEach((act, index) => {
+                const performer = document.createElement('div');
+                performer.className = 'performer';
+                performer.style.background = act.color;
+                performer.style.left = (100 + index * 120) + 'px';
+                performer.style.bottom = '20px';
+                performer.textContent = act.emoji;
+                performer.style.fontSize = '1.5rem';
+                performer.style.display = 'flex';
+                performer.style.alignItems = 'center';
+                performer.style.justifyContent = 'center';
+                
+                performer.addEventListener('click', () => selectPerformer(index));
+                
+                stage.appendChild(performer);
+                
+                performers.push({
+                    element: performer,
+                    act: act,
+                    index: index,
+                    performed: false
+                });
+
+                // 공연 영역 표시
+                const area = document.createElement('div');
+                area.className = 'performance-area';
+                area.style.left = act.area.x + 'px';
+                area.style.top = act.area.y + 'px';
+                area.style.width = act.area.w + 'px';
+                area.style.height = act.area.h + 'px';
+                area.id = 'area-' + index;
+                
+                stage.appendChild(area);
+            });
+        }
+
+        function selectPerformer(index) {
+            if (!gameActive || performers[index].performed) return;
+            
+            selectedPerformer = index;
+            
+            // 모든 공연자 비활성화
+            performers.forEach(p => p.element.classList.remove('active'));
+            
+            // 선택된 공연자 활성화
+            performers[index].element.classList.add('active');
+            
+            // 해당 공연 영역 활성화
+            document.querySelectorAll('.performance-area').forEach(area => {
+                area.classList.remove('active');
+            });
+            document.getElementById('area-' + index).classList.add('active');
+            
+            // 스포트라이트 이동
+            moveSpotlight(acts[index].area);
+            
+            showStatus.textContent = `${acts[index].name} 준비 중... 스페이스바로 타이밍!`;
+        }
+
+        function moveSpotlight(area) {
+            spotlight.style.left = (area.x + area.w/2 - 50) + 'px';
+            spotlight.style.top = (area.y + area.h/2 - 50) + 'px';
+            spotlight.style.opacity = '1';
+        }
+
+        function startTiming() {
+            timingInterval = setInterval(() => {
+                timingPosition += timingDirection * 2;
+                
+                if (timingPosition >= 290) {
+                    timingPosition = 290;
+                    timingDirection = -1;
+                } else if (timingPosition <= 0) {
+                    timingPosition = 0;
+                    timingDirection = 1;
+                }
+                
+                timingIndicator.style.left = timingPosition + 'px';
+            }, 50);
+        }
+
+        function performAct() {
+            if (!gameActive || selectedPerformer === null) return;
+            
+            const performer = performers[selectedPerformer];
+            if (performer.performed) return;
+            
+            // 타이밍 체크 (중앙 근처일수록 높은 점수)
+            const centerDistance = Math.abs(timingPosition - 145); // 중앙은 145px
+            let points = 0;
+            let message = '';
+            
+            if (centerDistance < 20) {
+                points = 100;
+                message = '🎯 완벽한 타이밍!';
+            } else if (centerDistance < 40) {
+                points = 70;
+                message = '👍 좋은 타이밍!';
+            } else if (centerDistance < 60) {
+                points = 40;
+                message = '✨ 괜찮은 타이밍!';
+            } else {
+                points = 10;
+                message = '😅 아쉬운 타이밍...';
+            }
+            
+            score += points;
+            updateScore();
+            
+            // 공연 완료 표시
+            performer.performed = true;
+            performer.element.style.opacity = '0.5';
+            performer.element.classList.remove('active');
+            
+            // 공연자를 공연 영역으로 이동
+            const area = performer.act.area;
+            performer.element.style.left = (area.x + area.w/2 - 20) + 'px';
+            performer.element.style.bottom = (450 - area.y - area.h/2 - 30) + 'px';
+            
+            showResult(message, points);
+            
+            // 다음 막으로
+            setTimeout(() => {
+                nextAct();
+            }, 2000);
+        }
+
+        function nextAct() {
+            currentAct++;
+            
+            if (currentAct > acts.length) {
+                endShow();
+                return;
+            }
+            
+            selectedPerformer = null;
+            spotlight.style.opacity = '0';
+            
+            // 모든 영역 비활성화
+            document.querySelectorAll('.performance-area').forEach(area => {
+                area.classList.remove('active');
+            });
+            
+            if (currentAct === acts.length) {
+                showStatus.textContent = '마지막 공연을 선택하세요!';
+            } else {
+                showStatus.textContent = `${currentAct}막: 공연자를 선택하세요!`;
+            }
+        }
+
+        function endShow() {
+            gameActive = false;
+            clearInterval(timingInterval);
+            
+            let finalMessage = '';
+            if (score >= 400) {
+                finalMessage = '🏆 환상적인 쇼!';
+            } else if (score >= 300) {
+                finalMessage = '🎉 훌륭한 쇼!';
+            } else if (score >= 200) {
+                finalMessage = '👏 좋은 쇼!';
+            } else {
+                finalMessage = '😊 연습이 더 필요해요!';
+            }
+            
+            showStatus.textContent = `쇼 종료! ${finalMessage}`;
+            spotlight.style.opacity = '0';
+        }
+
+        function showResult(text, points) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = points > 70 ? '#00ff00' : points > 40 ? '#ffff00' : '#ff6600';
+            result.style.fontSize = '2rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'showPop 2s ease-out forwards';
+            
+            stage.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function resetGame() {
+            gameActive = false;
+            currentAct = 0;
+            score = 0;
+            selectedPerformer = null;
+            
+            if (timingInterval) {
+                clearInterval(timingInterval);
+            }
+            
+            updateScore();
+            showStatus.textContent = '쇼 준비 중...';
+            spotlight.style.opacity = '0';
+            
+            // 모든 공연자와 영역 제거
+            performers.forEach(p => p.element.remove());
+            document.querySelectorAll('.performance-area').forEach(area => area.remove());
+            performers = [];
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 컨트롤
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    performAct();
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 's':
+                case 'S':
+                    startShow();
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                    const num = parseInt(e.key) - 1;
+                    if (num < performers.length) {
+                        selectPerformer(num);
+                    }
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes showPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

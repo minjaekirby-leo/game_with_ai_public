@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 서커스 불쇼</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 100, 0, 0.8);
+        }
+
+        .stage {
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(circle, #2a2a2a, #1a1a1a);
+            border: 3px solid #ff6600;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .performer {
+            width: 60px;
+            height: 80px;
+            background: #ff4444;
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .fire {
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ff6600, #ff0000);
+            border-radius: 50%;
+            position: absolute;
+            animation: flicker 0.5s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            100% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff6600, #ff4400);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 100, 0, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .fire-trail {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: #ff6600;
+            border-radius: 50%;
+            animation: fadeOut 1s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🔥 서커스 불쇼 🔥</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 클릭: 불 던지기<br>
+            • 마우스 이동: 조준<br>
+            • 안전하게 불쇼를 연출하세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="stage" id="stage">
+            <div class="performer" id="performer"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startShow()">🔥 불쇼 시작</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let fires = [];
+        let mouseX = 0;
+        let mouseY = 0;
+
+        const stage = document.getElementById('stage');
+        const performer = document.getElementById('performer');
+        const scoreElement = document.getElementById('score');
+
+        // 마우스 위치 추적
+        stage.addEventListener('mousemove', (e) => {
+            const rect = stage.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            
+            if (gameActive) {
+                // 공연자가 마우스를 따라 움직임
+                const performerX = Math.max(30, Math.min(570, mouseX - 30));
+                performer.style.left = performerX + 'px';
+            }
+        });
+
+        // 불 던지기
+        stage.addEventListener('click', (e) => {
+            if (!gameActive) return;
+            
+            const rect = stage.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            createFire(clickX, clickY);
+            createFireTrail(clickX, clickY);
+            
+            score += 10;
+            updateScore();
+        });
+
+        function createFire(x, y) {
+            const fire = document.createElement('div');
+            fire.className = 'fire';
+            fire.style.left = x - 15 + 'px';
+            fire.style.top = y - 15 + 'px';
+            
+            stage.appendChild(fire);
+            
+            // 불 효과 지속 시간
+            setTimeout(() => {
+                if (fire.parentNode) {
+                    fire.parentNode.removeChild(fire);
+                }
+            }, 2000);
+        }
+
+        function createFireTrail(x, y) {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const trail = document.createElement('div');
+                    trail.className = 'fire-trail';
+                    trail.style.left = (x + Math.random() * 20 - 10) + 'px';
+                    trail.style.top = (y + Math.random() * 20 - 10) + 'px';
+                    
+                    stage.appendChild(trail);
+                    
+                    setTimeout(() => {
+                        if (trail.parentNode) {
+                            trail.parentNode.removeChild(trail);
+                        }
+                    }, 1000);
+                }, i * 100);
+            }
+        }
+
+        function startShow() {
+            gameActive = true;
+            score = 0;
+            updateScore();
+            
+            // 배경 음악 효과 (시각적)
+            document.body.style.animation = 'none';
+            setTimeout(() => {
+                document.body.style.animation = 'pulse 2s ease-in-out infinite';
+            }, 10);
+        }
+
+        function resetGame() {
+            gameActive = false;
+            score = 0;
+            updateScore();
+            
+            // 모든 불 제거
+            const allFires = stage.querySelectorAll('.fire, .fire-trail');
+            allFires.forEach(fire => fire.remove());
+            
+            // 공연자 위치 초기화
+            performer.style.left = '50%';
+            performer.style.transform = 'translateX(-50%)';
+            
+            document.body.style.animation = 'none';
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (gameActive) {
+                        createFire(mouseX, mouseY);
+                        createFireTrail(mouseX, mouseY);
+                        score += 10;
+                        updateScore();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 's':
+                case 'S':
+                    startShow();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes pulse {
+            0%, 100% { background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); }
+            50% { background: linear-gradient(135deg, #2a1a1e, #26213e, #1f3460); }
+        }
+    </style>
+</body>
+</html>

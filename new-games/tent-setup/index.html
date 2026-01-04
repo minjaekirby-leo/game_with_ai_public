@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎪 서커스 텐트 설치</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #228B22, #32CD32, #90EE90);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(34, 139, 34, 0.8);
+        }
+
+        .stage {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 30%, #228B22 100%);
+            border: 3px solid #32CD32;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to bottom, #8B4513, #654321);
+        }
+
+        .tent-part {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .tent-part:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .tent-part.placed {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .pole {
+            width: 10px;
+            background: #8B4513;
+            border-radius: 5px;
+        }
+
+        .rope {
+            height: 3px;
+            background: #D2691E;
+            border-radius: 2px;
+        }
+
+        .canvas {
+            background: linear-gradient(45deg, #FF6347, #FF4500);
+            border: 2px solid #8B0000;
+            border-radius: 10px;
+        }
+
+        .stake {
+            width: 15px;
+            height: 15px;
+            background: #696969;
+            border-radius: 50%;
+        }
+
+        .parts-inventory {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .part-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .part-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .part-item.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .part-icon {
+            width: 30px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #228B22, #32CD32);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(34, 139, 34, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            color: #FFD700;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        .completion-message.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎪 서커스 텐트 설치 🎪</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 부품 선택 후 클릭<br>
+            • 올바른 순서로 설치<br>
+            • 안전한 텐트를 완성하세요!
+        </div>
+
+        <div class="score">진행도: <span id="score">0</span>%</div>
+
+        <div class="parts-inventory" id="inventory">
+            <h3>🔧 부품</h3>
+            <div class="part-item" data-type="pole" onclick="selectPart('pole')">
+                <div class="part-icon" style="background: #8B4513;"></div>
+                <span>기둥 (4개)</span>
+            </div>
+            <div class="part-item" data-type="canvas" onclick="selectPart('canvas')">
+                <div class="part-icon" style="background: #FF6347;"></div>
+                <span>천막 (1개)</span>
+            </div>
+            <div class="part-item" data-type="rope" onclick="selectPart('rope')">
+                <div class="part-icon" style="background: #D2691E;"></div>
+                <span>로프 (8개)</span>
+            </div>
+            <div class="part-item" data-type="stake" onclick="selectPart('stake')">
+                <div class="part-icon" style="background: #696969;"></div>
+                <span>말뚝 (8개)</span>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="stage" id="stage">
+            <div class="ground"></div>
+            <div class="completion-message" id="completionMessage">🎪 텐트 완성! 🎪</div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startSetup()">🔨 설치 시작</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedPartType = null;
+        let placedParts = [];
+        let gameActive = false;
+        let progress = 0;
+        
+        const partCounts = {
+            pole: { max: 4, placed: 0 },
+            canvas: { max: 1, placed: 0 },
+            rope: { max: 8, placed: 0 },
+            stake: { max: 8, placed: 0 }
+        };
+
+        const stage = document.getElementById('stage');
+        const scoreElement = document.getElementById('score');
+        const progressFill = document.getElementById('progressFill');
+        const completionMessage = document.getElementById('completionMessage');
+
+        function selectPart(type) {
+            if (!gameActive) return;
+            if (partCounts[type].placed >= partCounts[type].max) return;
+            
+            selectedPartType = type;
+            
+            // 모든 부품 아이템에서 selected 클래스 제거
+            document.querySelectorAll('.part-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 선택된 부품에 selected 클래스 추가
+            document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+        }
+
+        function startSetup() {
+            gameActive = true;
+            progress = 0;
+            updateProgress();
+            resetPartCounts();
+            updateInventory();
+        }
+
+        function resetPartCounts() {
+            Object.keys(partCounts).forEach(type => {
+                partCounts[type].placed = 0;
+            });
+        }
+
+        function updateInventory() {
+            Object.keys(partCounts).forEach(type => {
+                const item = document.querySelector(`[data-type="${type}"]`);
+                const span = item.querySelector('span');
+                const remaining = partCounts[type].max - partCounts[type].placed;
+                
+                if (remaining <= 0) {
+                    item.style.opacity = '0.5';
+                    item.style.pointerEvents = 'none';
+                } else {
+                    item.style.opacity = '1';
+                    item.style.pointerEvents = 'auto';
+                }
+                
+                span.textContent = span.textContent.split('(')[0] + `(${remaining}개)`;
+            });
+        }
+
+        // 스테이지 클릭 이벤트
+        stage.addEventListener('click', (e) => {
+            if (!gameActive || !selectedPartType) return;
+            
+            const rect = stage.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (canPlacePart(selectedPartType, x, y)) {
+                placePart(selectedPartType, x, y);
+            }
+        });
+
+        function canPlacePart(type, x, y) {
+            // 기본 배치 규칙
+            if (partCounts[type].placed >= partCounts[type].max) return false;
+            
+            switch(type) {
+                case 'pole':
+                    // 기둥은 땅 근처에만 배치 가능
+                    return y > 300;
+                    
+                case 'canvas':
+                    // 천막은 기둥이 4개 모두 설치된 후에만 가능
+                    return partCounts.pole.placed === 4 && y < 300;
+                    
+                case 'rope':
+                    // 로프는 기둥이 있을 때만 가능
+                    return partCounts.pole.placed > 0;
+                    
+                case 'stake':
+                    // 말뚝은 땅에만 배치 가능
+                    return y > 350;
+                    
+                default:
+                    return false;
+            }
+        }
+
+        function placePart(type, x, y) {
+            const part = document.createElement('div');
+            part.className = 'tent-part placed';
+            
+            switch(type) {
+                case 'pole':
+                    part.classList.add('pole');
+                    part.style.width = '10px';
+                    part.style.height = '120px';
+                    part.style.left = (x - 5) + 'px';
+                    part.style.bottom = '100px';
+                    break;
+                    
+                case 'canvas':
+                    part.classList.add('canvas');
+                    part.style.width = '400px';
+                    part.style.height = '200px';
+                    part.style.left = (x - 200) + 'px';
+                    part.style.top = (y - 100) + 'px';
+                    break;
+                    
+                case 'rope':
+                    part.classList.add('rope');
+                    const length = Math.random() * 100 + 50;
+                    const angle = Math.random() * 360;
+                    part.style.width = length + 'px';
+                    part.style.left = (x - length/2) + 'px';
+                    part.style.top = y + 'px';
+                    part.style.transform = `rotate(${angle}deg)`;
+                    break;
+                    
+                case 'stake':
+                    part.classList.add('stake');
+                    part.style.left = (x - 7) + 'px';
+                    part.style.bottom = '85px';
+                    break;
+            }
+            
+            stage.appendChild(part);
+            placedParts.push(part);
+            
+            partCounts[type].placed++;
+            updateInventory();
+            updateProgress();
+            
+            // 배치 효과
+            showPlacementEffect(x, y, type);
+            
+            // 완성 체크
+            checkCompletion();
+        }
+
+        function showPlacementEffect(x, y, type) {
+            const effect = document.createElement('div');
+            effect.textContent = getPartEmoji(type);
+            effect.style.position = 'absolute';
+            effect.style.left = x + 'px';
+            effect.style.top = y + 'px';
+            effect.style.fontSize = '2rem';
+            effect.style.pointerEvents = 'none';
+            effect.style.zIndex = '100';
+            effect.style.animation = 'placeEffect 1s ease-out forwards';
+            
+            stage.appendChild(effect);
+            
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    effect.parentNode.removeChild(effect);
+                }
+            }, 1000);
+        }
+
+        function getPartEmoji(type) {
+            const emojis = {
+                'pole': '🏗️',
+                'canvas': '🎪',
+                'rope': '🪢',
+                'stake': '⚒️'
+            };
+            return emojis[type] || '✨';
+        }
+
+        function updateProgress() {
+            const totalParts = Object.values(partCounts).reduce((sum, part) => sum + part.max, 0);
+            const placedTotal = Object.values(partCounts).reduce((sum, part) => sum + part.placed, 0);
+            
+            progress = Math.round((placedTotal / totalParts) * 100);
+            scoreElement.textContent = progress;
+            progressFill.style.width = progress + '%';
+        }
+
+        function checkCompletion() {
+            const allPartsPlaced = Object.values(partCounts).every(part => part.placed === part.max);
+            
+            if (allPartsPlaced) {
+                completionMessage.classList.add('show');
+                gameActive = false;
+                
+                // 완성 축하 효과
+                setTimeout(() => {
+                    createCelebrationEffect();
+                }, 500);
+            }
+        }
+
+        function createCelebrationEffect() {
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.textContent = ['🎉', '🎊', '✨', '🎪'][Math.floor(Math.random() * 4)];
+                    confetti.style.position = 'absolute';
+                    confetti.style.left = Math.random() * 700 + 'px';
+                    confetti.style.top = Math.random() * 200 + 'px';
+                    confetti.style.fontSize = '2rem';
+                    confetti.style.pointerEvents = 'none';
+                    confetti.style.zIndex = '100';
+                    confetti.style.animation = 'confetti 3s ease-out forwards';
+                    
+                    stage.appendChild(confetti);
+                    
+                    setTimeout(() => {
+                        if (confetti.parentNode) {
+                            confetti.parentNode.removeChild(confetti);
+                        }
+                    }, 3000);
+                }, i * 100);
+            }
+        }
+
+        function resetGame() {
+            gameActive = false;
+            selectedPartType = null;
+            progress = 0;
+            
+            // 모든 배치된 부품 제거
+            placedParts.forEach(part => {
+                if (part.parentNode) {
+                    part.parentNode.removeChild(part);
+                }
+            });
+            placedParts = [];
+            
+            // 선택 상태 초기화
+            document.querySelectorAll('.part-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            completionMessage.classList.remove('show');
+            resetPartCounts();
+            updateInventory();
+            updateProgress();
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    selectPart('pole');
+                    break;
+                case '2':
+                    selectPart('canvas');
+                    break;
+                case '3':
+                    selectPart('rope');
+                    break;
+                case '4':
+                    selectPart('stake');
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 's':
+                case 'S':
+                    startSetup();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes placeEffect {
+            0% { opacity: 1; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.5); }
+            100% { opacity: 0; transform: scale(1) translateY(-30px); }
+        }
+
+        @keyframes confetti {
+            0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(200px) rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

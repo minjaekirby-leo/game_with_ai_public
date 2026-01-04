@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐾 서커스 동물 돌보기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #98FB98, #90EE90, #32CD32);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(152, 251, 152, 0.8);
+        }
+
+        .animal-area {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #228B22, #32CD32);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animal {
+            width: 80px;
+            height: 80px;
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border: 3px solid white;
+        }
+
+        .animal:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .animal.selected {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px #FFD700;
+        }
+
+        .animal.happy {
+            animation: bounce 0.5s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .need-indicator {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .care-tools {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 120px;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .tool-btn.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .tool-icon {
+            font-size: 1.5rem;
+            margin-right: 8px;
+        }
+
+        .animal-info {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .happiness-bar {
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .happiness-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+            transition: width 0.5s ease;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #98FB98, #32CD32);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(152, 251, 152, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .care-effect {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: careFloat 2s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes careFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🐾 서커스 동물 돌보기 🐾</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 도구 선택<br>
+            • 동물 클릭하여 돌보기<br>
+            • 모든 동물을 행복하게!
+        </div>
+
+        <div class="score">행복도: <span id="score">0</span>%</div>
+
+        <div class="animal-area" id="animalArea">
+            <div class="care-tools">
+                <h4>🛠️ 도구</h4>
+                <div class="tool-btn selected" data-tool="food" onclick="selectTool('food')">
+                    <span class="tool-icon">🥕</span>
+                    <span>먹이</span>
+                </div>
+                <div class="tool-btn" data-tool="water" onclick="selectTool('water')">
+                    <span class="tool-icon">💧</span>
+                    <span>물</span>
+                </div>
+                <div class="tool-btn" data-tool="brush" onclick="selectTool('brush')">
+                    <span class="tool-icon">🧽</span>
+                    <span>목욕</span>
+                </div>
+                <div class="tool-btn" data-tool="toy" onclick="selectTool('toy')">
+                    <span class="tool-icon">🎾</span>
+                    <span>놀이</span>
+                </div>
+                <div class="tool-btn" data-tool="medicine" onclick="selectTool('medicine')">
+                    <span class="tool-icon">💊</span>
+                    <span>치료</span>
+                </div>
+            </div>
+
+            <div class="animal-info" id="animalInfo">
+                <h4>🐾 선택된 동물</h4>
+                <div id="selectedAnimalName">동물을 선택하세요</div>
+                <div>행복도:</div>
+                <div class="happiness-bar">
+                    <div class="happiness-fill" id="happinessFill" style="width: 0%;"></div>
+                </div>
+                <div id="animalNeeds">필요: 없음</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="feedAllAnimals()">🍎 모든 동물 먹이주기</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedTool = 'food';
+        let selectedAnimal = null;
+        let animals = [];
+        let totalHappiness = 0;
+
+        const animalArea = document.getElementById('animalArea');
+        const scoreElement = document.getElementById('score');
+        const animalInfo = document.getElementById('animalInfo');
+        const selectedAnimalName = document.getElementById('selectedAnimalName');
+        const happinessFill = document.getElementById('happinessFill');
+        const animalNeeds = document.getElementById('animalNeeds');
+
+        const animalTypes = [
+            { emoji: '🦁', name: '사자', color: '#DAA520', needs: ['food', 'water', 'toy'] },
+            { emoji: '🐘', name: '코끼리', color: '#708090', needs: ['food', 'water', 'brush'] },
+            { emoji: '🐵', name: '원숭이', color: '#8B4513', needs: ['food', 'toy', 'medicine'] },
+            { emoji: '🐅', name: '호랑이', color: '#FF8C00', needs: ['food', 'water', 'toy'] },
+            { emoji: '🐻', name: '곰', color: '#654321', needs: ['food', 'brush', 'toy'] },
+            { emoji: '🦒', name: '기린', color: '#DEB887', needs: ['food', 'water', 'brush'] }
+        ];
+
+        function initializeGame() {
+            animals = [];
+            animalArea.innerHTML = '';
+            
+            // 도구 패널과 정보 패널 다시 추가
+            createToolsPanel();
+            createInfoPanel();
+            
+            // 동물들 생성
+            animalTypes.forEach((type, index) => {
+                const animal = {
+                    ...type,
+                    happiness: Math.floor(Math.random() * 50) + 25, // 25-75%
+                    currentNeed: type.needs[Math.floor(Math.random() * type.needs.length)],
+                    element: null
+                };
+                
+                const animalElement = document.createElement('div');
+                animalElement.className = 'animal';
+                animalElement.style.background = type.color;
+                animalElement.style.left = (100 + (index % 3) * 200) + 'px';
+                animalElement.style.top = (100 + Math.floor(index / 3) * 150) + 'px';
+                animalElement.innerHTML = type.emoji;
+                animalElement.addEventListener('click', () => selectAnimal(animal));
+                
+                // 필요 표시기 추가
+                const needIndicator = document.createElement('div');
+                needIndicator.className = 'need-indicator';
+                needIndicator.style.background = getNeedColor(animal.currentNeed);
+                needIndicator.textContent = getNeedEmoji(animal.currentNeed);
+                animalElement.appendChild(needIndicator);
+                
+                animal.element = animalElement;
+                animalArea.appendChild(animalElement);
+                animals.push(animal);
+            });
+            
+            updateTotalHappiness();
+        }
+
+        function createToolsPanel() {
+            const toolsPanel = document.createElement('div');
+            toolsPanel.className = 'care-tools';
+            toolsPanel.innerHTML = `
+                <h4>🛠️ 도구</h4>
+                <div class="tool-btn selected" data-tool="food" onclick="selectTool('food')">
+                    <span class="tool-icon">🥕</span>
+                    <span>먹이</span>
+                </div>
+                <div class="tool-btn" data-tool="water" onclick="selectTool('water')">
+                    <span class="tool-icon">💧</span>
+                    <span>물</span>
+                </div>
+                <div class="tool-btn" data-tool="brush" onclick="selectTool('brush')">
+                    <span class="tool-icon">🧽</span>
+                    <span>목욕</span>
+                </div>
+                <div class="tool-btn" data-tool="toy" onclick="selectTool('toy')">
+                    <span class="tool-icon">🎾</span>
+                    <span>놀이</span>
+                </div>
+                <div class="tool-btn" data-tool="medicine" onclick="selectTool('medicine')">
+                    <span class="tool-icon">💊</span>
+                    <span>치료</span>
+                </div>
+            `;
+            animalArea.appendChild(toolsPanel);
+        }
+
+        function createInfoPanel() {
+            const infoPanel = document.createElement('div');
+            infoPanel.className = 'animal-info';
+            infoPanel.innerHTML = `
+                <h4>🐾 선택된 동물</h4>
+                <div id="selectedAnimalName">동물을 선택하세요</div>
+                <div>행복도:</div>
+                <div class="happiness-bar">
+                    <div class="happiness-fill" id="happinessFill" style="width: 0%;"></div>
+                </div>
+                <div id="animalNeeds">필요: 없음</div>
+            `;
+            animalArea.appendChild(infoPanel);
+        }
+
+        function selectTool(tool) {
+            selectedTool = tool;
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            document.querySelector(`[data-tool="${tool}"]`).classList.add('selected');
+        }
+
+        function selectAnimal(animal) {
+            selectedAnimal = animal;
+            
+            // 모든 동물 선택 해제
+            animals.forEach(a => a.element.classList.remove('selected'));
+            
+            // 선택된 동물 강조
+            animal.element.classList.add('selected');
+            
+            // 정보 업데이트
+            updateAnimalInfo();
+        }
+
+        function updateAnimalInfo() {
+            if (!selectedAnimal) return;
+            
+            document.getElementById('selectedAnimalName').textContent = selectedAnimal.name;
+            document.getElementById('happinessFill').style.width = selectedAnimal.happiness + '%';
+            document.getElementById('animalNeeds').textContent = `필요: ${getNeedName(selectedAnimal.currentNeed)}`;
+        }
+
+        function careForAnimal(animal) {
+            if (!selectedTool) return;
+            
+            let happinessIncrease = 0;
+            let effectEmoji = '';
+            
+            if (selectedTool === animal.currentNeed) {
+                // 올바른 도구 사용
+                happinessIncrease = 20;
+                effectEmoji = '💖';
+                
+                // 새로운 필요 생성
+                animal.currentNeed = animal.needs[Math.floor(Math.random() * animal.needs.length)];
+                updateNeedIndicator(animal);
+            } else if (animal.needs.includes(selectedTool)) {
+                // 필요한 도구이지만 우선순위가 아님
+                happinessIncrease = 10;
+                effectEmoji = '😊';
+            } else {
+                // 잘못된 도구
+                happinessIncrease = 5;
+                effectEmoji = '😐';
+            }
+            
+            animal.happiness = Math.min(100, animal.happiness + happinessIncrease);
+            
+            // 시각적 효과
+            animal.element.classList.add('happy');
+            setTimeout(() => {
+                animal.element.classList.remove('happy');
+            }, 500);
+            
+            showCareEffect(animal.element, effectEmoji);
+            updateAnimalInfo();
+            updateTotalHappiness();
+        }
+
+        function updateNeedIndicator(animal) {
+            const indicator = animal.element.querySelector('.need-indicator');
+            indicator.style.background = getNeedColor(animal.currentNeed);
+            indicator.textContent = getNeedEmoji(animal.currentNeed);
+        }
+
+        function getNeedColor(need) {
+            const colors = {
+                'food': '#FF6347',
+                'water': '#4169E1',
+                'brush': '#32CD32',
+                'toy': '#FFD700',
+                'medicine': '#FF69B4'
+            };
+            return colors[need] || '#333';
+        }
+
+        function getNeedEmoji(need) {
+            const emojis = {
+                'food': '🍎',
+                'water': '💧',
+                'brush': '🧽',
+                'toy': '🎾',
+                'medicine': '💊'
+            };
+            return emojis[need] || '❓';
+        }
+
+        function getNeedName(need) {
+            const names = {
+                'food': '먹이',
+                'water': '물',
+                'brush': '목욕',
+                'toy': '놀이',
+                'medicine': '치료'
+            };
+            return names[need] || '알 수 없음';
+        }
+
+        function showCareEffect(element, emoji) {
+            const effect = document.createElement('div');
+            effect.className = 'care-effect';
+            effect.textContent = emoji;
+            
+            const rect = element.getBoundingClientRect();
+            const areaRect = animalArea.getBoundingClientRect();
+            
+            effect.style.left = (rect.left - areaRect.left + 40) + 'px';
+            effect.style.top = (rect.top - areaRect.top + 20) + 'px';
+            
+            animalArea.appendChild(effect);
+            
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    effect.parentNode.removeChild(effect);
+                }
+            }, 2000);
+        }
+
+        function feedAllAnimals() {
+            animals.forEach(animal => {
+                animal.happiness = Math.min(100, animal.happiness + 15);
+                animal.element.classList.add('happy');
+                setTimeout(() => {
+                    animal.element.classList.remove('happy');
+                }, 500);
+                showCareEffect(animal.element, '🍎');
+            });
+            
+            updateAnimalInfo();
+            updateTotalHappiness();
+        }
+
+        function updateTotalHappiness() {
+            totalHappiness = Math.round(animals.reduce((sum, animal) => sum + animal.happiness, 0) / animals.length);
+            scoreElement.textContent = totalHappiness;
+        }
+
+        function resetGame() {
+            selectedAnimal = null;
+            selectedTool = 'food';
+            initializeGame();
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 동물 클릭 이벤트 (전역)
+        animalArea.addEventListener('click', (e) => {
+            const animalElement = e.target.closest('.animal');
+            if (animalElement) {
+                const animal = animals.find(a => a.element === animalElement);
+                if (animal) {
+                    if (selectedAnimal === animal) {
+                        // 이미 선택된 동물이면 돌보기
+                        careForAnimal(animal);
+                    } else {
+                        // 새로운 동물 선택
+                        selectAnimal(animal);
+                    }
+                }
+            }
+        });
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    selectTool('food');
+                    break;
+                case '2':
+                    selectTool('water');
+                    break;
+                case '3':
+                    selectTool('brush');
+                    break;
+                case '4':
+                    selectTool('toy');
+                    break;
+                case '5':
+                    selectTool('medicine');
+                    break;
+                case 'f':
+                case 'F':
+                    feedAllAnimals();
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            initializeGame();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💡 서커스 조명 쇼</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.3);
+            z-index: 10;
+            position: relative;
+        }
+
+        .stage {
+            width: 700px;
+            height: 450px;
+            background: #1a1a1a;
+            border: 3px solid #333;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spotlight {
+            position: absolute;
+            border-radius: 50%;
+            transition: all 0.5s ease;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .spotlight.active {
+            opacity: 0.8;
+        }
+
+        .performer {
+            width: 50px;
+            height: 70px;
+            position: absolute;
+            border-radius: 10px;
+            transition: all 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .lighting-control {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 200px;
+        }
+
+        .light-button {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .light-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .light-button.active {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .light-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+        }
+
+        .color-mixer {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .color-slider {
+            width: 100%;
+            margin: 10px 0;
+            height: 5px;
+            background: #333;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .color-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 10px;
+            border: 2px solid white;
+            margin-top: 10px;
+        }
+
+        .sequence-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 300px;
+        }
+
+        .sequence-button {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .sequence-button:hover {
+            background: #555;
+            transform: scale(1.05);
+        }
+
+        .sequence-button.recording {
+            background: #e74c3c;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+            z-index: 10;
+            position: relative;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #333, #555);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .strobe-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .strobe-effect.active {
+            animation: strobe 0.1s infinite;
+        }
+
+        @keyframes strobe {
+            0%, 50% { opacity: 0; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">💡 서커스 조명 쇼 💡</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 조명 버튼으로 스포트라이트<br>
+            • 색상 믹서로 색상 조절<br>
+            • 환상적인 조명쇼를 연출!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="stage" id="stage">
+            <div class="strobe-effect" id="strobeEffect"></div>
+            
+            <!-- 공연자들 -->
+            <div class="performer" style="left: 150px; bottom: 50px; background: #ff69b4;">🤸‍♀️</div>
+            <div class="performer" style="left: 300px; bottom: 50px; background: #4ecdc4;">🤹‍♂️</div>
+            <div class="performer" style="left: 450px; bottom: 50px; background: #f9ca24;">🎩</div>
+            <div class="performer" style="left: 600px; bottom: 50px; background: #6c5ce7;">🦁</div>
+        </div>
+
+        <div class="lighting-control">
+            <h4>💡 조명 제어</h4>
+            <div class="light-button" data-light="spot1" onclick="toggleLight('spot1')">
+                <div class="light-color" style="background: #ffffff;"></div>
+                <span>스포트라이트 1</span>
+            </div>
+            <div class="light-button" data-light="spot2" onclick="toggleLight('spot2')">
+                <div class="light-color" style="background: #ff6b6b;"></div>
+                <span>스포트라이트 2</span>
+            </div>
+            <div class="light-button" data-light="spot3" onclick="toggleLight('spot3')">
+                <div class="light-color" style="background: #4ecdc4;"></div>
+                <span>스포트라이트 3</span>
+            </div>
+            <div class="light-button" data-light="spot4" onclick="toggleLight('spot4')">
+                <div class="light-color" style="background: #45b7d1;"></div>
+                <span>스포트라이트 4</span>
+            </div>
+            <div class="light-button" data-light="flood" onclick="toggleLight('flood')">
+                <div class="light-color" style="background: #f9ca24;"></div>
+                <span>플러드 라이트</span>
+            </div>
+            <div class="light-button" data-light="strobe" onclick="toggleLight('strobe')">
+                <div class="light-color" style="background: #ffffff;"></div>
+                <span>스트로브</span>
+            </div>
+        </div>
+
+        <div class="color-mixer">
+            <h4>🎨 색상 믹서</h4>
+            <label>빨강:</label>
+            <input type="range" class="color-slider" id="redSlider" min="0" max="255" value="255">
+            <label>초록:</label>
+            <input type="range" class="color-slider" id="greenSlider" min="0" max="255" value="255">
+            <label>파랑:</label>
+            <input type="range" class="color-slider" id="blueSlider" min="0" max="255" value="255">
+            <div class="color-preview" id="colorPreview"></div>
+        </div>
+
+        <div class="sequence-panel">
+            <h4>🎬 시퀀스</h4>
+            <button class="sequence-button" onclick="recordSequence()">⏺️ 녹화</button>
+            <button class="sequence-button" onclick="playSequence()">▶️ 재생</button>
+            <button class="sequence-button" onclick="clearSequence()">🗑️ 지우기</button>
+            <button class="sequence-button" onclick="autoShow()">✨ 자동 쇼</button>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startShow()">🎪 쇼 시작</button>
+            <button class="control-btn" onclick="allLightsOff()">🌙 모든 조명 끄기</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let activeLights = new Set();
+        let currentColor = { r: 255, g: 255, b: 255 };
+        let lightSequence = [];
+        let isRecording = false;
+        let sequenceInterval;
+
+        const stage = document.getElementById('stage');
+        const scoreElement = document.getElementById('score');
+        const strobeEffect = document.getElementById('strobeEffect');
+        const colorPreview = document.getElementById('colorPreview');
+        const redSlider = document.getElementById('redSlider');
+        const greenSlider = document.getElementById('greenSlider');
+        const blueSlider = document.getElementById('blueSlider');
+
+        // 조명 위치 설정
+        const lightPositions = {
+            spot1: { x: 150, y: 200, size: 120 },
+            spot2: { x: 300, y: 200, size: 120 },
+            spot3: { x: 450, y: 200, size: 120 },
+            spot4: { x: 600, y: 200, size: 120 },
+            flood: { x: 350, y: 225, size: 400 },
+            strobe: null // 스트로브는 전체 화면
+        };
+
+        function startShow() {
+            gameActive = true;
+            score = 0;
+            updateScore();
+            createSpotlights();
+        }
+
+        function createSpotlights() {
+            // 기존 스포트라이트 제거
+            document.querySelectorAll('.spotlight').forEach(light => light.remove());
+
+            // 새 스포트라이트 생성
+            Object.keys(lightPositions).forEach(lightId => {
+                if (lightId === 'strobe') return;
+
+                const spotlight = document.createElement('div');
+                spotlight.className = 'spotlight';
+                spotlight.id = lightId;
+                
+                const pos = lightPositions[lightId];
+                spotlight.style.width = pos.size + 'px';
+                spotlight.style.height = pos.size + 'px';
+                spotlight.style.left = (pos.x - pos.size/2) + 'px';
+                spotlight.style.top = (pos.y - pos.size/2) + 'px';
+                
+                stage.appendChild(spotlight);
+            });
+        }
+
+        function toggleLight(lightId) {
+            if (!gameActive) return;
+
+            if (lightId === 'strobe') {
+                toggleStrobe();
+                return;
+            }
+
+            const spotlight = document.getElementById(lightId);
+            const button = document.querySelector(`[data-light="${lightId}"]`);
+            
+            if (activeLights.has(lightId)) {
+                // 조명 끄기
+                activeLights.delete(lightId);
+                spotlight.classList.remove('active');
+                button.classList.remove('active');
+            } else {
+                // 조명 켜기
+                activeLights.add(lightId);
+                spotlight.classList.add('active');
+                button.classList.add('active');
+                
+                // 현재 색상 적용
+                const color = `rgba(${currentColor.r}, ${currentColor.g}, ${currentColor.b}, 0.6)`;
+                spotlight.style.background = `radial-gradient(circle, ${color}, transparent)`;
+            }
+
+            // 점수 추가
+            score += 5;
+            updateScore();
+
+            // 녹화 중이면 시퀀스에 추가
+            if (isRecording) {
+                lightSequence.push({
+                    action: 'toggle',
+                    light: lightId,
+                    color: {...currentColor},
+                    timestamp: Date.now()
+                });
+            }
+        }
+
+        function toggleStrobe() {
+            const button = document.querySelector(`[data-light="strobe"]`);
+            
+            if (strobeEffect.classList.contains('active')) {
+                strobeEffect.classList.remove('active');
+                button.classList.remove('active');
+            } else {
+                strobeEffect.classList.add('active');
+                button.classList.add('active');
+                
+                // 3초 후 자동으로 끄기
+                setTimeout(() => {
+                    strobeEffect.classList.remove('active');
+                    button.classList.remove('active');
+                }, 3000);
+            }
+        }
+
+        function updateColor() {
+            currentColor.r = parseInt(redSlider.value);
+            currentColor.g = parseInt(greenSlider.value);
+            currentColor.b = parseInt(blueSlider.value);
+            
+            const color = `rgb(${currentColor.r}, ${currentColor.g}, ${currentColor.b})`;
+            colorPreview.style.background = color;
+            
+            // 활성화된 조명들에 새 색상 적용
+            activeLights.forEach(lightId => {
+                const spotlight = document.getElementById(lightId);
+                if (spotlight) {
+                    const rgbaColor = `rgba(${currentColor.r}, ${currentColor.g}, ${currentColor.b}, 0.6)`;
+                    spotlight.style.background = `radial-gradient(circle, ${rgbaColor}, transparent)`;
+                }
+            });
+        }
+
+        function recordSequence() {
+            const button = event.target;
+            
+            if (isRecording) {
+                // 녹화 중지
+                isRecording = false;
+                button.textContent = '⏺️ 녹화';
+                button.classList.remove('recording');
+            } else {
+                // 녹화 시작
+                isRecording = true;
+                lightSequence = [];
+                button.textContent = '⏹️ 중지';
+                button.classList.add('recording');
+            }
+        }
+
+        function playSequence() {
+            if (lightSequence.length === 0) return;
+
+            let index = 0;
+            const startTime = Date.now();
+            const firstTimestamp = lightSequence[0].timestamp;
+
+            const playNext = () => {
+                if (index < lightSequence.length) {
+                    const action = lightSequence[index];
+                    const delay = action.timestamp - firstTimestamp;
+                    
+                    setTimeout(() => {
+                        // 색상 설정
+                        currentColor = action.color;
+                        redSlider.value = currentColor.r;
+                        greenSlider.value = currentColor.g;
+                        blueSlider.value = currentColor.b;
+                        updateColor();
+                        
+                        // 조명 토글
+                        toggleLight(action.light);
+                        
+                        index++;
+                        playNext();
+                    }, delay);
+                }
+            };
+            
+            playNext();
+        }
+
+        function clearSequence() {
+            lightSequence = [];
+            isRecording = false;
+            const button = document.querySelector('.sequence-button.recording');
+            if (button) {
+                button.textContent = '⏺️ 녹화';
+                button.classList.remove('recording');
+            }
+        }
+
+        function autoShow() {
+            if (sequenceInterval) {
+                clearInterval(sequenceInterval);
+                sequenceInterval = null;
+                return;
+            }
+
+            const colors = [
+                { r: 255, g: 0, b: 0 },    // 빨강
+                { r: 0, g: 255, b: 0 },    // 초록
+                { r: 0, g: 0, b: 255 },    // 파랑
+                { r: 255, g: 255, b: 0 },  // 노랑
+                { r: 255, g: 0, b: 255 },  // 마젠타
+                { r: 0, g: 255, b: 255 }   // 시안
+            ];
+
+            const lights = ['spot1', 'spot2', 'spot3', 'spot4'];
+            let colorIndex = 0;
+
+            sequenceInterval = setInterval(() => {
+                // 랜덤 색상 선택
+                currentColor = colors[colorIndex % colors.length];
+                colorIndex++;
+                
+                redSlider.value = currentColor.r;
+                greenSlider.value = currentColor.g;
+                blueSlider.value = currentColor.b;
+                updateColor();
+
+                // 랜덤 조명 토글
+                const randomLight = lights[Math.floor(Math.random() * lights.length)];
+                toggleLight(randomLight);
+
+                // 가끔 스트로브 효과
+                if (Math.random() < 0.2) {
+                    toggleStrobe();
+                }
+            }, 800);
+        }
+
+        function allLightsOff() {
+            activeLights.clear();
+            document.querySelectorAll('.spotlight').forEach(light => {
+                light.classList.remove('active');
+            });
+            document.querySelectorAll('.light-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            strobeEffect.classList.remove('active');
+            
+            if (sequenceInterval) {
+                clearInterval(sequenceInterval);
+                sequenceInterval = null;
+            }
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 색상 슬라이더 이벤트
+        [redSlider, greenSlider, blueSlider].forEach(slider => {
+            slider.addEventListener('input', updateColor);
+        });
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            switch(e.key) {
+                case '1':
+                    toggleLight('spot1');
+                    break;
+                case '2':
+                    toggleLight('spot2');
+                    break;
+                case '3':
+                    toggleLight('spot3');
+                    break;
+                case '4':
+                    toggleLight('spot4');
+                    break;
+                case '5':
+                    toggleLight('flood');
+                    break;
+                case '6':
+                    toggleLight('strobe');
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    playSequence();
+                    break;
+                case 'r':
+                case 'R':
+                    recordSequence();
+                    break;
+                case 'c':
+                case 'C':
+                    clearSequence();
+                    break;
+                case 'a':
+                case 'A':
+                    autoShow();
+                    break;
+                case 'Escape':
+                    allLightsOff();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+            updateColor();
+        });
+    </script>
+</body>
+</html>

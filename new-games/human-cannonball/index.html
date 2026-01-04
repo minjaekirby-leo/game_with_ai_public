@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎪 서커스 인간대포</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB, #4682B4, #1E90FF);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(30, 144, 255, 0.8);
+        }
+
+        .stage {
+            width: 800px;
+            height: 500px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #228B22 100%);
+            border: 3px solid #4682B4;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cannon {
+            width: 120px;
+            height: 60px;
+            background: linear-gradient(45deg, #696969, #808080);
+            position: absolute;
+            bottom: 100px;
+            left: 50px;
+            border-radius: 10px;
+            transform-origin: right center;
+            transition: transform 0.3s ease;
+        }
+
+        .cannon-barrel {
+            width: 80px;
+            height: 30px;
+            background: linear-gradient(45deg, #2F4F4F, #696969);
+            position: absolute;
+            right: -70px;
+            top: 15px;
+            border-radius: 15px;
+        }
+
+        .human {
+            width: 20px;
+            height: 30px;
+            background: #ff69b4;
+            position: absolute;
+            border-radius: 10px;
+            transition: all 1s ease;
+            z-index: 10;
+        }
+
+        .target-net {
+            width: 100px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 3px solid #fff;
+            position: absolute;
+            bottom: 50px;
+            right: 100px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .trajectory-line {
+            position: absolute;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.5);
+            transform-origin: bottom;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .wind-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+        }
+
+        .power-meter {
+            position: absolute;
+            bottom: 20px;
+            left: 50px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .power-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .angle-meter {
+            position: absolute;
+            bottom: 60px;
+            left: 50px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .angle-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ccff, #0066ff);
+            width: 50%;
+            transition: width 0.1s ease;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #4682B4, #1E90FF);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(70, 130, 180, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .splash-effect {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #87CEEB, transparent);
+            border-radius: 50%;
+            animation: splash 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes splash {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎪 서커스 인간대포 🎪</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 스페이스바: 파워 조절<br>
+            • 화살표: 각도 조절<br>
+            • 엔터: 발사!<br>
+            • 안전망에 착지하세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="wind-indicator" id="windIndicator">
+            바람: <span id="windSpeed">0</span> km/h <span id="windDirection">→</span>
+        </div>
+
+        <div class="stage" id="stage">
+            <div class="cannon" id="cannon">
+                <div class="cannon-barrel"></div>
+            </div>
+            
+            <div class="human" id="human" style="left: 110px; bottom: 130px;"></div>
+            
+            <div class="target-net" id="targetNet">🎯</div>
+            
+            <div class="trajectory-line" id="trajectoryLine"></div>
+        </div>
+
+        <div class="power-meter">
+            <div class="power-bar" id="powerBar"></div>
+        </div>
+
+        <div class="angle-meter">
+            <div class="angle-bar" id="angleBar"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startGame()">🎪 게임 시작</button>
+            <button class="control-btn" onclick="fire()">🚀 발사!</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let power = 50;
+        let angle = 45;
+        let windSpeed = 0;
+        let windDirection = 1; // 1 = 오른쪽, -1 = 왼쪽
+        let humanFlying = false;
+
+        const cannon = document.getElementById('cannon');
+        const human = document.getElementById('human');
+        const scoreElement = document.getElementById('score');
+        const powerBar = document.getElementById('powerBar');
+        const angleBar = document.getElementById('angleBar');
+        const windIndicator = document.getElementById('windSpeed');
+        const windDirectionElement = document.getElementById('windDirection');
+        const trajectoryLine = document.getElementById('trajectoryLine');
+        const stage = document.getElementById('stage');
+        const targetNet = document.getElementById('targetNet');
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            updateScore();
+            generateWind();
+            resetHuman();
+            createClouds();
+        }
+
+        function generateWind() {
+            windSpeed = Math.floor(Math.random() * 20) + 5; // 5-25 km/h
+            windDirection = Math.random() > 0.5 ? 1 : -1;
+            
+            windIndicator.textContent = windSpeed;
+            windDirectionElement.textContent = windDirection > 0 ? '→' : '←';
+        }
+
+        function createClouds() {
+            // 기존 구름 제거
+            const existingClouds = stage.querySelectorAll('.cloud');
+            existingClouds.forEach(cloud => cloud.remove());
+
+            // 새 구름 생성
+            for (let i = 0; i < 3; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.width = (50 + Math.random() * 50) + 'px';
+                cloud.style.height = (30 + Math.random() * 20) + 'px';
+                cloud.style.left = (200 + Math.random() * 400) + 'px';
+                cloud.style.top = (50 + Math.random() * 150) + 'px';
+                cloud.style.animationDelay = (Math.random() * 2) + 's';
+                
+                stage.appendChild(cloud);
+            }
+        }
+
+        function updateCannon() {
+            const rotation = -(90 - angle); // 각도를 회전으로 변환
+            cannon.style.transform = `rotate(${rotation}deg)`;
+            
+            // 궤적선 표시
+            if (gameActive && !humanFlying) {
+                showTrajectory();
+            }
+        }
+
+        function showTrajectory() {
+            const cannonX = 120;
+            const cannonY = 400 - 130; // stage 높이에서 대포 위치
+            
+            const radians = (angle * Math.PI) / 180;
+            const length = (power * 3); // 파워에 따른 궤적 길이
+            
+            trajectoryLine.style.left = cannonX + 'px';
+            trajectoryLine.style.bottom = (500 - cannonY) + 'px';
+            trajectoryLine.style.height = length + 'px';
+            trajectoryLine.style.transform = `rotate(${90 - angle}deg)`;
+            trajectoryLine.style.opacity = '0.7';
+        }
+
+        function fire() {
+            if (!gameActive || humanFlying) return;
+            
+            humanFlying = true;
+            trajectoryLine.style.opacity = '0';
+            
+            // 발사 계산
+            const radians = (angle * Math.PI) / 180;
+            const initialVelocity = power * 0.8;
+            const vx = initialVelocity * Math.cos(radians);
+            const vy = initialVelocity * Math.sin(radians);
+            
+            // 바람 효과
+            const windEffect = windSpeed * windDirection * 0.3;
+            
+            animateHuman(vx + windEffect, vy);
+        }
+
+        function animateHuman(vx, vy) {
+            const startX = 110;
+            const startY = 130;
+            let currentX = startX;
+            let currentY = startY;
+            let currentVy = vy;
+            
+            const gravity = 0.5;
+            const interval = setInterval(() => {
+                currentX += vx * 0.1;
+                currentY += currentVy * 0.1;
+                currentVy -= gravity;
+                
+                human.style.left = currentX + 'px';
+                human.style.bottom = currentY + 'px';
+                
+                // 회전 효과
+                const rotation = Math.atan2(-currentVy, vx) * (180 / Math.PI);
+                human.style.transform = `rotate(${rotation}deg)`;
+                
+                // 착지 체크
+                if (currentY <= 50) {
+                    clearInterval(interval);
+                    checkLanding(currentX, currentY);
+                }
+                
+                // 화면 밖으로 나가면 종료
+                if (currentX > 850 || currentX < -50) {
+                    clearInterval(interval);
+                    showResult('💥 화면 밖으로!', 0);
+                    resetHuman();
+                }
+            }, 16);
+        }
+
+        function checkLanding(x, y) {
+            const netX = 700; // 안전망 x 위치
+            const netWidth = 100;
+            
+            if (x >= netX && x <= netX + netWidth) {
+                // 안전망에 착지
+                const distance = Math.abs(x - (netX + netWidth/2));
+                let points = 0;
+                
+                if (distance < 20) {
+                    points = 100;
+                    showResult('🎯 완벽한 착지!', points);
+                } else if (distance < 40) {
+                    points = 50;
+                    showResult('👍 좋은 착지!', points);
+                } else {
+                    points = 20;
+                    showResult('✨ 착지 성공!', points);
+                }
+                
+                score += points;
+                updateScore();
+                createSplashEffect(x, 50);
+                
+            } else {
+                // 땅에 착지
+                showResult('💥 땅에 착지!', 0);
+                createSplashEffect(x, 50);
+            }
+            
+            setTimeout(() => {
+                resetHuman();
+                generateWind();
+            }, 2000);
+        }
+
+        function createSplashEffect(x, y) {
+            const splash = document.createElement('div');
+            splash.className = 'splash-effect';
+            splash.style.left = (x - 25) + 'px';
+            splash.style.bottom = y + 'px';
+            
+            stage.appendChild(splash);
+            
+            setTimeout(() => {
+                if (splash.parentNode) {
+                    splash.parentNode.removeChild(splash);
+                }
+            }, 1000);
+        }
+
+        function showResult(text, points) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = points > 0 ? '#00ff00' : '#ff0000';
+            result.style.fontSize = '2rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'fadeUp 2s ease-out forwards';
+            
+            stage.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function resetHuman() {
+            humanFlying = false;
+            human.style.left = '110px';
+            human.style.bottom = '130px';
+            human.style.transform = 'rotate(0deg)';
+        }
+
+        function resetGame() {
+            gameActive = false;
+            score = 0;
+            power = 50;
+            angle = 45;
+            updateScore();
+            updatePowerBar();
+            updateAngleBar();
+            updateCannon();
+            resetHuman();
+            trajectoryLine.style.opacity = '0';
+            
+            // 모든 효과 제거
+            const effects = stage.querySelectorAll('.splash-effect, .cloud');
+            effects.forEach(effect => effect.remove());
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function updatePowerBar() {
+            powerBar.style.width = power + '%';
+        }
+
+        function updateAngleBar() {
+            angleBar.style.width = ((angle / 90) * 100) + '%';
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 컨트롤
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    power = (power + 5) % 105;
+                    if (power === 0) power = 5;
+                    updatePowerBar();
+                    updateCannon();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    angle = Math.min(90, angle + 5);
+                    updateAngleBar();
+                    updateCannon();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    angle = Math.max(10, angle - 5);
+                    updateAngleBar();
+                    updateCannon();
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    fire();
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 's':
+                case 'S':
+                    startGame();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+            updatePowerBar();
+            updateAngleBar();
+            updateCannon();
+        });
+    </script>
+
+    <style>
+        @keyframes fadeUp {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-50px); }
+        }
+    </style>
+</body>
+</html>

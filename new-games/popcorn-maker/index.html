@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍿 서커스 팝콘 만들기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6347);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 215, 0, 0.8);
+        }
+
+        .popcorn-machine {
+            width: 600px;
+            height: 400px;
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .machine-top {
+            width: 300px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #FFD700;
+            border-radius: 15px;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+        }
+
+        .popcorn {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #FFFACD;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: pop 0.5s ease-out forwards;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+
+        .heat-control {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 100px;
+            height: 100px;
+            background: #333;
+            border-radius: 50%;
+            border: 5px solid #FFD700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .heat-control:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .heat-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #ff0000;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .oil-dispenser {
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+            width: 80px;
+            height: 120px;
+            background: #4169E1;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .oil-dispenser:hover {
+            transform: scale(1.1);
+        }
+
+        .oil-level {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 60px;
+            height: 100px;
+            background: rgba(255, 255, 0, 0.7);
+            border-radius: 5px;
+            transition: height 0.3s ease;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🍿 서커스 팝콘 만들기 🍿</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 열 조절기로 온도 조절<br>
+            • 오일 디스펜서로 기름 추가<br>
+            • 맛있는 팝콘을 만드세요!
+        </div>
+
+        <div class="score">팝콘: <span id="score">0</span>개</div>
+
+        <div class="popcorn-machine" id="machine">
+            <div class="machine-top" id="machineTop"></div>
+            
+            <div class="heat-control" id="heatControl" onclick="adjustHeat()">
+                <div class="heat-indicator" id="heatIndicator"></div>
+            </div>
+            
+            <div class="oil-dispenser" id="oilDispenser" onclick="addOil()">
+                <div class="oil-level" id="oilLevel"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startMaking()">🍿 팝콘 만들기</button>
+            <button class="control-btn" onclick="resetMachine()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let heat = 0;
+        let oil = 100;
+        let popcornInterval;
+        let popcornCount = 0;
+
+        const scoreElement = document.getElementById('score');
+        const machineTop = document.getElementById('machineTop');
+        const heatIndicator = document.getElementById('heatIndicator');
+        const oilLevel = document.getElementById('oilLevel');
+
+        function adjustHeat() {
+            if (!gameActive) return;
+            
+            heat = (heat + 25) % 125;
+            updateHeatIndicator();
+        }
+
+        function updateHeatIndicator() {
+            const intensity = heat / 100;
+            const red = Math.min(255, 100 + intensity * 155);
+            const green = Math.max(0, 100 - intensity * 100);
+            
+            heatIndicator.style.background = `rgb(${red}, ${green}, 0)`;
+            heatIndicator.style.transform = `translate(-50%, -50%) scale(${0.8 + intensity * 0.4})`;
+        }
+
+        function addOil() {
+            if (!gameActive || oil >= 100) return;
+            
+            oil = Math.min(100, oil + 20);
+            updateOilLevel();
+        }
+
+        function updateOilLevel() {
+            oilLevel.style.height = oil + 'px';
+        }
+
+        function startMaking() {
+            gameActive = true;
+            score = 0;
+            updateScore();
+            
+            if (popcornInterval) {
+                clearInterval(popcornInterval);
+            }
+            
+            popcornInterval = setInterval(() => {
+                if (heat > 50 && oil > 0) {
+                    makePopcorn();
+                    oil = Math.max(0, oil - 1);
+                    updateOilLevel();
+                }
+            }, 200);
+        }
+
+        function makePopcorn() {
+            const popcorn = document.createElement('div');
+            popcorn.className = 'popcorn';
+            
+            const x = Math.random() * 260 + 20;
+            const y = Math.random() * 160 + 20;
+            
+            popcorn.style.left = x + 'px';
+            popcorn.style.top = y + 'px';
+            
+            // 랜덤 색상 (다양한 맛)
+            const colors = ['#FFFACD', '#FFE4B5', '#FFDAB9', '#F0E68C'];
+            popcorn.style.background = colors[Math.floor(Math.random() * colors.length)];
+            
+            machineTop.appendChild(popcorn);
+            
+            score++;
+            updateScore();
+            
+            // 팝콘 제거 (용량 관리)
+            setTimeout(() => {
+                if (popcorn.parentNode) {
+                    popcorn.parentNode.removeChild(popcorn);
+                }
+            }, 3000);
+        }
+
+        function resetMachine() {
+            gameActive = false;
+            score = 0;
+            heat = 0;
+            oil = 100;
+            
+            if (popcornInterval) {
+                clearInterval(popcornInterval);
+            }
+            
+            updateScore();
+            updateHeatIndicator();
+            updateOilLevel();
+            
+            // 모든 팝콘 제거
+            const allPopcorn = machineTop.querySelectorAll('.popcorn');
+            allPopcorn.forEach(popcorn => popcorn.remove());
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    startMaking();
+                    break;
+                case 'h':
+                case 'H':
+                    adjustHeat();
+                    break;
+                case 'o':
+                case 'O':
+                    addOil();
+                    break;
+                case 'r':
+                case 'R':
+                    resetMachine();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetMachine();
+        });
+    </script>
+</body>
+</html>

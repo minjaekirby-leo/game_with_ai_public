@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎭 서커스 무대 디자인</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2C3E50, #34495E, #5D6D7E);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(44, 62, 80, 0.8);
+        }
+
+        .stage-area {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #8B4513 70%, #654321 100%);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        .stage-element {
+            position: absolute;
+            cursor: move;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .stage-element:hover {
+            transform: scale(1.05);
+            border-color: #FFD700;
+        }
+
+        .stage-element.selected {
+            border-color: #FF6B6B;
+            box-shadow: 0 0 15px #FF6B6B;
+        }
+
+        .element-palette {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .palette-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .palette-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .palette-item.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .item-icon {
+            font-size: 1.5rem;
+            margin-right: 8px;
+        }
+
+        .design-tools {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .layer-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .layer-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .layer-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #2C3E50, #34495E);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎭 서커스 무대 디자인 🎭</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 요소 선택 후 무대에 배치<br>
+            • 드래그로 이동<br>
+            • 환상적인 무대를 만드세요!
+        </div>
+
+        <div class="score">요소: <span id="score">0</span>개</div>
+
+        <div class="stage-area" id="stageArea">
+            <div class="element-palette">
+                <h4>🎨 요소</h4>
+                <div class="palette-item selected" data-type="backdrop" onclick="selectElement('backdrop')">
+                    <span class="item-icon">🎭</span>
+                    <span>배경막</span>
+                </div>
+                <div class="palette-item" data-type="curtain" onclick="selectElement('curtain')">
+                    <span class="item-icon">🎪</span>
+                    <span>커튼</span>
+                </div>
+                <div class="palette-item" data-type="platform" onclick="selectElement('platform')">
+                    <span class="item-icon">🏗️</span>
+                    <span>플랫폼</span>
+                </div>
+                <div class="palette-item" data-type="prop" onclick="selectElement('prop')">
+                    <span class="item-icon">🎯</span>
+                    <span>소품</span>
+                </div>
+                <div class="palette-item" data-type="light" onclick="selectElement('light')">
+                    <span class="item-icon">💡</span>
+                    <span>조명</span>
+                </div>
+                <div class="palette-item" data-type="decoration" onclick="selectElement('decoration')">
+                    <span class="item-icon">✨</span>
+                    <span>장식</span>
+                </div>
+            </div>
+
+            <div class="design-tools">
+                <h4>🛠️ 도구</h4>
+                <button class="tool-btn" onclick="duplicateSelected()">📋 복사</button>
+                <button class="tool-btn" onclick="deleteSelected()">🗑️ 삭제</button>
+                <button class="tool-btn" onclick="rotateSelected()">🔄 회전</button>
+                <button class="tool-btn" onclick="resizeSelected()">📏 크기</button>
+            </div>
+
+            <div class="layer-controls">
+                <h4>📚 레이어</h4>
+                <button class="layer-btn" onclick="moveToFront()">앞으로</button>
+                <button class="layer-btn" onclick="moveToBack()">뒤로</button>
+                <button class="layer-btn" onclick="moveForward()">한 단계 앞</button>
+                <button class="layer-btn" onclick="moveBackward()">한 단계 뒤</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="saveDesign()">💾 디자인 저장</button>
+            <button class="control-btn" onclick="clearStage()">🗑️ 무대 지우기</button>
+            <button class="control-btn" onclick="randomDesign()">🎲 랜덤 디자인</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedElementType = 'backdrop';
+        let selectedElement = null;
+        let stageElements = [];
+        let elementCount = 0;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        const stageArea = document.getElementById('stageArea');
+        const scoreElement = document.getElementById('score');
+
+        const elementTypes = {
+            backdrop: { color: '#4169E1', width: 200, height: 150, emoji: '🎭' },
+            curtain: { color: '#8B0000', width: 100, height: 200, emoji: '🎪' },
+            platform: { color: '#8B4513', width: 150, height: 30, emoji: '🏗️' },
+            prop: { color: '#FFD700', width: 50, height: 50, emoji: '🎯' },
+            light: { color: '#FFFF00', width: 40, height: 40, emoji: '💡' },
+            decoration: { color: '#FF69B4', width: 60, height: 60, emoji: '✨' }
+        };
+
+        function selectElement(type) {
+            selectedElementType = type;
+            
+            document.querySelectorAll('.palette-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+        }
+
+        // 무대 클릭 이벤트
+        stageArea.addEventListener('click', (e) => {
+            // 팔레트나 도구 영역 클릭 시 무시
+            if (e.target.closest('.element-palette') || 
+                e.target.closest('.design-tools') || 
+                e.target.closest('.layer-controls')) {
+                return;
+            }
+
+            // 기존 요소 클릭 시 선택
+            if (e.target.classList.contains('stage-element')) {
+                selectStageElement(e.target);
+                return;
+            }
+
+            // 빈 공간 클릭 시 새 요소 생성
+            const rect = stageArea.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            createElement(selectedElementType, x, y);
+        });
+
+        function createElement(type, x, y) {
+            const elementData = elementTypes[type];
+            const element = document.createElement('div');
+            
+            element.className = 'stage-element';
+            element.style.background = elementData.color;
+            element.style.width = elementData.width + 'px';
+            element.style.height = elementData.height + 'px';
+            element.style.left = (x - elementData.width/2) + 'px';
+            element.style.top = (y - elementData.height/2) + 'px';
+            element.style.display = 'flex';
+            element.style.alignItems = 'center';
+            element.style.justifyContent = 'center';
+            element.style.fontSize = '2rem';
+            element.textContent = elementData.emoji;
+            element.dataset.type = type;
+            element.dataset.rotation = '0';
+            
+            // 드래그 이벤트 추가
+            element.addEventListener('mousedown', startDrag);
+            
+            stageArea.appendChild(element);
+            stageElements.push(element);
+            elementCount++;
+            updateScore();
+            
+            selectStageElement(element);
+        }
+
+        function selectStageElement(element) {
+            // 모든 요소 선택 해제
+            stageElements.forEach(el => el.classList.remove('selected'));
+            
+            // 선택된 요소 강조
+            element.classList.add('selected');
+            selectedElement = element;
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            selectedElement = e.target;
+            selectStageElement(selectedElement);
+            
+            const rect = selectedElement.getBoundingClientRect();
+            const stageRect = stageArea.getBoundingClientRect();
+            
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging || !selectedElement) return;
+            
+            const stageRect = stageArea.getBoundingClientRect();
+            const x = e.clientX - stageRect.left - dragOffset.x;
+            const y = e.clientY - stageRect.top - dragOffset.y;
+            
+            selectedElement.style.left = Math.max(0, Math.min(x, stageArea.clientWidth - selectedElement.offsetWidth)) + 'px';
+            selectedElement.style.top = Math.max(0, Math.min(y, stageArea.clientHeight - selectedElement.offsetHeight)) + 'px';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function duplicateSelected() {
+            if (!selectedElement) return;
+            
+            const rect = selectedElement.getBoundingClientRect();
+            const stageRect = stageArea.getBoundingClientRect();
+            const x = rect.left - stageRect.left + 50;
+            const y = rect.top - stageRect.top + 50;
+            
+            createElement(selectedElement.dataset.type, x, y);
+        }
+
+        function deleteSelected() {
+            if (!selectedElement) return;
+            
+            const index = stageElements.indexOf(selectedElement);
+            if (index > -1) {
+                stageElements.splice(index, 1);
+            }
+            
+            selectedElement.remove();
+            selectedElement = null;
+            elementCount--;
+            updateScore();
+        }
+
+        function rotateSelected() {
+            if (!selectedElement) return;
+            
+            const currentRotation = parseInt(selectedElement.dataset.rotation) || 0;
+            const newRotation = (currentRotation + 45) % 360;
+            
+            selectedElement.style.transform = `rotate(${newRotation}deg)`;
+            selectedElement.dataset.rotation = newRotation;
+        }
+
+        function resizeSelected() {
+            if (!selectedElement) return;
+            
+            const currentWidth = selectedElement.offsetWidth;
+            const currentHeight = selectedElement.offsetHeight;
+            const scale = currentWidth < 100 ? 1.2 : 0.8;
+            
+            selectedElement.style.width = (currentWidth * scale) + 'px';
+            selectedElement.style.height = (currentHeight * scale) + 'px';
+        }
+
+        function moveToFront() {
+            if (!selectedElement) return;
+            selectedElement.style.zIndex = '1000';
+        }
+
+        function moveToBack() {
+            if (!selectedElement) return;
+            selectedElement.style.zIndex = '1';
+        }
+
+        function moveForward() {
+            if (!selectedElement) return;
+            const currentZ = parseInt(selectedElement.style.zIndex) || 10;
+            selectedElement.style.zIndex = (currentZ + 1).toString();
+        }
+
+        function moveBackward() {
+            if (!selectedElement) return;
+            const currentZ = parseInt(selectedElement.style.zIndex) || 10;
+            selectedElement.style.zIndex = Math.max(1, currentZ - 1).toString();
+        }
+
+        function saveDesign() {
+            if (stageElements.length === 0) return;
+            
+            showResult('💾 무대 디자인 저장됨!');
+            
+            // 저장 후 새 디자인 시작
+            setTimeout(() => {
+                clearStage();
+            }, 2000);
+        }
+
+        function clearStage() {
+            stageElements.forEach(element => element.remove());
+            stageElements = [];
+            selectedElement = null;
+            elementCount = 0;
+            updateScore();
+        }
+
+        function randomDesign() {
+            clearStage();
+            
+            const types = Object.keys(elementTypes);
+            const numElements = 8 + Math.floor(Math.random() * 7); // 8-15개 요소
+            
+            for (let i = 0; i < numElements; i++) {
+                setTimeout(() => {
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    const x = 100 + Math.random() * 500;
+                    const y = 100 + Math.random() * 250;
+                    
+                    createElement(type, x, y);
+                }, i * 200);
+            }
+        }
+
+        function showResult(text) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = '#FFD700';
+            result.style.fontSize = '2rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '10000';
+            result.style.animation = 'stagePop 2s ease-out forwards';
+            
+            document.body.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function updateScore() {
+            scoreElement.textContent = elementCount;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'Delete':
+                case 'Backspace':
+                    deleteSelected();
+                    break;
+                case 'c':
+                case 'C':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        duplicateSelected();
+                    } else {
+                        clearStage();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (selectedElement) {
+                        rotateSelected();
+                    } else {
+                        randomDesign();
+                    }
+                    break;
+                case 's':
+                case 'S':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        saveDesign();
+                    } else {
+                        resizeSelected();
+                    }
+                    break;
+                case '1':
+                    selectElement('backdrop');
+                    break;
+                case '2':
+                    selectElement('curtain');
+                    break;
+                case '3':
+                    selectElement('platform');
+                    break;
+                case '4':
+                    selectElement('prop');
+                    break;
+                case '5':
+                    selectElement('light');
+                    break;
+                case '6':
+                    selectElement('decoration');
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+        });
+    </script>
+
+    <style>
+        @keyframes stagePop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

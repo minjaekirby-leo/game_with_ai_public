@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎈 서커스 풍선 아트</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #ff6b9d, #c44569, #f8b500);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 107, 157, 0.8);
+        }
+
+        .stage {
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(circle, #fff, #f0f0f0);
+            border: 3px solid #ff6b9d;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balloon {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .balloon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .balloon-segment {
+            position: absolute;
+            background: #ff6b9d;
+            border-radius: 10px;
+            transition: all 0.5s ease;
+        }
+
+        .work-area {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed #fff;
+            border-radius: 15px;
+        }
+
+        .balloon-colors {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-btn.selected {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .shape-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .shape-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .shape-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff6b9d, #c44569);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 107, 157, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .creation-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+        }
+
+        .creation-display.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎈 서커스 풍선 아트 🎈</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 색상 선택 후 클릭<br>
+            • 모양 버튼으로 작품 만들기<br>
+            • 창의적인 풍선 아트를 만드세요!
+        </div>
+
+        <div class="score">작품: <span id="score">0</span></div>
+
+        <div class="stage" id="stage">
+            <div class="balloon-colors">
+                <div class="color-btn selected" style="background: #ff6b9d;" onclick="selectColor('#ff6b9d')"></div>
+                <div class="color-btn" style="background: #4ecdc4;" onclick="selectColor('#4ecdc4')"></div>
+                <div class="color-btn" style="background: #45b7d1;" onclick="selectColor('#45b7d1')"></div>
+                <div class="color-btn" style="background: #f9ca24;" onclick="selectColor('#f9ca24')"></div>
+                <div class="color-btn" style="background: #6c5ce7;" onclick="selectColor('#6c5ce7')"></div>
+                <div class="color-btn" style="background: #a29bfe;" onclick="selectColor('#a29bfe')"></div>
+            </div>
+
+            <div class="shape-buttons">
+                <button class="shape-btn" onclick="createShape('dog')">🐕 강아지</button>
+                <button class="shape-btn" onclick="createShape('flower')">🌸 꽃</button>
+                <button class="shape-btn" onclick="createShape('sword')">⚔️ 칼</button>
+                <button class="shape-btn" onclick="createShape('heart')">💖 하트</button>
+                <button class="shape-btn" onclick="createShape('star')">⭐ 별</button>
+            </div>
+
+            <div class="work-area" id="workArea"></div>
+            <div class="creation-display" id="creationDisplay"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="clearWork()">🗑️ 지우기</button>
+            <button class="control-btn" onclick="saveCreation()">💾 작품 저장</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#ff6b9d';
+        let creationCount = 0;
+        let currentBalloons = [];
+
+        const stage = document.getElementById('stage');
+        const workArea = document.getElementById('workArea');
+        const scoreElement = document.getElementById('score');
+        const creationDisplay = document.getElementById('creationDisplay');
+
+        function selectColor(color) {
+            selectedColor = color;
+            
+            // 모든 색상 버튼에서 selected 클래스 제거
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 클릭된 색상 버튼에 selected 클래스 추가
+            event.target.classList.add('selected');
+        }
+
+        function createShape(shape) {
+            clearWork();
+            
+            const workRect = workArea.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            
+            const offsetX = workRect.left - stageRect.left;
+            const offsetY = workRect.top - stageRect.top;
+            
+            switch(shape) {
+                case 'dog':
+                    createDog(offsetX, offsetY);
+                    break;
+                case 'flower':
+                    createFlower(offsetX, offsetY);
+                    break;
+                case 'sword':
+                    createSword(offsetX, offsetY);
+                    break;
+                case 'heart':
+                    createHeart(offsetX, offsetY);
+                    break;
+                case 'star':
+                    createStar(offsetX, offsetY);
+                    break;
+            }
+            
+            showCreation(getShapeEmoji(shape));
+        }
+
+        function createDog(offsetX, offsetY) {
+            // 머리
+            createBalloonSegment(offsetX + 200, offsetY + 50, 60, 60, true);
+            // 몸
+            createBalloonSegment(offsetX + 180, offsetY + 100, 100, 40);
+            // 다리들
+            createBalloonSegment(offsetX + 160, offsetY + 130, 20, 50);
+            createBalloonSegment(offsetX + 200, offsetY + 130, 20, 50);
+            createBalloonSegment(offsetX + 240, offsetY + 130, 20, 50);
+            createBalloonSegment(offsetX + 280, offsetY + 130, 20, 50);
+            // 꼬리
+            createBalloonSegment(offsetX + 290, offsetY + 110, 40, 15);
+        }
+
+        function createFlower(offsetX, offsetY) {
+            const centerX = offsetX + 250;
+            const centerY = offsetY + 100;
+            
+            // 꽃잎들
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI * 2 * i) / 6;
+                const x = centerX + Math.cos(angle) * 40;
+                const y = centerY + Math.sin(angle) * 40;
+                createBalloonSegment(x - 15, y - 15, 30, 30, true);
+            }
+            
+            // 중심
+            createBalloonSegment(centerX - 15, centerY - 15, 30, 30, true);
+            // 줄기
+            createBalloonSegment(centerX - 5, centerY + 15, 10, 80);
+        }
+
+        function createSword(offsetX, offsetY) {
+            // 칼날
+            createBalloonSegment(offsetX + 240, offsetY + 30, 20, 120);
+            // 손잡이
+            createBalloonSegment(offsetX + 235, offsetY + 150, 30, 40);
+            // 가드
+            createBalloonSegment(offsetX + 220, offsetY + 145, 60, 10);
+        }
+
+        function createHeart(offsetX, offsetY) {
+            // 왼쪽 상단
+            createBalloonSegment(offsetX + 200, offsetY + 60, 40, 40, true);
+            // 오른쪽 상단
+            createBalloonSegment(offsetX + 260, offsetY + 60, 40, 40, true);
+            // 중간
+            createBalloonSegment(offsetX + 220, offsetY + 90, 40, 40, true);
+            // 하단
+            createBalloonSegment(offsetX + 240, offsetY + 120, 20, 30);
+        }
+
+        function createStar(offsetX, offsetY) {
+            const centerX = offsetX + 250;
+            const centerY = offsetY + 100;
+            
+            // 별의 5개 점
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * 50;
+                const y = centerY + Math.sin(angle) * 50;
+                createBalloonSegment(x - 10, y - 10, 20, 20, true);
+            }
+            
+            // 중심
+            createBalloonSegment(centerX - 15, centerY - 15, 30, 30, true);
+        }
+
+        function createBalloonSegment(x, y, width, height, isRound = false) {
+            const segment = document.createElement('div');
+            segment.className = 'balloon-segment';
+            segment.style.left = x + 'px';
+            segment.style.top = y + 'px';
+            segment.style.width = width + 'px';
+            segment.style.height = height + 'px';
+            segment.style.background = selectedColor;
+            
+            if (isRound) {
+                segment.style.borderRadius = '50%';
+            }
+            
+            stage.appendChild(segment);
+            currentBalloons.push(segment);
+            
+            // 애니메이션 효과
+            segment.style.transform = 'scale(0)';
+            setTimeout(() => {
+                segment.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        function getShapeEmoji(shape) {
+            const emojis = {
+                'dog': '🐕',
+                'flower': '🌸',
+                'sword': '⚔️',
+                'heart': '💖',
+                'star': '⭐'
+            };
+            return emojis[shape] || '🎈';
+        }
+
+        function showCreation(emoji) {
+            creationDisplay.textContent = emoji;
+            creationDisplay.classList.add('show');
+            
+            setTimeout(() => {
+                creationDisplay.classList.remove('show');
+            }, 2000);
+        }
+
+        function clearWork() {
+            currentBalloons.forEach(balloon => {
+                if (balloon.parentNode) {
+                    balloon.parentNode.removeChild(balloon);
+                }
+            });
+            currentBalloons = [];
+        }
+
+        function saveCreation() {
+            if (currentBalloons.length > 0) {
+                creationCount++;
+                updateScore();
+                
+                // 저장 효과
+                showCreation('💾 저장됨!');
+                
+                // 잠시 후 작업 영역 클리어
+                setTimeout(() => {
+                    clearWork();
+                }, 1500);
+            }
+        }
+
+        function updateScore() {
+            scoreElement.textContent = creationCount;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 클릭으로 풍선 세그먼트 추가
+        workArea.addEventListener('click', (e) => {
+            const rect = workArea.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            
+            const x = e.clientX - stageRect.left - 15;
+            const y = e.clientY - stageRect.top - 15;
+            
+            createBalloonSegment(x, y, 30, 30, true);
+        });
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'c':
+                case 'C':
+                    clearWork();
+                    break;
+                case 's':
+                case 'S':
+                    saveCreation();
+                    break;
+                case '1':
+                    createShape('dog');
+                    break;
+                case '2':
+                    createShape('flower');
+                    break;
+                case '3':
+                    createShape('sword');
+                    break;
+                case '4':
+                    createShape('heart');
+                    break;
+                case '5':
+                    createShape('star');
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+        });
+    </script>
+</body>
+</html>

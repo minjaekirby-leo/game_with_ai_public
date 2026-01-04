@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔊 서커스 음향 효과</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2C3E50, #34495E, #5D6D7E);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(44, 62, 80, 0.8);
+        }
+
+        .sound-board {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #2C3E50, #34495E);
+            border: 3px solid #F39C12;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .sound-button {
+            background: linear-gradient(45deg, #E74C3C, #C0392B);
+            border: 3px solid #F39C12;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sound-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.5);
+        }
+
+        .sound-button:active {
+            transform: scale(0.95);
+            background: linear-gradient(45deg, #C0392B, #A93226);
+        }
+
+        .sound-button.playing {
+            animation: pulse 0.5s ease-in-out;
+            background: linear-gradient(45deg, #27AE60, #229954);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .sound-label {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .performance-stage {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .volume-control {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .volume-slider {
+            width: 100%;
+            height: 5px;
+            background: #34495E;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .sequence-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 200px;
+        }
+
+        .sequence-item {
+            display: inline-block;
+            margin: 2px;
+            padding: 5px 10px;
+            background: #E74C3C;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #2C3E50, #34495E);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .wave-effect {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 2px solid #F39C12;
+            border-radius: 50%;
+            animation: wave 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes wave {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🔊 서커스 음향 효과 🔊</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 버튼 클릭으로 음향 재생<br>
+            • 공연에 맞는 타이밍<br>
+            • 완벽한 음향을 만드세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="performance-stage" id="performanceStage">
+            🎪 공연 준비 중...
+        </div>
+
+        <div class="sound-board" id="soundBoard">
+            <div class="sound-button" data-sound="drumroll" onclick="playSound('drumroll')">
+                🥁
+                <div class="sound-label">드럼롤</div>
+            </div>
+            <div class="sound-button" data-sound="fanfare" onclick="playSound('fanfare')">
+                🎺
+                <div class="sound-label">팡파르</div>
+            </div>
+            <div class="sound-button" data-sound="applause" onclick="playSound('applause')">
+                👏
+                <div class="sound-label">박수</div>
+            </div>
+            <div class="sound-button" data-sound="whistle" onclick="playSound('whistle')">
+                🎵
+                <div class="sound-label">휘슬</div>
+            </div>
+            <div class="sound-button" data-sound="cymbal" onclick="playSound('cymbal')">
+                🥽
+                <div class="sound-label">심벌</div>
+            </div>
+            <div class="sound-button" data-sound="horn" onclick="playSound('horn')">
+                📯
+                <div class="sound-label">경적</div>
+            </div>
+            <div class="sound-button" data-sound="bell" onclick="playSound('bell')">
+                🔔
+                <div class="sound-label">종</div>
+            </div>
+            <div class="sound-button" data-sound="cheer" onclick="playSound('cheer')">
+                🎉
+                <div class="sound-label">환호</div>
+            </div>
+            <div class="sound-button" data-sound="magic" onclick="playSound('magic')">
+                ✨
+                <div class="sound-label">마법</div>
+            </div>
+            <div class="sound-button" data-sound="laugh" onclick="playSound('laugh')">
+                😂
+                <div class="sound-label">웃음</div>
+            </div>
+            <div class="sound-button" data-sound="gasp" onclick="playSound('gasp')">
+                😱
+                <div class="sound-label">놀람</div>
+            </div>
+            <div class="sound-button" data-sound="tada" onclick="playSound('tada')">
+                🎊
+                <div class="sound-label">짜잔</div>
+            </div>
+        </div>
+
+        <div class="volume-control">
+            <h4>🔊 볼륨</h4>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
+        </div>
+
+        <div class="sequence-display">
+            <h4>🎵 시퀀스</h4>
+            <div id="sequenceList"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startPerformance()">🎪 공연 시작</button>
+            <button class="control-btn" onclick="playSequence()">▶️ 시퀀스 재생</button>
+            <button class="control-btn" onclick="clearSequence()">🗑️ 시퀀스 지우기</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let soundSequence = [];
+        let currentPerformance = null;
+        let volume = 0.5;
+
+        const scoreElement = document.getElementById('score');
+        const performanceStage = document.getElementById('performanceStage');
+        const sequenceList = document.getElementById('sequenceList');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const soundBoard = document.getElementById('soundBoard');
+
+        // 음향 효과 데이터 (실제 게임에서는 오디오 파일 사용)
+        const soundEffects = {
+            drumroll: { name: '드럼롤', emoji: '🥁', duration: 2000 },
+            fanfare: { name: '팡파르', emoji: '🎺', duration: 3000 },
+            applause: { name: '박수', emoji: '👏', duration: 2500 },
+            whistle: { name: '휘슬', emoji: '🎵', duration: 1000 },
+            cymbal: { name: '심벌', emoji: '🥽', duration: 1500 },
+            horn: { name: '경적', emoji: '📯', duration: 2000 },
+            bell: { name: '종', emoji: '🔔', duration: 1200 },
+            cheer: { name: '환호', emoji: '🎉', duration: 3000 },
+            magic: { name: '마법', emoji: '✨', duration: 1800 },
+            laugh: { name: '웃음', emoji: '😂', duration: 2200 },
+            gasp: { name: '놀람', emoji: '😱', duration: 800 },
+            tada: { name: '짜잔', emoji: '🎊', duration: 2500 }
+        };
+
+        const performances = [
+            { name: '공중그네', sequence: ['drumroll', 'gasp', 'applause'], emoji: '🤸‍♀️' },
+            { name: '마술쇼', sequence: ['magic', 'gasp', 'tada', 'applause'], emoji: '🎩' },
+            { name: '저글링', sequence: ['whistle', 'cheer', 'applause'], emoji: '🤹‍♂️' },
+            { name: '동물쇼', sequence: ['horn', 'laugh', 'applause'], emoji: '🦁' },
+            { name: '광대쇼', sequence: ['horn', 'laugh', 'cheer', 'applause'], emoji: '🤡' }
+        ];
+
+        function playSound(soundType) {
+            if (!gameActive) return;
+
+            const button = document.querySelector(`[data-sound="${soundType}"]`);
+            const sound = soundEffects[soundType];
+            
+            // 버튼 애니메이션
+            button.classList.add('playing');
+            setTimeout(() => {
+                button.classList.remove('playing');
+            }, 500);
+
+            // 파동 효과
+            createWaveEffect(button);
+
+            // 시퀀스에 추가
+            soundSequence.push(soundType);
+            updateSequenceDisplay();
+
+            // 공연 체크
+            if (currentPerformance) {
+                checkPerformanceMatch();
+            }
+
+            // 점수 추가
+            score += 10;
+            updateScore();
+
+            // 시각적 피드백
+            performanceStage.textContent = `🔊 ${sound.name} 재생 중...`;
+            setTimeout(() => {
+                if (!currentPerformance) {
+                    performanceStage.textContent = '🎪 공연 준비 중...';
+                }
+            }, sound.duration);
+        }
+
+        function createWaveEffect(button) {
+            const rect = button.getBoundingClientRect();
+            const boardRect = soundBoard.getBoundingClientRect();
+            
+            const wave = document.createElement('div');
+            wave.className = 'wave-effect';
+            wave.style.left = (rect.left - boardRect.left + rect.width/2 - 25) + 'px';
+            wave.style.top = (rect.top - boardRect.top + rect.height/2 - 25) + 'px';
+            
+            soundBoard.appendChild(wave);
+            
+            setTimeout(() => {
+                if (wave.parentNode) {
+                    wave.parentNode.removeChild(wave);
+                }
+            }, 1000);
+        }
+
+        function startPerformance() {
+            gameActive = true;
+            currentPerformance = performances[Math.floor(Math.random() * performances.length)];
+            soundSequence = [];
+            
+            performanceStage.innerHTML = `
+                ${currentPerformance.emoji} ${currentPerformance.name} 공연 중!<br>
+                <small>올바른 음향 효과를 순서대로 재생하세요</small>
+            `;
+            
+            updateSequenceDisplay();
+            updateScore();
+        }
+
+        function checkPerformanceMatch() {
+            if (!currentPerformance) return;
+
+            const requiredSequence = currentPerformance.sequence;
+            const currentSequence = soundSequence.slice(-requiredSequence.length);
+
+            // 완전히 일치하는지 확인
+            if (currentSequence.length === requiredSequence.length) {
+                const isMatch = currentSequence.every((sound, index) => 
+                    sound === requiredSequence[index]
+                );
+
+                if (isMatch) {
+                    // 성공!
+                    score += 100;
+                    updateScore();
+                    showResult('🎉 완벽한 음향 효과!', true);
+                    
+                    setTimeout(() => {
+                        startPerformance(); // 새로운 공연 시작
+                    }, 2000);
+                } else if (currentSequence.length === requiredSequence.length) {
+                    // 실패
+                    showResult('❌ 음향 효과가 맞지 않습니다', false);
+                    soundSequence = [];
+                    updateSequenceDisplay();
+                }
+            }
+        }
+
+        function playSequence() {
+            if (soundSequence.length === 0) return;
+
+            let index = 0;
+            const playNext = () => {
+                if (index < soundSequence.length) {
+                    const soundType = soundSequence[index];
+                    const button = document.querySelector(`[data-sound="${soundType}"]`);
+                    const sound = soundEffects[soundType];
+                    
+                    button.classList.add('playing');
+                    createWaveEffect(button);
+                    
+                    performanceStage.textContent = `🔊 ${sound.name} 재생 중...`;
+                    
+                    setTimeout(() => {
+                        button.classList.remove('playing');
+                        index++;
+                        playNext();
+                    }, sound.duration + 200);
+                } else {
+                    performanceStage.textContent = currentPerformance ? 
+                        `${currentPerformance.emoji} ${currentPerformance.name} 공연 중!` : 
+                        '🎪 공연 준비 중...';
+                }
+            };
+            
+            playNext();
+        }
+
+        function clearSequence() {
+            soundSequence = [];
+            updateSequenceDisplay();
+        }
+
+        function updateSequenceDisplay() {
+            sequenceList.innerHTML = '';
+            soundSequence.forEach(soundType => {
+                const sound = soundEffects[soundType];
+                const item = document.createElement('div');
+                item.className = 'sequence-item';
+                item.textContent = sound.emoji;
+                item.title = sound.name;
+                sequenceList.appendChild(item);
+            });
+        }
+
+        function showResult(text, success) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '50%';
+            result.style.transform = 'translate(-50%, -50%)';
+            result.style.color = success ? '#27AE60' : '#E74C3C';
+            result.style.fontSize = '2rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'soundPop 2s ease-out forwards';
+            result.style.textAlign = 'center';
+            result.style.background = 'rgba(0, 0, 0, 0.8)';
+            result.style.padding = '20px';
+            result.style.borderRadius = '15px';
+            
+            document.body.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 볼륨 조절
+        volumeSlider.addEventListener('input', (e) => {
+            volume = e.target.value / 100;
+        });
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            const keyMap = {
+                '1': 'drumroll', '2': 'fanfare', '3': 'applause', '4': 'whistle',
+                '5': 'cymbal', '6': 'horn', '7': 'bell', '8': 'cheer',
+                '9': 'magic', '0': 'laugh', '-': 'gasp', '=': 'tada'
+            };
+            
+            if (keyMap[e.key]) {
+                playSound(keyMap[e.key]);
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                playSequence();
+            } else if (e.key === 'c' || e.key === 'C') {
+                clearSequence();
+            } else if (e.key === 's' || e.key === 'S') {
+                startPerformance();
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+            updateSequenceDisplay();
+        });
+    </script>
+
+    <style>
+        @keyframes soundPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛍️ 서커스 기념품 가게</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FF6B35, #F7931E, #FFD23F);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 107, 53, 0.8);
+        }
+
+        .shop {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shop-counter {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to top, #654321, #8B4513);
+            border-top: 3px solid #FFD700;
+        }
+
+        .product-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #FFD700;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .product {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        .product:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .product.selected {
+            background: rgba(255, 215, 0, 0.5);
+            border-color: #FF6B35;
+        }
+
+        .product-price {
+            font-size: 0.7rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 5px;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+        }
+
+        .customer-area {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .customer {
+            width: 60px;
+            height: 80px;
+            background: #FF69B4;
+            border: 2px solid white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 10px;
+            position: relative;
+        }
+
+        .customer:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .customer.selected {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px #FFD700;
+        }
+
+        .customer-request {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 5px;
+            font-size: 0.6rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .customer:hover .customer-request {
+            opacity: 1;
+        }
+
+        .cash-register {
+            position: absolute;
+            bottom: 100px;
+            right: 50px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 120px;
+        }
+
+        .register-display {
+            background: #000;
+            color: #00ff00;
+            padding: 8px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            text-align: right;
+            margin-bottom: 10px;
+        }
+
+        .register-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .register-btn:hover {
+            background: #555;
+        }
+
+        .register-btn.total {
+            background: #00aa00;
+            width: 100%;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .timer {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🛍️ 서커스 기념품 가게 🛍️</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 고객 클릭으로 주문 확인<br>
+            • 상품 선택 후 계산<br>
+            • 빠른 서비스로 만족시키기!
+        </div>
+
+        <div class="score">수익: <span id="score">0</span>원</div>
+
+        <div class="timer" id="timer">⏰ 60초</div>
+
+        <div class="shop" id="shop">
+            <div class="shop-counter"></div>
+            
+            <div class="product-display" id="productDisplay">
+                <!-- 상품들이 동적으로 생성됩니다 -->
+            </div>
+
+            <div class="customer-area" id="customerArea">
+                <h4 style="text-align: center; margin-top: 0;">👥 고객</h4>
+                <!-- 고객들이 동적으로 생성됩니다 -->
+            </div>
+
+            <div class="cash-register">
+                <div class="register-display" id="registerDisplay">0</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;">
+                    <button class="register-btn" onclick="inputNumber(1)">1</button>
+                    <button class="register-btn" onclick="inputNumber(2)">2</button>
+                    <button class="register-btn" onclick="inputNumber(3)">3</button>
+                    <button class="register-btn" onclick="inputNumber(4)">4</button>
+                    <button class="register-btn" onclick="inputNumber(5)">5</button>
+                    <button class="register-btn" onclick="inputNumber(6)">6</button>
+                    <button class="register-btn" onclick="inputNumber(7)">7</button>
+                    <button class="register-btn" onclick="inputNumber(8)">8</button>
+                    <button class="register-btn" onclick="inputNumber(9)">9</button>
+                    <button class="register-btn" onclick="clearRegister()">C</button>
+                    <button class="register-btn" onclick="inputNumber(0)">0</button>
+                    <button class="register-btn total" onclick="processPayment()">결제</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startGame()">🛍️ 가게 열기</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let timeLeft = 60;
+        let gameTimer;
+        let customers = [];
+        let selectedCustomer = null;
+        let selectedProduct = null;
+        let registerValue = '0';
+
+        const shop = document.getElementById('shop');
+        const productDisplay = document.getElementById('productDisplay');
+        const customerArea = document.getElementById('customerArea');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const registerDisplay = document.getElementById('registerDisplay');
+
+        const products = [
+            { emoji: '🧸', name: '곰인형', price: 15000 },
+            { emoji: '🎪', name: '서커스 텐트', price: 25000 },
+            { emoji: '🎭', name: '가면', price: 8000 },
+            { emoji: '🎈', name: '풍선', price: 3000 },
+            { emoji: '🍿', name: '팝콘', price: 5000 },
+            { emoji: '🍭', name: '솜사탕', price: 4000 },
+            { emoji: '📸', name: '사진', price: 10000 },
+            { emoji: '👕', name: '티셔츠', price: 20000 },
+            { emoji: '🎯', name: '기념품', price: 12000 }
+        ];
+
+        const customerTypes = [
+            { emoji: '👨', name: '남성', color: '#4169E1' },
+            { emoji: '👩', name: '여성', color: '#FF69B4' },
+            { emoji: '👶', name: '어린이', color: '#32CD32' },
+            { emoji: '👴', name: '할아버지', color: '#8B4513' },
+            { emoji: '👵', name: '할머니', color: '#9370DB' },
+            { emoji: '👨‍👩‍👧‍👦', name: '가족', color: '#FF6347' }
+        ];
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            timeLeft = 60;
+            
+            updateScore();
+            updateTimer();
+            createProducts();
+            clearCustomers();
+            spawnCustomer();
+            
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+                
+                // 랜덤하게 새 고객 생성
+                if (Math.random() < 0.3 && customers.length < 3) {
+                    spawnCustomer();
+                }
+            }, 1000);
+        }
+
+        function createProducts() {
+            productDisplay.innerHTML = '';
+            
+            products.forEach(product => {
+                const productElement = document.createElement('div');
+                productElement.className = 'product';
+                productElement.innerHTML = `
+                    ${product.emoji}
+                    <div class="product-price">${(product.price / 1000)}k</div>
+                `;
+                productElement.dataset.name = product.name;
+                productElement.dataset.price = product.price;
+                productElement.addEventListener('click', () => selectProduct(productElement, product));
+                
+                productDisplay.appendChild(productElement);
+            });
+        }
+
+        function selectProduct(element, product) {
+            if (!gameActive) return;
+            
+            selectedProduct = product;
+            
+            // 모든 상품 선택 해제
+            document.querySelectorAll('.product').forEach(p => {
+                p.classList.remove('selected');
+            });
+            
+            // 선택된 상품 강조
+            element.classList.add('selected');
+            
+            // 계산기에 가격 표시
+            registerValue = product.price.toString();
+            updateRegisterDisplay();
+        }
+
+        function spawnCustomer() {
+            const customerData = customerTypes[Math.floor(Math.random() * customerTypes.length)];
+            const wantedProduct = products[Math.floor(Math.random() * products.length)];
+            
+            const customer = document.createElement('div');
+            customer.className = 'customer';
+            customer.style.background = customerData.color;
+            customer.innerHTML = `
+                ${customerData.emoji}
+                <div class="customer-request">${wantedProduct.emoji} ${wantedProduct.name}</div>
+            `;
+            
+            customer.dataset.wantedProduct = wantedProduct.name;
+            customer.dataset.wantedPrice = wantedProduct.price;
+            customer.dataset.customerType = customerData.name;
+            
+            customer.addEventListener('click', () => selectCustomer(customer));
+            
+            // 고객 위치 설정
+            const existingCustomers = customerArea.querySelectorAll('.customer');
+            const row = Math.floor(existingCustomers.length / 3);
+            const col = existingCustomers.length % 3;
+            
+            customer.style.position = 'absolute';
+            customer.style.left = (20 + col * 80) + 'px';
+            customer.style.top = (40 + row * 100) + 'px';
+            
+            customerArea.appendChild(customer);
+            customers.push(customer);
+        }
+
+        function selectCustomer(customer) {
+            if (!gameActive) return;
+            
+            selectedCustomer = customer;
+            
+            // 모든 고객 선택 해제
+            customers.forEach(c => c.classList.remove('selected'));
+            
+            // 선택된 고객 강조
+            customer.classList.add('selected');
+            
+            // 원하는 상품 강조
+            const wantedProductName = customer.dataset.wantedProduct;
+            document.querySelectorAll('.product').forEach(product => {
+                product.classList.remove('selected');
+                if (product.dataset.name === wantedProductName) {
+                    product.classList.add('selected');
+                    selectedProduct = {
+                        name: wantedProductName,
+                        price: parseInt(product.dataset.price)
+                    };
+                    registerValue = product.dataset.price;
+                    updateRegisterDisplay();
+                }
+            });
+        }
+
+        function inputNumber(num) {
+            if (registerValue === '0') {
+                registerValue = num.toString();
+            } else {
+                registerValue += num.toString();
+            }
+            updateRegisterDisplay();
+        }
+
+        function clearRegister() {
+            registerValue = '0';
+            updateRegisterDisplay();
+        }
+
+        function updateRegisterDisplay() {
+            registerDisplay.textContent = parseInt(registerValue).toLocaleString();
+        }
+
+        function processPayment() {
+            if (!gameActive || !selectedCustomer || !selectedProduct) return;
+            
+            const inputAmount = parseInt(registerValue);
+            const wantedPrice = parseInt(selectedCustomer.dataset.wantedPrice);
+            const wantedProduct = selectedCustomer.dataset.wantedProduct;
+            
+            if (selectedProduct.name === wantedProduct && inputAmount === wantedPrice) {
+                // 정확한 상품과 가격
+                score += wantedPrice;
+                updateScore();
+                showResult('✅ 완벽한 서비스!', true);
+                removeCustomer(selectedCustomer);
+                
+            } else if (selectedProduct.name === wantedProduct) {
+                // 상품은 맞지만 가격이 틀림
+                showResult('❌ 가격이 틀렸습니다!', false);
+                
+            } else {
+                // 잘못된 상품
+                showResult('❌ 다른 상품을 원합니다!', false);
+            }
+            
+            // 초기화
+            selectedCustomer = null;
+            selectedProduct = null;
+            clearRegister();
+            
+            // 선택 해제
+            document.querySelectorAll('.product, .customer').forEach(element => {
+                element.classList.remove('selected');
+            });
+        }
+
+        function removeCustomer(customer) {
+            const index = customers.indexOf(customer);
+            if (index !== -1) {
+                customers.splice(index, 1);
+                customer.remove();
+            }
+        }
+
+        function clearCustomers() {
+            customers.forEach(customer => customer.remove());
+            customers = [];
+            selectedCustomer = null;
+        }
+
+        function showResult(text, success) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = success ? '#00FF00' : '#FF0000';
+            result.style.fontSize = '1.5rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'shopPop 2s ease-out forwards';
+            
+            shop.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 2000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameTimer);
+            
+            let message = '';
+            if (score >= 100000) {
+                message = '🏆 최고의 상인!';
+            } else if (score >= 50000) {
+                message = '🎉 훌륭한 장사!';
+            } else if (score >= 20000) {
+                message = '👍 좋은 성과!';
+            } else {
+                message = '😊 더 연습해보세요!';
+            }
+            
+            showResult(`게임 종료! ${message}`, true);
+        }
+
+        function resetGame() {
+            gameActive = false;
+            if (gameTimer) clearInterval(gameTimer);
+            
+            score = 0;
+            timeLeft = 60;
+            selectedCustomer = null;
+            selectedProduct = null;
+            registerValue = '0';
+            
+            updateScore();
+            updateTimer();
+            updateRegisterDisplay();
+            clearCustomers();
+            
+            // 모든 선택 해제
+            document.querySelectorAll('.product, .customer').forEach(element => {
+                element.classList.remove('selected');
+            });
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score.toLocaleString();
+        }
+
+        function updateTimer() {
+            timerElement.textContent = `⏰ ${timeLeft}초`;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                inputNumber(parseInt(e.key));
+            } else if (e.key === 'Enter') {
+                processPayment();
+            } else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
+                clearRegister();
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes shopPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

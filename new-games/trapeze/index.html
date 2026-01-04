@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>서커스 공중그네</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: 'Comic Sans MS', cursive; background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%); color: white; text-align: center; min-height: 100vh; }
+        h1 { font-size: 3rem; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .game-container { background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin: 20px auto; max-width: 900px; backdrop-filter: blur(10px); }
+        canvas { border: 5px solid #fff; border-radius: 15px; background: linear-gradient(180deg, #74b9ff 0%, #00b894 100%); }
+        button { background: linear-gradient(45deg, #fd79a8, #fdcb6e); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 5px; transition: all 0.3s; }
+        button:hover { transform: scale(1.05); }
+        .info { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }
+        .info-box { background: rgba(255, 255, 255, 0.2); padding: 15px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🎪 서커스 공중그네</h1>
+    <div class="game-container">
+        <div class="info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">성공: <span id="success">0</span></div>
+            <div class="info-box">실패: <span id="fails">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>
+            <button onclick="startGame()">🎮 게임 시작</button>
+            <button onclick="jump()" id="jumpBtn">🤸 점프!</button>
+            <button onclick="resetGame()">🔄 다시 시작</button>
+        </div>
+        <p><strong>조작법:</strong> 타이밍에 맞춰 점프 버튼 클릭!</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false, score = 0, success = 0, fails = 0;
+        let performer = { x: 200, y: 300, swinging: true, angle: 0, speed: 0.05, onTrapeze: true };
+        let targetTrapeze = { x: 600, y: 300, angle: Math.PI, speed: -0.04 };
+        let particles = [];
+        
+        function jump() {
+            if (!gameRunning || !performer.onTrapeze) return;
+            performer.onTrapeze = false;
+            performer.vx = Math.cos(performer.angle) * 8;
+            performer.vy = Math.sin(performer.angle) * 8;
+            document.getElementById('jumpBtn').disabled = true;
+        }
+        
+        function updatePerformer() {
+            if (performer.onTrapeze) {
+                performer.angle += performer.speed;
+                performer.x = 200 + Math.sin(performer.angle) * 100;
+                performer.y = 200 + Math.cos(performer.angle) * 100;
+            } else {
+                performer.vy += 0.3;
+                performer.x += performer.vx;
+                performer.y += performer.vy;
+                
+                // 목표 그네와 충돌 체크
+                const targetX = 600 + Math.sin(targetTrapeze.angle) * 100;
+                const targetY = 200 + Math.cos(targetTrapeze.angle) * 100;
+                const distance = Math.sqrt(Math.pow(performer.x - targetX, 2) + Math.pow(performer.y - targetY, 2));
+                
+                if (distance < 50) {
+                    performer.onTrapeze = true;
+                    performer.x = 600;
+                    performer.angle = targetTrapeze.angle;
+                    performer.speed = targetTrapeze.speed;
+                    score += 100;
+                    success++;
+                    createSuccessParticles(targetX, targetY);
+                    document.getElementById('jumpBtn').disabled = false;
+                } else if (performer.y > canvas.height) {
+                    fails++;
+                    resetPerformer();
+                }
+            }
+        }
+        
+        function updateTargetTrapeze() {
+            targetTrapeze.angle += targetTrapeze.speed;
+        }
+        
+        function createSuccessParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: -Math.random() * 8,
+                    life: 60,
+                    color: '#FFD700'
+                });
+            }
+        }
+        
+        function updateParticles() {
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+        }
+        
+        function resetPerformer() {
+            performer = { x: 200, y: 300, swinging: true, angle: 0, speed: 0.05, onTrapeze: true };
+            document.getElementById('jumpBtn').disabled = false;
+        }
+        
+        function draw() {
+            ctx.fillStyle = '#74b9ff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 그네 줄
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(200, 100);
+            ctx.lineTo(performer.x, performer.y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(600, 100);
+            const targetX = 600 + Math.sin(targetTrapeze.angle) * 100;
+            const targetY = 200 + Math.cos(targetTrapeze.angle) * 100;
+            ctx.lineTo(targetX, targetY);
+            ctx.stroke();
+            
+            // 그네
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(performer.x - 20, performer.y + 10, 40, 5);
+            ctx.fillRect(targetX - 20, targetY + 10, 40, 5);
+            
+            // 공연자
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(performer.x, performer.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 파티클
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life / 60;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+        
+        function gameLoop() {
+            if (gameRunning) {
+                updatePerformer();
+                updateTargetTrapeze();
+                updateParticles();
+                updateDisplay();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('success').textContent = success;
+            document.getElementById('fails').textContent = fails;
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            document.getElementById('jumpBtn').disabled = false;
+        }
+        
+        function resetGame() {
+            gameRunning = false;
+            score = 0; success = 0; fails = 0;
+            resetPerformer();
+            particles = [];
+            updateDisplay();
+            document.getElementById('jumpBtn').disabled = true;
+        }
+        
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

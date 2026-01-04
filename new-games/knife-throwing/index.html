@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗡️ 서커스 칼 던지기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2c1810, #4a2c1a, #6b3e2a);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.8);
+        }
+
+        .stage {
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(circle, #8B4513, #654321);
+            border: 3px solid #D2691E;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .target-wheel {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #ff0000, #cc0000, #990000);
+            border: 5px solid #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        .target-center {
+            width: 30px;
+            height: 30px;
+            background: #ffff00;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .assistant {
+            width: 40px;
+            height: 60px;
+            background: #ff69b4;
+            position: absolute;
+            top: 50%;
+            right: 100px;
+            transform: translateY(-50%);
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .knife {
+            width: 30px;
+            height: 5px;
+            background: linear-gradient(90deg, #c0c0c0, #808080);
+            position: absolute;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+
+        .knife::before {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: -2px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid #c0c0c0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .throwing-line {
+            position: absolute;
+            left: 50px;
+            top: 50%;
+            width: 2px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%);
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #8B4513, #A0522D);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .power-meter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .power-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🗡️ 서커스 칼 던지기 🗡️</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 스페이스바: 파워 조절<br>
+            • 클릭: 칼 던지기<br>
+            • 어시스턴트를 다치게 하지 마세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="stage" id="stage">
+            <div class="throwing-line"></div>
+            <div class="target-wheel">
+                <div class="target-center"></div>
+            </div>
+            <div class="assistant" id="assistant"></div>
+        </div>
+
+        <div class="power-meter">
+            <div class="power-bar" id="powerBar"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startGame()">🗡️ 게임 시작</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let power = 0;
+        let powerDirection = 1;
+        let powerInterval;
+        let knives = [];
+
+        const stage = document.getElementById('stage');
+        const scoreElement = document.getElementById('score');
+        const powerBar = document.getElementById('powerBar');
+        const assistant = document.getElementById('assistant');
+
+        // 파워 미터 애니메이션
+        function startPowerMeter() {
+            powerInterval = setInterval(() => {
+                power += powerDirection * 2;
+                if (power >= 100) {
+                    power = 100;
+                    powerDirection = -1;
+                } else if (power <= 0) {
+                    power = 0;
+                    powerDirection = 1;
+                }
+                powerBar.style.width = power + '%';
+            }, 50);
+        }
+
+        function stopPowerMeter() {
+            if (powerInterval) {
+                clearInterval(powerInterval);
+                powerInterval = null;
+            }
+        }
+
+        // 칼 던지기
+        function throwKnife() {
+            if (!gameActive) return;
+
+            const knife = document.createElement('div');
+            knife.className = 'knife';
+            knife.style.left = '80px';
+            knife.style.top = '50%';
+            knife.style.transform = 'translateY(-50%)';
+            
+            stage.appendChild(knife);
+
+            // 칼 애니메이션
+            const targetX = 450 + (power - 50) * 2; // 파워에 따른 거리 조절
+            const targetY = 200 + Math.random() * 100 - 50; // 약간의 랜덤성
+
+            knife.style.transition = 'all 1s ease-out';
+            knife.style.left = targetX + 'px';
+            knife.style.top = targetY + 'px';
+            knife.style.transform = 'translateY(-50%) rotate(720deg)';
+
+            // 점수 계산
+            setTimeout(() => {
+                checkHit(knife, targetX, targetY);
+            }, 1000);
+
+            // 칼 제거
+            setTimeout(() => {
+                if (knife.parentNode) {
+                    knife.parentNode.removeChild(knife);
+                }
+            }, 3000);
+        }
+
+        function checkHit(knife, x, y) {
+            const wheelCenterX = 500;
+            const wheelCenterY = 200;
+            const distance = Math.sqrt((x - wheelCenterX) ** 2 + (y - wheelCenterY) ** 2);
+
+            if (distance < 100) { // 바퀴에 맞음
+                if (distance < 15) {
+                    score += 100; // 중앙
+                    showHitEffect(x, y, '🎯 완벽!');
+                } else if (distance < 50) {
+                    score += 50; // 내부
+                    showHitEffect(x, y, '👍 좋아!');
+                } else {
+                    score += 20; // 외부
+                    showHitEffect(x, y, '✨ 맞음!');
+                }
+                updateScore();
+            }
+
+            // 어시스턴트와의 거리 체크 (안전성)
+            const assistantX = 550;
+            const assistantY = 200;
+            const assistantDistance = Math.sqrt((x - assistantX) ** 2 + (y - assistantY) ** 2);
+            
+            if (assistantDistance < 30) {
+                showHitEffect(x, y, '⚠️ 위험!');
+                score = Math.max(0, score - 50);
+                updateScore();
+            }
+        }
+
+        function showHitEffect(x, y, text) {
+            const effect = document.createElement('div');
+            effect.textContent = text;
+            effect.style.position = 'absolute';
+            effect.style.left = x + 'px';
+            effect.style.top = y + 'px';
+            effect.style.color = '#ffff00';
+            effect.style.fontSize = '1.2rem';
+            effect.style.fontWeight = 'bold';
+            effect.style.pointerEvents = 'none';
+            effect.style.zIndex = '100';
+            effect.style.animation = 'fadeUp 2s ease-out forwards';
+            
+            stage.appendChild(effect);
+            
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    effect.parentNode.removeChild(effect);
+                }
+            }, 2000);
+        }
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            updateScore();
+            startPowerMeter();
+        }
+
+        function resetGame() {
+            gameActive = false;
+            score = 0;
+            power = 0;
+            updateScore();
+            stopPowerMeter();
+            powerBar.style.width = '0%';
+            
+            // 모든 칼 제거
+            const allKnives = stage.querySelectorAll('.knife');
+            allKnives.forEach(knife => knife.remove());
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 및 마우스 이벤트
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (gameActive) {
+                        throwKnife();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 's':
+                case 'S':
+                    startGame();
+                    break;
+            }
+        });
+
+        stage.addEventListener('click', () => {
+            if (gameActive) {
+                throwKnife();
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes fadeUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-50px); }
+        }
+    </style>
+</body>
+</html>

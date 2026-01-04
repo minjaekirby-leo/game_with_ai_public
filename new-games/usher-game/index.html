@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎫 서커스 관객 안내</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #8B0000, #DC143C, #FF6347);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(139, 0, 0, 0.8);
+        }
+
+        .theater {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #2F4F4F, #696969);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .seating-area {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            padding: 20px;
+        }
+
+        .seat {
+            background: #4169E1;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .seat.occupied {
+            background: #8B0000;
+            cursor: default;
+        }
+
+        .seat.selected {
+            background: #00FF00;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .customer {
+            width: 50px;
+            height: 70px;
+            position: absolute;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 2px solid white;
+        }
+
+        .customer:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .customer.selected {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px #FFD700;
+        }
+
+        .ticket-info {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .customer:hover .ticket-info {
+            opacity: 1;
+        }
+
+        .entrance {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 30px;
+            background: #228B22;
+            border: 2px solid #FFD700;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .game-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(139, 0, 0, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎫 서커스 관객 안내 🎫</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 고객 클릭으로 선택<br>
+            • 티켓에 맞는 좌석 클릭<br>
+            • 빠르고 정확하게 안내!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="theater" id="theater">
+            <div class="entrance">🚪 입구</div>
+            
+            <div class="game-info">
+                <h4>📋 정보</h4>
+                <div>대기 고객: <span id="waitingCount">0</span></div>
+                <div>완료: <span id="completedCount">0</span></div>
+                <div>실수: <span id="mistakeCount">0</span></div>
+            </div>
+
+            <div class="timer" id="timer">
+                ⏰ 60초
+            </div>
+
+            <div class="seating-area" id="seatingArea">
+                <!-- 좌석들이 동적으로 생성됩니다 -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="startGame()">🎪 게임 시작</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let timeLeft = 60;
+        let gameTimer;
+        let customers = [];
+        let selectedCustomer = null;
+        let seats = [];
+        let waitingCount = 0;
+        let completedCount = 0;
+        let mistakeCount = 0;
+
+        const theater = document.getElementById('theater');
+        const seatingArea = document.getElementById('seatingArea');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const waitingCountElement = document.getElementById('waitingCount');
+        const completedCountElement = document.getElementById('completedCount');
+        const mistakeCountElement = document.getElementById('mistakeCount');
+
+        const customerTypes = [
+            { emoji: '👨', name: '성인 남성', color: '#4169E1' },
+            { emoji: '👩', name: '성인 여성', color: '#FF69B4' },
+            { emoji: '👶', name: '어린이', color: '#32CD32' },
+            { emoji: '👴', name: '노인 남성', color: '#8B4513' },
+            { emoji: '👵', name: '노인 여성', color: '#9370DB' },
+            { emoji: '👨‍👩‍👧‍👦', name: '가족', color: '#FF6347' }
+        ];
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            timeLeft = 60;
+            waitingCount = 0;
+            completedCount = 0;
+            mistakeCount = 0;
+            
+            updateScore();
+            updateTimer();
+            updateGameInfo();
+            createSeats();
+            clearCustomers();
+            
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+                
+                // 랜덤하게 새 고객 생성
+                if (Math.random() < 0.4 && customers.length < 4) {
+                    spawnCustomer();
+                }
+            }, 1000);
+            
+            // 초기 고객 생성
+            spawnCustomer();
+        }
+
+        function createSeats() {
+            seatingArea.innerHTML = '';
+            seats = [];
+            
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < 10; col++) {
+                    const seat = document.createElement('div');
+                    seat.className = 'seat';
+                    seat.dataset.row = row + 1;
+                    seat.dataset.col = col + 1;
+                    seat.textContent = `${row + 1}-${col + 1}`;
+                    seat.addEventListener('click', () => assignSeat(seat));
+                    
+                    seatingArea.appendChild(seat);
+                    seats.push(seat);
+                }
+            }
+            
+            // 일부 좌석을 이미 점유된 상태로 설정
+            const occupiedSeats = Math.floor(Math.random() * 15) + 5;
+            for (let i = 0; i < occupiedSeats; i++) {
+                const randomSeat = seats[Math.floor(Math.random() * seats.length)];
+                if (!randomSeat.classList.contains('occupied')) {
+                    randomSeat.classList.add('occupied');
+                    randomSeat.textContent = '🚫';
+                }
+            }
+        }
+
+        function spawnCustomer() {
+            const customerData = customerTypes[Math.floor(Math.random() * customerTypes.length)];
+            const customer = document.createElement('div');
+            customer.className = 'customer';
+            customer.style.background = customerData.color;
+            customer.style.left = (50 + customers.length * 80) + 'px';
+            customer.style.top = '60px';
+            customer.innerHTML = `
+                ${customerData.emoji}
+                <div class="ticket-info" id="ticketInfo-${customers.length}"></div>
+            `;
+            
+            // 티켓 정보 생성
+            const ticketRow = Math.floor(Math.random() * 6) + 1;
+            const ticketCol = Math.floor(Math.random() * 10) + 1;
+            const ticketInfo = `${ticketRow}-${ticketCol}`;
+            
+            customer.dataset.ticketRow = ticketRow;
+            customer.dataset.ticketCol = ticketCol;
+            customer.dataset.customerType = customerData.name;
+            
+            document.getElementById(`ticketInfo-${customers.length}`).textContent = `좌석: ${ticketInfo}`;
+            
+            customer.addEventListener('click', () => selectCustomer(customer));
+            
+            theater.appendChild(customer);
+            customers.push(customer);
+            waitingCount++;
+            updateGameInfo();
+        }
+
+        function selectCustomer(customer) {
+            if (!gameActive) return;
+            
+            selectedCustomer = customer;
+            
+            // 모든 고객 선택 해제
+            customers.forEach(c => c.classList.remove('selected'));
+            
+            // 선택된 고객 강조
+            customer.classList.add('selected');
+            
+            // 해당 좌석 강조
+            const targetRow = customer.dataset.ticketRow;
+            const targetCol = customer.dataset.ticketCol;
+            
+            seats.forEach(seat => {
+                seat.classList.remove('selected');
+                if (seat.dataset.row === targetRow && seat.dataset.col === targetCol) {
+                    seat.classList.add('selected');
+                }
+            });
+        }
+
+        function assignSeat(seat) {
+            if (!gameActive || !selectedCustomer || seat.classList.contains('occupied')) return;
+            
+            const customerRow = selectedCustomer.dataset.ticketRow;
+            const customerCol = selectedCustomer.dataset.ticketCol;
+            const seatRow = seat.dataset.row;
+            const seatCol = seat.dataset.col;
+            
+            if (customerRow === seatRow && customerCol === seatCol) {
+                // 올바른 좌석
+                score += 50;
+                updateScore();
+                
+                seat.classList.add('occupied');
+                seat.classList.remove('selected');
+                seat.textContent = selectedCustomer.innerHTML.split('<')[0]; // 이모지만 가져오기
+                
+                showResult('✅ 정확한 안내!', true);
+                removeCustomer(selectedCustomer);
+                completedCount++;
+                
+            } else {
+                // 잘못된 좌석
+                mistakeCount++;
+                score = Math.max(0, score - 20);
+                updateScore();
+                showResult('❌ 잘못된 좌석!', false);
+            }
+            
+            updateGameInfo();
+            selectedCustomer = null;
+            
+            // 모든 좌석 선택 해제
+            seats.forEach(s => s.classList.remove('selected'));
+        }
+
+        function removeCustomer(customer) {
+            const index = customers.indexOf(customer);
+            if (index !== -1) {
+                customers.splice(index, 1);
+                customer.remove();
+                waitingCount--;
+                
+                // 남은 고객들 위치 재조정
+                customers.forEach((c, i) => {
+                    c.style.left = (50 + i * 80) + 'px';
+                });
+            }
+        }
+
+        function clearCustomers() {
+            customers.forEach(customer => customer.remove());
+            customers = [];
+            selectedCustomer = null;
+        }
+
+        function showResult(text, success) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = success ? '#00FF00' : '#FF0000';
+            result.style.fontSize = '1.5rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'usherPop 1.5s ease-out forwards';
+            
+            theater.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 1500);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameTimer);
+            
+            let message = '';
+            if (completedCount >= 15) {
+                message = '🏆 완벽한 안내원!';
+            } else if (completedCount >= 10) {
+                message = '🎉 훌륭한 서비스!';
+            } else if (completedCount >= 5) {
+                message = '👍 좋은 성과!';
+            } else {
+                message = '😊 더 연습해보세요!';
+            }
+            
+            showResult(`게임 종료! ${message}`, true);
+        }
+
+        function resetGame() {
+            gameActive = false;
+            if (gameTimer) clearInterval(gameTimer);
+            
+            score = 0;
+            timeLeft = 60;
+            waitingCount = 0;
+            completedCount = 0;
+            mistakeCount = 0;
+            selectedCustomer = null;
+            
+            updateScore();
+            updateTimer();
+            updateGameInfo();
+            clearCustomers();
+            
+            // 모든 좌석 초기화
+            seats.forEach(seat => {
+                seat.classList.remove('occupied', 'selected');
+                seat.textContent = `${seat.dataset.row}-${seat.dataset.col}`;
+            });
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function updateTimer() {
+            timerElement.textContent = `⏰ ${timeLeft}초`;
+        }
+
+        function updateGameInfo() {
+            waitingCountElement.textContent = waitingCount;
+            completedCountElement.textContent = completedCount;
+            mistakeCountElement.textContent = mistakeCount;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            if (e.key >= '1' && e.key <= '4' && customers[parseInt(e.key) - 1]) {
+                selectCustomer(customers[parseInt(e.key) - 1]);
+            } else if (e.key === 'Escape') {
+                selectedCustomer = null;
+                customers.forEach(c => c.classList.remove('selected'));
+                seats.forEach(s => s.classList.remove('selected'));
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+    </script>
+
+    <style>
+        @keyframes usherPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

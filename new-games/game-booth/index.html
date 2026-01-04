@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 서커스 게임 부스</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FF6347, #FF4500, #DC143C);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 99, 71, 0.8);
+        }
+
+        .booth {
+            width: 700px;
+            height: 450px;
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-area {
+            width: 400px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #FFD700;
+            border-radius: 15px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .ring-toss {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .peg {
+            width: 20px;
+            height: 60px;
+            background: #8B4513;
+            border-radius: 10px;
+            position: absolute;
+            bottom: 20px;
+        }
+
+        .ring {
+            width: 40px;
+            height: 40px;
+            border: 5px solid #FF69B4;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ring:hover {
+            transform: scale(1.1);
+        }
+
+        .prize-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 150px;
+        }
+
+        .prize-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .prize-emoji {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .game-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .game-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+
+        .game-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .game-btn.active {
+            background: rgba(255, 215, 0, 0.5);
+            border-color: #FFD700;
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #FF6347, #FF4500);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 99, 71, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .duck {
+            width: 30px;
+            height: 30px;
+            background: #FFD700;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .balloon-target {
+            width: 40px;
+            height: 60px;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .balloon-target:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎯 서커스 게임 부스 🎯</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 게임 선택<br>
+            • 클릭하여 플레이<br>
+            • 상품을 획득하세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="booth" id="booth">
+            <div class="prize-display">
+                <h4>🏆 상품</h4>
+                <div class="prize-item">
+                    <span class="prize-emoji">🧸</span>
+                    <span>곰인형 (100점)</span>
+                </div>
+                <div class="prize-item">
+                    <span class="prize-emoji">🎈</span>
+                    <span>풍선 (50점)</span>
+                </div>
+                <div class="prize-item">
+                    <span class="prize-emoji">🍭</span>
+                    <span>사탕 (20점)</span>
+                </div>
+            </div>
+
+            <div class="game-selector">
+                <h4>🎮 게임</h4>
+                <button class="game-btn active" onclick="selectGame('ring-toss')">🎯 링 던지기</button>
+                <button class="game-btn" onclick="selectGame('duck-pond')">🦆 오리 뽑기</button>
+                <button class="game-btn" onclick="selectGame('balloon-pop')">🎈 풍선 터뜨리기</button>
+            </div>
+
+            <div class="game-area" id="gameArea">
+                <!-- 게임별 콘텐츠가 여기에 동적으로 생성됩니다 -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="claimPrize()">🏆 상품 받기</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentGame = 'ring-toss';
+        let gameActive = false;
+
+        const scoreElement = document.getElementById('score');
+        const gameArea = document.getElementById('gameArea');
+
+        function selectGame(game) {
+            currentGame = game;
+            
+            // 모든 게임 버튼 비활성화
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 선택된 게임 버튼 활성화
+            event.target.classList.add('active');
+            
+            setupGame();
+        }
+
+        function setupGame() {
+            gameArea.innerHTML = '';
+            gameActive = true;
+            
+            switch(currentGame) {
+                case 'ring-toss':
+                    setupRingToss();
+                    break;
+                case 'duck-pond':
+                    setupDuckPond();
+                    break;
+                case 'balloon-pop':
+                    setupBalloonPop();
+                    break;
+            }
+        }
+
+        function setupRingToss() {
+            // 말뚝 생성
+            for (let i = 0; i < 5; i++) {
+                const peg = document.createElement('div');
+                peg.className = 'peg';
+                peg.style.left = (50 + i * 60) + 'px';
+                peg.dataset.points = (i + 1) * 10;
+                gameArea.appendChild(peg);
+            }
+            
+            // 링 생성
+            for (let i = 0; i < 3; i++) {
+                const ring = document.createElement('div');
+                ring.className = 'ring';
+                ring.style.left = (50 + i * 100) + 'px';
+                ring.style.top = '20px';
+                ring.addEventListener('click', () => throwRing(ring));
+                gameArea.appendChild(ring);
+            }
+        }
+
+        function throwRing(ring) {
+            if (!gameActive) return;
+            
+            // 랜덤 말뚝 선택
+            const pegs = gameArea.querySelectorAll('.peg');
+            const targetPeg = pegs[Math.floor(Math.random() * pegs.length)];
+            const pegRect = targetPeg.getBoundingClientRect();
+            const gameRect = gameArea.getBoundingClientRect();
+            
+            const targetX = pegRect.left - gameRect.left + 10;
+            const targetY = pegRect.top - gameRect.top + 10;
+            
+            // 링 애니메이션
+            ring.style.transition = 'all 1s ease-out';
+            ring.style.left = targetX + 'px';
+            ring.style.top = targetY + 'px';
+            ring.style.transform = 'rotate(720deg)';
+            
+            setTimeout(() => {
+                const points = parseInt(targetPeg.dataset.points);
+                score += points;
+                updateScore();
+                showResult(`🎯 ${points}점 획득!`);
+                
+                ring.remove();
+                
+                // 모든 링을 사용했으면 게임 종료
+                if (gameArea.querySelectorAll('.ring').length === 0) {
+                    setTimeout(() => setupRingToss(), 2000);
+                }
+            }, 1000);
+        }
+
+        function setupDuckPond() {
+            // 오리들 생성
+            for (let i = 0; i < 8; i++) {
+                const duck = document.createElement('div');
+                duck.className = 'duck';
+                duck.style.left = (50 + (i % 4) * 80) + 'px';
+                duck.style.top = (50 + Math.floor(i / 4) * 100) + 'px';
+                duck.style.animationDelay = (i * 0.3) + 's';
+                duck.dataset.points = Math.random() > 0.7 ? '50' : '10';
+                duck.addEventListener('click', () => pickDuck(duck));
+                gameArea.appendChild(duck);
+            }
+        }
+
+        function pickDuck(duck) {
+            if (!gameActive) return;
+            
+            const points = parseInt(duck.dataset.points);
+            score += points;
+            updateScore();
+            
+            duck.style.transform = 'scale(1.5) rotate(360deg)';
+            duck.style.opacity = '0';
+            
+            showResult(`🦆 ${points}점 오리!`);
+            
+            setTimeout(() => {
+                duck.remove();
+                
+                // 모든 오리를 뽑았으면 게임 재시작
+                if (gameArea.querySelectorAll('.duck').length === 0) {
+                    setTimeout(() => setupDuckPond(), 2000);
+                }
+            }, 500);
+        }
+
+        function setupBalloonPop() {
+            // 풍선들 생성
+            const colors = ['#FF69B4', '#4ECDC4', '#F9CA24', '#6C5CE7', '#FD79A8'];
+            
+            for (let i = 0; i < 10; i++) {
+                const balloon = document.createElement('div');
+                balloon.className = 'balloon-target';
+                balloon.style.background = colors[Math.floor(Math.random() * colors.length)];
+                balloon.style.left = (30 + (i % 5) * 70) + 'px';
+                balloon.style.top = (30 + Math.floor(i / 5) * 120) + 'px';
+                balloon.dataset.points = Math.random() > 0.5 ? '30' : '15';
+                balloon.addEventListener('click', () => popBalloon(balloon));
+                gameArea.appendChild(balloon);
+            }
+        }
+
+        function popBalloon(balloon) {
+            if (!gameActive) return;
+            
+            const points = parseInt(balloon.dataset.points);
+            score += points;
+            updateScore();
+            
+            // 터지는 효과
+            balloon.style.transform = 'scale(2)';
+            balloon.style.opacity = '0';
+            balloon.style.background = '#FFD700';
+            
+            showResult(`🎈 ${points}점!`);
+            
+            setTimeout(() => {
+                balloon.remove();
+                
+                // 모든 풍선을 터뜨렸으면 게임 재시작
+                if (gameArea.querySelectorAll('.balloon-target').length === 0) {
+                    setTimeout(() => setupBalloonPop(), 2000);
+                }
+            }, 300);
+        }
+
+        function showResult(text) {
+            const result = document.createElement('div');
+            result.textContent = text;
+            result.style.position = 'absolute';
+            result.style.left = '50%';
+            result.style.top = '30%';
+            result.style.transform = 'translateX(-50%)';
+            result.style.color = '#FFD700';
+            result.style.fontSize = '1.5rem';
+            result.style.fontWeight = 'bold';
+            result.style.pointerEvents = 'none';
+            result.style.zIndex = '100';
+            result.style.animation = 'boothPop 1.5s ease-out forwards';
+            
+            gameArea.appendChild(result);
+            
+            setTimeout(() => {
+                if (result.parentNode) {
+                    result.parentNode.removeChild(result);
+                }
+            }, 1500);
+        }
+
+        function claimPrize() {
+            let prize = '';
+            let cost = 0;
+            
+            if (score >= 100) {
+                prize = '🧸 곰인형';
+                cost = 100;
+            } else if (score >= 50) {
+                prize = '🎈 풍선';
+                cost = 50;
+            } else if (score >= 20) {
+                prize = '🍭 사탕';
+                cost = 20;
+            } else {
+                showResult('점수가 부족합니다!');
+                return;
+            }
+            
+            score -= cost;
+            updateScore();
+            showResult(`🏆 ${prize} 획득!`);
+        }
+
+        function resetGame() {
+            score = 0;
+            gameActive = false;
+            updateScore();
+            setupGame();
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    selectGame('ring-toss');
+                    break;
+                case '2':
+                    selectGame('duck-pond');
+                    break;
+                case '3':
+                    selectGame('balloon-pop');
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+                case 'p':
+                case 'P':
+                    claimPrize();
+                    break;
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            updateScore();
+            setupGame();
+        });
+    </script>
+
+    <style>
+        @keyframes boothPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>

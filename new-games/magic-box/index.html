@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎩 서커스 마술상자</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a0033, #330066, #4d0099);
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(153, 0, 153, 0.8);
+        }
+
+        .stage {
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(circle, #2a2a2a, #1a1a1a);
+            border: 3px solid #9900ff;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .magic-box {
+            width: 150px;
+            height: 200px;
+            background: linear-gradient(45deg, #8B4513, #A0522D);
+            border: 3px solid #FFD700;
+            position: absolute;
+            left: 50%;
+            bottom: 50px;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            transition: all 0.5s ease;
+        }
+
+        .box-door {
+            width: 140px;
+            height: 190px;
+            background: linear-gradient(45deg, #654321, #8B4513);
+            border: 2px solid #FFD700;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            border-radius: 8px;
+            transform-origin: left center;
+            transition: transform 0.8s ease;
+            cursor: pointer;
+        }
+
+        .box-door.open {
+            transform: rotateY(-120deg);
+        }
+
+        .assistant {
+            width: 50px;
+            height: 80px;
+            background: #ff69b4;
+            position: absolute;
+            left: 50%;
+            bottom: 60px;
+            transform: translateX(-50%);
+            border-radius: 10px;
+            transition: all 1s ease;
+            z-index: 5;
+        }
+
+        .assistant.hidden {
+            opacity: 0;
+            transform: translateX(-50%) scale(0.1);
+        }
+
+        .magician {
+            width: 60px;
+            height: 100px;
+            background: #000080;
+            position: absolute;
+            left: 100px;
+            bottom: 50px;
+            border-radius: 10px;
+        }
+
+        .magic-wand {
+            width: 40px;
+            height: 3px;
+            background: #FFD700;
+            position: absolute;
+            top: 30px;
+            right: -45px;
+            border-radius: 2px;
+            transform-origin: left center;
+            animation: wave 2s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+        }
+
+        .sparkles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: sparkle 1s ease-out forwards;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 1; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0) rotate(360deg); }
+        }
+
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #9900ff, #cc00ff);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(153, 0, 255, 0.5);
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            max-width: 200px;
+        }
+
+        .magic-words {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #FFD700;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+        }
+
+        .magic-words.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">🎩 서커스 마술상자 🎩</h1>
+        
+        <div class="instructions">
+            🎯 조작법:<br>
+            • 상자 클릭: 문 열기/닫기<br>
+            • 마술 버튼: 마술 시전<br>
+            • 관객들을 놀라게 하세요!
+        </div>
+
+        <div class="score">점수: <span id="score">0</span></div>
+
+        <div class="stage" id="stage">
+            <div class="magician">
+                <div class="magic-wand"></div>
+            </div>
+            
+            <div class="magic-box" id="magicBox">
+                <div class="box-door" id="boxDoor" onclick="toggleDoor()"></div>
+                <div class="assistant" id="assistant"></div>
+            </div>
+            
+            <div class="sparkles" id="sparkles"></div>
+            <div class="magic-words" id="magicWords">아브라카다브라!</div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="performMagic()">✨ 마술 시전</button>
+            <button class="control-btn" onclick="resetGame()">🔄 다시 시작</button>
+            <button class="control-btn" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = true;
+        let doorOpen = false;
+        let assistantVisible = true;
+        let magicInProgress = false;
+
+        const boxDoor = document.getElementById('boxDoor');
+        const assistant = document.getElementById('assistant');
+        const scoreElement = document.getElementById('score');
+        const sparkles = document.getElementById('sparkles');
+        const magicWords = document.getElementById('magicWords');
+        const stage = document.getElementById('stage');
+
+        function toggleDoor() {
+            if (magicInProgress) return;
+            
+            doorOpen = !doorOpen;
+            boxDoor.classList.toggle('open', doorOpen);
+            
+            // 문을 열 때 점수
+            if (doorOpen) {
+                score += 5;
+                updateScore();
+                createSparkles(300, 200, 5);
+            }
+        }
+
+        function performMagic() {
+            if (magicInProgress) return;
+            
+            magicInProgress = true;
+            
+            // 마술 단어 표시
+            magicWords.classList.add('show');
+            
+            setTimeout(() => {
+                magicWords.classList.remove('show');
+            }, 1500);
+
+            // 문이 열려있으면 닫고, 어시스턴트 상태 변경
+            if (doorOpen) {
+                boxDoor.classList.remove('open');
+                doorOpen = false;
+                
+                setTimeout(() => {
+                    // 어시스턴트 사라지기/나타나기
+                    assistantVisible = !assistantVisible;
+                    assistant.classList.toggle('hidden', !assistantVisible);
+                    
+                    // 점수 추가
+                    score += assistantVisible ? 50 : 100;
+                    updateScore();
+                    
+                    // 스파클 효과
+                    createSparkles(300, 200, 15);
+                    
+                    // 성공 메시지
+                    showMagicEffect(assistantVisible ? '✨ 등장!' : '🎩 사라짐!');
+                    
+                    magicInProgress = false;
+                }, 800);
+            } else {
+                // 문이 닫혀있으면 그냥 스파클 효과만
+                createSparkles(300, 200, 10);
+                score += 10;
+                updateScore();
+                
+                setTimeout(() => {
+                    magicInProgress = false;
+                }, 1500);
+            }
+        }
+
+        function createSparkles(centerX, centerY, count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    
+                    const angle = (Math.PI * 2 * i) / count;
+                    const radius = 50 + Math.random() * 50;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    sparkle.style.left = x + 'px';
+                    sparkle.style.top = y + 'px';
+                    sparkle.style.background = `hsl(${Math.random() * 360}, 100%, 70%)`;
+                    
+                    sparkles.appendChild(sparkle);
+                    
+                    setTimeout(() => {
+                        if (sparkle.parentNode) {
+                            sparkle.parentNode.removeChild(sparkle);
+                        }
+                    }, 1000);
+                }, i * 50);
+            }
+        }
+
+        function showMagicEffect(text) {
+            const effect = document.createElement('div');
+            effect.textContent = text;
+            effect.style.position = 'absolute';
+            effect.style.left = '50%';
+            effect.style.top = '30%';
+            effect.style.transform = 'translateX(-50%)';
+            effect.style.color = '#FFD700';
+            effect.style.fontSize = '2rem';
+            effect.style.fontWeight = 'bold';
+            effect.style.pointerEvents = 'none';
+            effect.style.zIndex = '100';
+            effect.style.animation = 'magicPop 2s ease-out forwards';
+            
+            stage.appendChild(effect);
+            
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    effect.parentNode.removeChild(effect);
+                }
+            }, 2000);
+        }
+
+        function resetGame() {
+            score = 0;
+            doorOpen = false;
+            assistantVisible = true;
+            magicInProgress = false;
+            
+            updateScore();
+            boxDoor.classList.remove('open');
+            assistant.classList.remove('hidden');
+            magicWords.classList.remove('show');
+            
+            // 모든 스파클 제거
+            const allSparkles = sparkles.querySelectorAll('.sparkle');
+            allSparkles.forEach(sparkle => sparkle.remove());
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        function goHome() {
+            window.location.href = '../../index.html';
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    performMagic();
+                    break;
+                case 'o':
+                case 'O':
+                    toggleDoor();
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+            }
+        });
+
+        // 자동 마술 데모
+        function autoDemo() {
+            if (!gameActive) return;
+            
+            setTimeout(() => {
+                if (Math.random() > 0.7) {
+                    createSparkles(
+                        Math.random() * 600,
+                        Math.random() * 400,
+                        3
+                    );
+                }
+                autoDemo();
+            }, 2000 + Math.random() * 3000);
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            resetGame();
+            autoDemo();
+        });
+    </script>
+
+    <style>
+        @keyframes magicPop {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1); }
+        }
+    </style>
+</body>
+</html>
