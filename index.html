@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 10살 어린이를 위한 게임 모음</title>
+    <title>🎮 서민재의 게임랜드</title>
     <style>
         * {
             margin: 0;
@@ -39,6 +39,44 @@
             animation: bounceIn 1s ease-out;
         }
 
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .character-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .header-text {
+            text-align: left;
+            max-width: 600px;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .header-text {
+                text-align: center;
+            }
+        }
+
         @keyframes bounceIn {
             0% { transform: scale(0.3); opacity: 0; }
             50% { transform: scale(1.05); }
@@ -68,6 +106,22 @@
             max-width: 600px;
             margin: 0 auto;
             line-height: 1.6;
+        }
+
+        .notice {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid rgba(255, 193, 7, 0.5);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #fff3cd;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
 
         .games-grid {
@@ -275,12 +329,16 @@
     
     <div class="container">
         <div class="header">
-            <h1>🎮 게임 모음</h1>
-            <div class="subtitle">10살 어린이를 위한 코딩 학습 게임 - 총 100개!</div>div>
-            <div class="description">
-                AI와 함께 만든 재미있는 게임들로 코딩을 배워보세요!<br>
-                각 게임은 다른 기술로 만들어져서 다양한 프로그래밍 방식을 경험할 수 있어요.<br>
-                <strong>총 100개의 게임이 준비되어 있습니다! 🎮</strong>
+            <div class="header-content">
+                <img src="seominjae-character.png" alt="서민재 캐릭터" class="character-image">
+                <div class="header-text">
+                    <h1>🎮 서민재의 게임랜드</h1>
+                    <div class="description">
+                        AI와 함께 서민재가 만들어가는 재밌는 게임들을 함께 즐겨봐요~<br>
+                        <strong>총 100개의 게임이 준비되어 있습니다! 🎮</strong><br>
+                        <div class="notice">💻 PC와 마우스로 즐겨야 대부분의 게임을 원활하게 즐길 수 있어요!</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1354,12 +1412,7 @@
         </div>
 
         <div class="footer">
-            <h3>🌟 학습 팁</h3>
-            <p>
-                각 게임의 코드를 열어보고 AI에게 질문해보세요!<br>
-                "이 부분은 어떻게 작동하나요?" 또는 "색깔을 바꾸려면 어떻게 해야 하나요?" 같은 질문을 해보세요.<br>
-                코딩은 실험하고 시도해보는 것이 가장 중요해요! 🚀
-            </p>
+            
         </div>
     </div>
 
