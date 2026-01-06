@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕹️ 레트로 아케이드</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(45deg, #0a0a0a, #1a1a2e, #16213e);
+            font-family: 'Orbitron', monospace;
+            color: #00ff00;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .arcade-machine {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            border: 5px solid #444;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-area {
+            flex: 1;
+            background: #000;
+            border: 10px solid #333;
+            border-radius: 20px;
+            margin: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-canvas {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            position: relative;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 0, 0.03) 2px,
+                rgba(0, 255, 0, 0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .title-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 100;
+        }
+
+        .game-title {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            margin-bottom: 30px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff; }
+            to { text-shadow: 0 0 30px #ff00ff, 0 0 60px #ff00ff, 0 0 80px #ff00ff; }
+        }
+
+        .game-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .menu-item {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            min-width: 200px;
+        }
+
+        .menu-item:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        .controls-panel {
+            height: 150px;
+            background: linear-gradient(135deg, #333, #222);
+            border-top: 3px solid #555;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #666;
+            background: linear-gradient(135deg, #444, #222);
+            color: #00ff00;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .control-button:hover {
+            background: linear-gradient(135deg, #555, #333);
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        .control-button:active {
+            transform: scale(0.95);
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        .joystick {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #666, #333);
+            border: 4px solid #888;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .joystick::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 200;
+        }
+
+        .lives-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            z-index: 200;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 300;
+            display: none;
+        }
+
+        .game-over-text {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 20px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .insert-coin {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 게임 요소들 */
+        .player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #00ff00;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .enemy {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #ff0000;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .bullet {
+            position: absolute;
+            width: 4px;
+            height: 10px;
+            background: #ffff00;
+            border-radius: 2px;
+            box-shadow: 0 0 5px #ffff00;
+        }
+
+        .power-up {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ff00ff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #ff00ff;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .explosion {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #ffff00, #ff6600, #ff0000);
+            border-radius: 50%;
+            animation: explode 0.5s ease-out forwards;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="arcade-machine">
+        <div class="screen-area">
+            <div class="game-canvas" id="gameCanvas">
+                <div class="scanlines"></div>
+                
+                <div class="score-display">SCORE: <span id="score">000000</span></div>
+                <div class="lives-display">LIVES: <span id="lives">3</span></div>
+                
+                <div class="title-screen" id="titleScreen">
+                    <div class="game-title">RETRO INVADERS</div>
+                    <div class="game-menu">
+                        <button class="menu-item" onclick="startGame()">START GAME</button>
+                        <button class="menu-item" onclick="showInstructions()">INSTRUCTIONS</button>
+                        <button class="menu-item" onclick="showHighScores()">HIGH SCORES</button>
+                    </div>
+                </div>
+                
+                <div class="game-over" id="gameOver">
+                    <div class="game-over-text">GAME OVER</div>
+                    <button class="menu-item" onclick="resetGame()">PLAY AGAIN</button>
+                    <button class="menu-item" onclick="showTitleScreen()">MAIN MENU</button>
+                </div>
+                
+                <div class="insert-coin">INSERT COIN - PRESS SPACE TO START</div>
+            </div>
+        </div>
+        
+        <div class="controls-panel">
+            <div class="control-group">
+                <div class="joystick" id="joystick"></div>
+                <div style="color: #00ff00; font-size: 0.8rem;">MOVE</div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-button" id="fireButton">🔥</div>
+                <div style="color: #00ff00; font-size: 0.8rem;">FIRE</div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-button" id="pauseButton">⏸️</div>
+                <div style="color: #00ff00; font-size: 0.8rem;">PAUSE</div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-button" id="resetButton">🔄</div>
+                <div style="color: #00ff00; font-size: 0.8rem;">RESET</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = 'title'; // title, playing, paused, gameOver
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameSpeed = 1;
+        
+        // 게임 객체들
+        let player = { x: 400, y: 500, width: 30, height: 30, speed: 5 };
+        let bullets = [];
+        let enemies = [];
+        let powerUps = [];
+        let explosions = [];
+        
+        // 게임 루프
+        let gameLoop;
+        let enemySpawnTimer = 0;
+        let powerUpSpawnTimer = 0;
+        
+        // DOM 요소들
+        const gameCanvas = document.getElementById('gameCanvas');
+        const titleScreen = document.getElementById('titleScreen');
+        const gameOver = document.getElementById('gameOver');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        
+        // 키 입력 상태
+        const keys = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            space: false
+        };
+        
+        // 이벤트 리스너
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    keys.left = true;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    keys.right = true;
+                    break;
+                case 'ArrowUp':
+                case 'KeyW':
+                    keys.up = true;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    keys.down = true;
+                    break;
+                case 'Space':
+                    e.preventDefault();
+                    keys.space = true;
+                    if (gameState === 'title') {
+                        startGame();
+                    }
+                    break;
+                case 'KeyP':
+                    togglePause();
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    keys.left = false;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    keys.right = false;
+                    break;
+                case 'ArrowUp':
+                case 'KeyW':
+                    keys.up = false;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    keys.down = false;
+                    break;
+                case 'Space':
+                    keys.space = false;
+                    break;
+            }
+        });
+        
+        // 컨트롤 버튼 이벤트
+        document.getElementById('fireButton').addEventListener('click', () => {
+            if (gameState === 'playing') {
+                shoot();
+            }
+        });
+        
+        document.getElementById('pauseButton').addEventListener('click', togglePause);
+        document.getElementById('resetButton').addEventListener('click', resetGame);
+        
+        // 게임 함수들
+        function startGame() {
+            gameState = 'playing';
+            titleScreen.style.display = 'none';
+            gameOver.style.display = 'none';
+            
+            // 게임 초기화
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameSpeed = 1;
+            
+            player = { x: 400, y: 500, width: 30, height: 30, speed: 5 };
+            bullets = [];
+            enemies = [];
+            powerUps = [];
+            explosions = [];
+            
+            updateUI();
+            
+            // 게임 루프 시작
+            gameLoop = setInterval(update, 16); // 60 FPS
+        }
+        
+        function update() {
+            if (gameState !== 'playing') return;
+            
+            // 플레이어 이동
+            if (keys.left && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys.right && player.x < gameCanvas.clientWidth - player.width) {
+                player.x += player.speed;
+            }
+            if (keys.up && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (keys.down && player.y < gameCanvas.clientHeight - player.height) {
+                player.y += player.speed;
+            }
+            
+            // 총알 발사
+            if (keys.space) {
+                shoot();
+            }
+            
+            // 적 생성
+            enemySpawnTimer++;
+            if (enemySpawnTimer > 60 / gameSpeed) {
+                spawnEnemy();
+                enemySpawnTimer = 0;
+            }
+            
+            // 파워업 생성
+            powerUpSpawnTimer++;
+            if (powerUpSpawnTimer > 600) {
+                spawnPowerUp();
+                powerUpSpawnTimer = 0;
+            }
+            
+            // 객체들 업데이트
+            updateBullets();
+            updateEnemies();
+            updatePowerUps();
+            updateExplosions();
+            
+            // 충돌 검사
+            checkCollisions();
+            
+            // 화면 렌더링
+            render();
+            
+            // 레벨 업 체크
+            if (score > 0 && score % 1000 === 0) {
+                levelUp();
+            }
+        }
+        
+        function shoot() {
+            bullets.push({
+                x: player.x + player.width / 2 - 2,
+                y: player.y,
+                width: 4,
+                height: 10,
+                speed: 8
+            });
+        }
+        
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * (gameCanvas.clientWidth - 25),
+                y: -25,
+                width: 25,
+                height: 25,
+                speed: 2 * gameSpeed,
+                type: Math.random() > 0.8 ? 'fast' : 'normal'
+            });
+        }
+        
+        function spawnPowerUp() {
+            powerUps.push({
+                x: Math.random() * (gameCanvas.clientWidth - 20),
+                y: -20,
+                width: 20,
+                height: 20,
+                speed: 3,
+                type: Math.random() > 0.5 ? 'life' : 'speed'
+            });
+        }
+        
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                return bullet.y > -bullet.height;
+            });
+        }
+        
+        function updateEnemies() {
+            enemies = enemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                if (enemy.type === 'fast') {
+                    enemy.speed += 0.1;
+                }
+                return enemy.y < gameCanvas.clientHeight;
+            });
+        }
+        
+        function updatePowerUps() {
+            powerUps = powerUps.filter(powerUp => {
+                powerUp.y += powerUp.speed;
+                return powerUp.y < gameCanvas.clientHeight;
+            });
+        }
+        
+        function updateExplosions() {
+            explosions = explosions.filter(explosion => {
+                explosion.life--;
+                return explosion.life > 0;
+            });
+        }
+        
+        function checkCollisions() {
+            // 총알과 적 충돌
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (isColliding(bullet, enemy)) {
+                        // 폭발 효과
+                        createExplosion(enemy.x, enemy.y);
+                        
+                        // 점수 추가
+                        score += enemy.type === 'fast' ? 20 : 10;
+                        
+                        // 객체 제거
+                        bullets.splice(bulletIndex, 1);
+                        enemies.splice(enemyIndex, 1);
+                    }
+                });
+            });
+            
+            // 플레이어와 적 충돌
+            enemies.forEach((enemy, enemyIndex) => {
+                if (isColliding(player, enemy)) {
+                    createExplosion(player.x, player.y);
+                    lives--;
+                    enemies.splice(enemyIndex, 1);
+                    
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            });
+            
+            // 플레이어와 파워업 충돌
+            powerUps.forEach((powerUp, powerUpIndex) => {
+                if (isColliding(player, powerUp)) {
+                    if (powerUp.type === 'life') {
+                        lives++;
+                    } else if (powerUp.type === 'speed') {
+                        player.speed = Math.min(player.speed + 1, 10);
+                    }
+                    powerUps.splice(powerUpIndex, 1);
+                }
+            });
+        }
+        
+        function isColliding(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+        
+        function createExplosion(x, y) {
+            explosions.push({
+                x: x,
+                y: y,
+                life: 30
+            });
+        }
+        
+        function render() {
+            // 기존 게임 객체들 제거
+            const existingObjects = gameCanvas.querySelectorAll('.player, .enemy, .bullet, .power-up, .explosion');
+            existingObjects.forEach(obj => obj.remove());
+            
+            // 플레이어 렌더링
+            const playerElement = document.createElement('div');
+            playerElement.className = 'player';
+            playerElement.style.left = player.x + 'px';
+            playerElement.style.top = player.y + 'px';
+            gameCanvas.appendChild(playerElement);
+            
+            // 총알 렌더링
+            bullets.forEach(bullet => {
+                const bulletElement = document.createElement('div');
+                bulletElement.className = 'bullet';
+                bulletElement.style.left = bullet.x + 'px';
+                bulletElement.style.top = bullet.y + 'px';
+                gameCanvas.appendChild(bulletElement);
+            });
+            
+            // 적 렌더링
+            enemies.forEach(enemy => {
+                const enemyElement = document.createElement('div');
+                enemyElement.className = 'enemy';
+                enemyElement.style.left = enemy.x + 'px';
+                enemyElement.style.top = enemy.y + 'px';
+                if (enemy.type === 'fast') {
+                    enemyElement.style.background = '#ff6600';
+                    enemyElement.style.boxShadow = '0 0 10px #ff6600';
+                }
+                gameCanvas.appendChild(enemyElement);
+            });
+            
+            // 파워업 렌더링
+            powerUps.forEach(powerUp => {
+                const powerUpElement = document.createElement('div');
+                powerUpElement.className = 'power-up';
+                powerUpElement.style.left = powerUp.x + 'px';
+                powerUpElement.style.top = powerUp.y + 'px';
+                if (powerUp.type === 'life') {
+                    powerUpElement.style.background = '#00ff00';
+                    powerUpElement.style.boxShadow = '0 0 15px #00ff00';
+                }
+                gameCanvas.appendChild(powerUpElement);
+            });
+            
+            // 폭발 렌더링
+            explosions.forEach(explosion => {
+                const explosionElement = document.createElement('div');
+                explosionElement.className = 'explosion';
+                explosionElement.style.left = explosion.x + 'px';
+                explosionElement.style.top = explosion.y + 'px';
+                gameCanvas.appendChild(explosionElement);
+            });
+            
+            updateUI();
+        }
+        
+        function levelUp() {
+            level++;
+            gameSpeed += 0.2;
+        }
+        
+        function updateUI() {
+            scoreElement.textContent = score.toString().padStart(6, '0');
+            livesElement.textContent = lives;
+        }
+        
+        function togglePause() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                clearInterval(gameLoop);
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                gameLoop = setInterval(update, 16);
+            }
+        }
+        
+        function endGame() {
+            gameState = 'gameOver';
+            clearInterval(gameLoop);
+            gameOver.style.display = 'block';
+        }
+        
+        function resetGame() {
+            clearInterval(gameLoop);
+            startGame();
+        }
+        
+        function showTitleScreen() {
+            gameState = 'title';
+            clearInterval(gameLoop);
+            titleScreen.style.display = 'block';
+            gameOver.style.display = 'none';
+            
+            // 게임 객체들 제거
+            const existingObjects = gameCanvas.querySelectorAll('.player, .enemy, .bullet, .power-up, .explosion');
+            existingObjects.forEach(obj => obj.remove());
+        }
+        
+        function showInstructions() {
+            alert('🕹️ RETRO INVADERS 조작법:\n\n' +
+                  '• 화살표 키 또는 WASD: 이동\n' +
+                  '• 스페이스바: 총알 발사\n' +
+                  '• P: 일시정지\n\n' +
+                  '목표: 적을 물리치고 최고 점수를 달성하세요!\n' +
+                  '파워업을 수집하여 능력을 향상시키세요!');
+        }
+        
+        function showHighScores() {
+            alert('🏆 HIGH SCORES:\n\n' +
+                  '1. PLAYER1 - 15000\n' +
+                  '2. PLAYER2 - 12000\n' +
+                  '3. PLAYER3 - 10000\n' +
+                  '4. PLAYER4 - 8000\n' +
+                  '5. PLAYER5 - 5000\n\n' +
+                  '당신의 점수: ' + score);
+        }
+        
+        // 초기화
+        showTitleScreen();
+    </script>
+</body>
+</html>
