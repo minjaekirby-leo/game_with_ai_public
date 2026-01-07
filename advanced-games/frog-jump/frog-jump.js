@@ -2,6 +2,38 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// 모바일 감지
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// 캔버스 크기 조정
+function resizeCanvas() {
+    const container = canvas.parentElement;
+    const maxWidth = Math.min(800, window.innerWidth - 40);
+    const maxHeight = Math.min(600, window.innerHeight * 0.6);
+    
+    // 비율 유지하면서 크기 조정
+    const aspectRatio = 800 / 600;
+    let newWidth = maxWidth;
+    let newHeight = newWidth / aspectRatio;
+    
+    if (newHeight > maxHeight) {
+        newHeight = maxHeight;
+        newWidth = newHeight * aspectRatio;
+    }
+    
+    canvas.style.width = newWidth + 'px';
+    canvas.style.height = newHeight + 'px';
+    
+    // 실제 캔버스 크기는 고정 (렌더링 품질 유지)
+    canvas.width = 800;
+    canvas.height = 600;
+}
+
+// 터치 관련 변수
+let touchStartTime = 0;
+let touchIndicator = document.getElementById('touchIndicator');
+let isCharging = false;
+
 // 게임 상태
 let gameRunning = false;
 let distance = 0;
@@ -394,6 +426,11 @@ function updateFrog() {
                 distance = Math.floor(distanceTraveled / 10);
                 score = distance * 10;
                 
+                // 햅틱 피드백 (모바일)
+                if (isMobile && navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                
                 break;
             }
         }
@@ -435,9 +472,18 @@ function jump() {
         frog.onGround = false;
         frog.power = 0;
         frog.charging = false;
+        isCharging = false;
         
         // 점프 파티클
         createLandingParticles(frog.x + frog.width/2, frog.y + frog.height);
+        
+        // 햅틱 피드백 (모바일)
+        if (isMobile && navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+        
+        // 터치 인디케이터 숨기기
+        hideTouchIndicator();
     }
 }
 
@@ -445,8 +491,8 @@ function jump() {
 function update() {
     if (!gameRunning) return;
     
-    // 파워 충전
-    if (keys.Space && frog.onGround) {
+    // 파워 충전 (키보드 또는 터치)
+    if ((keys.Space || isCharging) && frog.onGround) {
         frog.charging = true;
         frog.power = Math.min(frog.power + 2, frog.maxPower);
     }
@@ -498,6 +544,7 @@ function gameLoop() {
 // 게임 오버
 function gameOver() {
     gameRunning = false;
+    isCharging = false;
     
     // 물 튀김 효과
     createSplashParticles(frog.x + frog.width/2, waterLevel);
@@ -508,9 +555,16 @@ function gameOver() {
         localStorage.setItem('frogBestScore', bestScore);
     }
     
+    // 햅틱 피드백 (모바일)
+    if (isMobile && navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+    }
+    
     document.getElementById('finalDistance').textContent = distance;
     document.getElementById('finalScore').textContent = score;
     document.getElementById('gameOver').style.display = 'block';
+    
+    hideTouchIndicator();
 }
 
 // 디스플레이 업데이트
@@ -530,6 +584,7 @@ function startGame() {
 
 function resetGame() {
     gameRunning = false;
+    isCharging = false;
     
     // 개구리 초기화
     frog.x = 100;
@@ -556,6 +611,7 @@ function resetGame() {
     document.getElementById('gameOver').style.display = 'none';
     updateDisplay();
     updatePowerGauge();
+    hideTouchIndicator();
 }
 
 // 키보드 이벤트
@@ -571,7 +627,96 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
+// 터치 인디케이터 함수들
+function showTouchIndicator(x, y) {
+    const rect = canvas.getBoundingClientRect();
+    const power = Math.min(frog.power / frog.maxPower, 1);
+    const size = 50 + power * 50;
+    
+    touchIndicator.style.display = 'block';
+    touchIndicator.style.left = (rect.left + x - size/2) + 'px';
+    touchIndicator.style.top = (rect.top + y - size/2) + 'px';
+    touchIndicator.style.width = size + 'px';
+    touchIndicator.style.height = size + 'px';
+    touchIndicator.style.borderColor = `hsl(${120 * power}, 100%, 50%)`;
+}
+
+function hideTouchIndicator() {
+    touchIndicator.style.display = 'none';
+}
+
+// 터치 이벤트
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameRunning || !frog.onGround) return;
+    
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    isCharging = true;
+    touchStartTime = Date.now();
+    showTouchIndicator(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isCharging) return;
+    
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    showTouchIndicator(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isCharging && frog.charging) {
+        jump();
+    }
+    isCharging = false;
+}, { passive: false });
+
+// 마우스 이벤트 (PC에서도 클릭으로 조작 가능)
+canvas.addEventListener('mousedown', (e) => {
+    if (!gameRunning || !frog.onGround) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    isCharging = true;
+    showTouchIndicator(x, y);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isCharging) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    showTouchIndicator(x, y);
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (isCharging && frog.charging) {
+        jump();
+    }
+    isCharging = false;
+});
+
+// 창 크기 변경 시 캔버스 크기 조정
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => {
+    setTimeout(resizeCanvas, 100);
+});
+
 // 초기화
+resizeCanvas();
 generateLilyPads();
 updateDisplay();
 document.getElementById('bestScore').textContent = bestScore;
