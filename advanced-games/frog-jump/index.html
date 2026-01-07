@@ -192,59 +192,9 @@
             z-index: 50;
         }
         
-        .mobile-controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 200;
-            display: none;
-        }
-        
-        .jump-button {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #228B22, #32CD32);
-            border: 4px solid #FFFFFF;
-            color: white;
-            font-size: 1.2rem;
-            font-weight: bold;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.1s;
-            touch-action: manipulation;
-        }
-        
-        .jump-button:active {
-            transform: scale(0.95);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        }
-        
-        .jump-button.charging {
-            background: linear-gradient(45deg, #FF4500, #FF6347);
-            animation: pulse 0.5s infinite alternate;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.05); }
-        }
-        
-        .power-text {
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-        
         @media (max-width: 768px) {
             body {
                 padding: 10px;
-                padding-bottom: 160px;
             }
             
             .game-info {
@@ -263,14 +213,6 @@
             
             .control-item {
                 min-width: 150px;
-            }
-            
-            .mobile-controls {
-                display: block;
-            }
-            
-            .controls {
-                margin-bottom: 20px;
             }
         }
     </style>
@@ -295,7 +237,7 @@
             <div class="control-item">
                 <div class="control-icon">📱</div>
                 <strong>모바일</strong><br>
-                하단 점프 버튼을 길게 눌러<br>점프 파워 조절
+                화면을 길게 터치해서<br>점프 파워 조절
             </div>
         </div>
         <p style="margin-top: 15px; font-size: 0.85em; color: #666;">
@@ -329,14 +271,6 @@
     <div class="controls">
         <button onclick="startGame()">게임 시작</button>
         <button onclick="resetGame()">다시 시작</button>
-    </div>
-    
-    <!-- 모바일 전용 점프 버튼 -->
-    <div class="mobile-controls">
-        <div class="jump-button" id="jumpButton">
-            <div>🐸 점프</div>
-            <div class="power-text" id="powerText">0%</div>
-        </div>
     </div>
     
     <script src="frog-jump.js"></script>

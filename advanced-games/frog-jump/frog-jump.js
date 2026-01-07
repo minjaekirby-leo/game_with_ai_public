@@ -32,8 +32,6 @@ function resizeCanvas() {
 // 터치 관련 변수
 let touchStartTime = 0;
 let touchIndicator = document.getElementById('touchIndicator');
-let jumpButton = document.getElementById('jumpButton');
-let powerText = document.getElementById('powerText');
 let isCharging = false;
 
 // 게임 상태
@@ -390,17 +388,6 @@ function updatePowerGauge() {
     const powerFill = document.getElementById('powerFill');
     const percentage = (frog.power / frog.maxPower) * 100;
     powerFill.style.height = percentage + '%';
-    
-    // 모바일 버튼 파워 텍스트 업데이트
-    if (powerText) {
-        powerText.textContent = Math.floor(percentage) + '%';
-        
-        if (frog.charging) {
-            jumpButton.classList.add('charging');
-        } else {
-            jumpButton.classList.remove('charging');
-        }
-    }
 }
 
 // 개구리 업데이트
@@ -484,11 +471,6 @@ function jump() {
         
         // 점프 파티클
         createLandingParticles(frog.x + frog.width/2, frog.y + frog.height);
-        
-        // 버튼 상태 초기화
-        if (jumpButton) {
-            jumpButton.classList.remove('charging');
-        }
     }
 }
 
@@ -563,11 +545,6 @@ function gameOver() {
     document.getElementById('finalDistance').textContent = distance;
     document.getElementById('finalScore').textContent = score;
     document.getElementById('gameOver').style.display = 'block';
-    
-    // 버튼 상태 초기화
-    if (jumpButton) {
-        jumpButton.classList.remove('charging');
-    }
 }
 
 // 디스플레이 업데이트
@@ -614,11 +591,6 @@ function resetGame() {
     document.getElementById('gameOver').style.display = 'none';
     updateDisplay();
     updatePowerGauge();
-    
-    // 버튼 상태 초기화
-    if (jumpButton) {
-        jumpButton.classList.remove('charging');
-    }
 }
 
 // 키보드 이벤트
@@ -634,73 +606,88 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
-// 모바일 점프 버튼 이벤트
-jumpButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (!gameRunning || !frog.onGround) return;
-    
-    isCharging = true;
-    jumpButton.classList.add('charging');
-}, { passive: false });
-
-jumpButton.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    if (isCharging && frog.charging) {
-        jump();
-    }
-    isCharging = false;
-    jumpButton.classList.remove('charging');
-}, { passive: false });
-
-// PC에서도 마우스로 버튼 사용 가능
-jumpButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    if (!gameRunning || !frog.onGround) return;
-    
-    isCharging = true;
-    jumpButton.classList.add('charging');
-});
-
-jumpButton.addEventListener('mouseup', (e) => {
-    e.preventDefault();
-    if (isCharging && frog.charging) {
-        jump();
-    }
-    isCharging = false;
-    jumpButton.classList.remove('charging');
-});
-
-// 마우스가 버튼을 벗어났을 때도 처리
-jumpButton.addEventListener('mouseleave', (e) => {
-    if (isCharging && frog.charging) {
-        jump();
-    }
-    isCharging = false;
-    jumpButton.classList.remove('charging');
-});
-
-// 터치 인디케이터 함수들 (사용하지 않지만 호환성을 위해 유지)
+// 터치 인디케이터 함수들
 function showTouchIndicator(x, y) {
-    // 더 이상 사용하지 않음
+    const rect = canvas.getBoundingClientRect();
+    const power = Math.min(frog.power / frog.maxPower, 1);
+    const size = 50 + power * 50;
+    
+    touchIndicator.style.display = 'block';
+    touchIndicator.style.left = (rect.left + x - size/2) + 'px';
+    touchIndicator.style.top = (rect.top + y - size/2) + 'px';
+    touchIndicator.style.width = size + 'px';
+    touchIndicator.style.height = size + 'px';
+    touchIndicator.style.borderColor = `hsl(${120 * power}, 100%, 50%)`;
 }
 
 function hideTouchIndicator() {
-    // 더 이상 사용하지 않음
+    touchIndicator.style.display = 'none';
 }
 
-// 기존 캔버스 터치 이벤트는 제거하고 간단한 클릭 이벤트만 유지
-canvas.addEventListener('click', (e) => {
-    // PC에서 캔버스 클릭 시 간단한 피드백
-    if (!isMobile && gameRunning) {
-        // 클릭 위치에 간단한 파티클 효과
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width) + cameraX;
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        
-        for (let i = 0; i < 3; i++) {
-            particles.push(new Particle(x, y, '#32CD32'));
-        }
+// 터치 이벤트
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameRunning || !frog.onGround) return;
+    
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    isCharging = true;
+    touchStartTime = Date.now();
+    showTouchIndicator(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isCharging) return;
+    
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    showTouchIndicator(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isCharging && frog.charging) {
+        jump();
     }
+    isCharging = false;
+    hideTouchIndicator();
+}, { passive: false });
+
+// 마우스 이벤트 (PC에서도 클릭으로 조작 가능)
+canvas.addEventListener('mousedown', (e) => {
+    if (!gameRunning || !frog.onGround) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    isCharging = true;
+    showTouchIndicator(x, y);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isCharging) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    showTouchIndicator(x, y);
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (isCharging && frog.charging) {
+        jump();
+    }
+    isCharging = false;
+    hideTouchIndicator();
 });
 
 // 창 크기 변경 시 캔버스 크기 조정
