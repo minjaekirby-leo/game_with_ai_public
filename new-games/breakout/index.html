@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧱 브레이크아웃 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #ffffff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        #gameCanvas {
+            border: 4px solid #ffffff;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffffff;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff6b6b;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+            
+            #gameCanvas {
+                width: 90vw;
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🧱 브레이크아웃</h1>
+        <p>패들로 공을 튕겨서 모든 벽돌을 깨트리세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>⬅️➡️ 화살표 키로 패들 이동</p>
+        <p>🏓 공을 튕겨서 벽돌을 깨트리세요!</p>
+        <p>🧱 모든 벽돌을 깨면 승리!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let gameRunning = true;
+
+        // 게임 객체들
+        let paddle = { x: 350, y: 550 };
+        let ball = { x: 400, y: 300, dx: 4, dy: -4 };
+        let bricks = [];
+
+        // 벽돌 초기화
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < 5; r++) {
+                for (let i = 0; i < 10; i++) {
+                    bricks.push({
+                        x: i * 80 + 10,
+                        y: r * 25 + 50,
+                        visible: true,
+                        color: ['#F66', '#4EC', '#45B', '#FA7', '#98D'][r],
+                        points: (5 - r) * 10
+                    });
+                }
+            }
+        }
+
+        // 키보드 입력 처리
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 패들 업데이트
+        function updatePaddle() {
+            if (keys['ArrowLeft'] && paddle.x > 0) {
+                paddle.x -= 8;
+            }
+            if (keys['ArrowRight'] && paddle.x < 700) {
+                paddle.x += 8;
+            }
+        }
+
+        // 공 업데이트
+        function updateBall() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // 벽 충돌
+            if (ball.x + 8 > 800 || ball.x - 8 < 0) {
+                ball.dx *= -1;
+            }
+            if (ball.y - 8 < 0) {
+                ball.dy *= -1;
+            }
+
+            // 패들 충돌
+            if (ball.y + 8 > paddle.y && 
+                ball.y - 8 < paddle.y + 15 && 
+                ball.x > paddle.x && 
+                ball.x < paddle.x + 100) {
+                
+                // 패들의 어느 부분에 맞았는지에 따라 각도 조절
+                ball.dx = ((ball.x - paddle.x) / 100 - 0.5) * 8;
+                ball.dy = -Math.abs(ball.dy);
+            }
+
+            // 공이 바닥에 떨어짐
+            if (ball.y > 600) {
+                lives--;
+                updateLives();
+                
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    // 공 리셋
+                    ball = { x: 400, y: 300, dx: 4, dy: -4 };
+                }
+            }
+        }
+
+        // 벽돌 충돌 검사
+        function checkBrickCollisions() {
+            bricks.forEach(brick => {
+                if (brick.visible &&
+                    ball.x + 8 > brick.x && 
+                    ball.x - 8 < brick.x + 70 &&
+                    ball.y + 8 > brick.y && 
+                    ball.y - 8 < brick.y + 20) {
+                    
+                    ball.dy *= -1;
+                    brick.visible = false;
+                    score += brick.points;
+                    updateScore();
+                }
+            });
+
+            // 모든 벽돌이 깨졌는지 확인
+            if (bricks.every(brick => !brick.visible)) {
+                gameWin();
+            }
+        }
+
+        // 패들 그리기
+        function drawPaddle() {
+            ctx.fillStyle = '#ECF';
+            ctx.fillRect(paddle.x, paddle.y, 100, 15);
+        }
+
+        // 공 그리기
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#F39';
+            ctx.fill();
+        }
+
+        // 벽돌 그리기
+        function drawBricks() {
+            bricks.forEach(brick => {
+                if (brick.visible) {
+                    ctx.fillStyle = brick.color;
+                    ctx.fillRect(brick.x, brick.y, 70, 20);
+                }
+            });
+        }
+
+        // UI 그리기
+        function drawUI() {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '20px monospace';
+            ctx.fillText(`SCORE: ${score}`, 20, 30);
+            ctx.fillText(`LIVES: ${lives}`, 650, 30);
+        }
+
+        // 점수 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        // 생명 업데이트
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 승리
+        function gameWin() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score + ' (승리!)';
+            document.getElementById('gameOver').querySelector('h2').textContent = '승리!';
+            document.getElementById('gameOver').querySelector('h2').style.color = '#4ecdc4';
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            gameRunning = true;
+            
+            paddle = { x: 350, y: 550 };
+            ball = { x: 400, y: 300, dx: 4, dy: -4 };
+            
+            initBricks();
+            updateScore();
+            updateLives();
+            
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameOver').querySelector('h2').textContent = '게임 오버!';
+            document.getElementById('gameOver').querySelector('h2').style.color = '#ff6b6b';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 업데이트
+                updatePaddle();
+                updateBall();
+                checkBrickCollisions();
+            }
+
+            // 그리기
+            drawBricks();
+            drawPaddle();
+            drawBall();
+            drawUI();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initBricks();
+            updateScore();
+            updateLives();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>

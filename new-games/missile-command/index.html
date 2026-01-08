@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미사일 커맨드 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #00ff00;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .cities, .missiles {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+        }
+
+        #gameCanvas {
+            border: 4px solid #00ff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00ff00;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00ff00, #00aa00);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🚀 미사일 커맨드</h1>
+        <p>클릭해서 미사일을 요격하고 도시를 방어하세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="cities">도시: <span id="cities">6</span></div>
+        <div class="missiles">미사일: <span id="missiles">10</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>🖱️ 마우스로 조준</p>
+        <p>🔫 클릭으로 요격 미사일 발사</p>
+        <p>🏙️ 6개 도시를 모두 지키세요!</p>
+        <p>💥 연쇄 폭발로 더 많은 미사일을 막을 수 있어요!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let citiesLeft = 6;
+        let missilesLeft = 10;
+        let gameRunning = true;
+        let wave = 1;
+
+        // 게임 객체들
+        let enemyMissiles = [];
+        let defenseMissiles = [];
+        let explosions = [];
+        let cities = [];
+        let bases = [];
+
+        // 마우스 위치
+        let mouseX = 0;
+        let mouseY = 0;
+
+        // 도시 초기화
+        function initCities() {
+            cities = [];
+            for (let i = 0; i < 6; i++) {
+                cities.push({
+                    x: 100 + i * 120,
+                    y: canvas.height - 50,
+                    width: 60,
+                    height: 40,
+                    alive: true
+                });
+            }
+        }
+
+        // 미사일 기지 초기화
+        function initBases() {
+            bases = [
+                { x: 50, y: canvas.height - 30, missiles: 10 },
+                { x: canvas.width / 2, y: canvas.height - 30, missiles: 10 },
+                { x: canvas.width - 50, y: canvas.height - 30, missiles: 10 }
+            ];
+        }
+
+        // 마우스 이벤트
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameRunning && missilesLeft > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const targetX = e.clientX - rect.left;
+                const targetY = e.clientY - rect.top;
+                
+                // 가장 가까운 기지에서 발사
+                let closestBase = null;
+                let closestDistance = Infinity;
+                
+                for (let base of bases) {
+                    if (base.missiles > 0) {
+                        const distance = Math.abs(base.x - targetX);
+                        if (distance < closestDistance) {
+                            closestDistance = distance;
+                            closestBase = base;
+                        }
+                    }
+                }
+                
+                if (closestBase) {
+                    launchDefenseMissile(closestBase.x, closestBase.y, targetX, targetY);
+                    closestBase.missiles--;
+                    missilesLeft--;
+                    updateMissiles();
+                }
+            }
+        });
+
+        // 적 미사일 생성
+        function createEnemyMissile() {
+            if (Math.random() < 0.02 + wave * 0.005) {
+                const startX = Math.random() * canvas.width;
+                const targetX = Math.random() * canvas.width;
+                const targetY = canvas.height - 20;
+                
+                enemyMissiles.push({
+                    x: startX,
+                    y: 0,
+                    targetX: targetX,
+                    targetY: targetY,
+                    speed: 1 + wave * 0.2,
+                    trail: []
+                });
+            }
+        }
+
+        // 방어 미사일 발사
+        function launchDefenseMissile(startX, startY, targetX, targetY) {
+            defenseMissiles.push({
+                x: startX,
+                y: startY,
+                targetX: targetX,
+                targetY: targetY,
+                speed: 8,
+                trail: []
+            });
+        }
+
+        // 폭발 생성
+        function createExplosion(x, y, maxRadius = 50) {
+            explosions.push({
+                x: x,
+                y: y,
+                radius: 0,
+                maxRadius: maxRadius,
+                growing: true
+            });
+        }
+
+        // 적 미사일 업데이트
+        function updateEnemyMissiles() {
+            enemyMissiles = enemyMissiles.filter(missile => {
+                const dx = missile.targetX - missile.x;
+                const dy = missile.targetY - missile.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < missile.speed) {
+                    // 목표 도달 - 폭발
+                    createExplosion(missile.targetX, missile.targetY, 30);
+                    
+                    // 도시 파괴 체크
+                    for (let city of cities) {
+                        if (city.alive && 
+                            missile.targetX > city.x && 
+                            missile.targetX < city.x + city.width &&
+                            missile.targetY > city.y) {
+                            city.alive = false;
+                            citiesLeft--;
+                            updateCities();
+                        }
+                    }
+                    
+                    return false;
+                }
+                
+                // 이동
+                missile.x += (dx / distance) * missile.speed;
+                missile.y += (dy / distance) * missile.speed;
+                
+                // 궤적 추가
+                missile.trail.push({ x: missile.x, y: missile.y });
+                if (missile.trail.length > 20) {
+                    missile.trail.shift();
+                }
+                
+                return true;
+            });
+        }
+
+        // 방어 미사일 업데이트
+        function updateDefenseMissiles() {
+            defenseMissiles = defenseMissiles.filter(missile => {
+                const dx = missile.targetX - missile.x;
+                const dy = missile.targetY - missile.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < missile.speed) {
+                    // 목표 도달 - 폭발
+                    createExplosion(missile.targetX, missile.targetY);
+                    return false;
+                }
+                
+                // 이동
+                missile.x += (dx / distance) * missile.speed;
+                missile.y += (dy / distance) * missile.speed;
+                
+                // 궤적 추가
+                missile.trail.push({ x: missile.x, y: missile.y });
+                if (missile.trail.length > 10) {
+                    missile.trail.shift();
+                }
+                
+                return true;
+            });
+        }
+
+        // 폭발 업데이트
+        function updateExplosions() {
+            explosions = explosions.filter(explosion => {
+                if (explosion.growing) {
+                    explosion.radius += 2;
+                    if (explosion.radius >= explosion.maxRadius) {
+                        explosion.growing = false;
+                    }
+                } else {
+                    explosion.radius -= 1;
+                    if (explosion.radius <= 0) {
+                        return false;
+                    }
+                }
+                
+                // 적 미사일과 충돌 체크
+                enemyMissiles = enemyMissiles.filter(missile => {
+                    const dx = missile.x - explosion.x;
+                    const dy = missile.y - explosion.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < explosion.radius) {
+                        createExplosion(missile.x, missile.y, 30);
+                        score += 25;
+                        updateScore();
+                        return false;
+                    }
+                    return true;
+                });
+                
+                return true;
+            });
+        }
+
+        // 그리기 함수들
+        function drawCities() {
+            cities.forEach(city => {
+                if (city.alive) {
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(city.x, city.y, city.width, city.height);
+                    
+                    // 건물 디테일
+                    ctx.fillStyle = '#008800';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(city.x + i * 20 + 5, city.y + 10, 10, 30);
+                    }
+                }
+            });
+        }
+
+        function drawBases() {
+            bases.forEach(base => {
+                ctx.fillStyle = base.missiles > 0 ? '#ffff00' : '#666666';
+                ctx.beginPath();
+                ctx.arc(base.x, base.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 미사일 수 표시
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(base.missiles.toString(), base.x, base.y + 4);
+            });
+        }
+
+        function drawMissiles() {
+            // 적 미사일
+            enemyMissiles.forEach(missile => {
+                // 궤적
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < missile.trail.length; i++) {
+                    const point = missile.trail[i];
+                    if (i === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                }
+                ctx.stroke();
+                
+                // 미사일
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(missile.x, missile.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 방어 미사일
+            defenseMissiles.forEach(missile => {
+                // 궤적
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < missile.trail.length; i++) {
+                    const point = missile.trail[i];
+                    if (i === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                }
+                ctx.stroke();
+                
+                // 미사일
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(missile.x, missile.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawExplosions() {
+            explosions.forEach(explosion => {
+                const gradient = ctx.createRadialGradient(
+                    explosion.x, explosion.y, 0,
+                    explosion.x, explosion.y, explosion.radius
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.6)');
+                gradient.addColorStop(1, 'rgba(255, 0, 0, 0.2)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawCrosshair() {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(mouseX - 10, mouseY);
+            ctx.lineTo(mouseX + 10, mouseY);
+            ctx.moveTo(mouseX, mouseY - 10);
+            ctx.lineTo(mouseX, mouseY + 10);
+            ctx.stroke();
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateCities() {
+            document.getElementById('cities').textContent = citiesLeft;
+        }
+
+        function updateMissiles() {
+            document.getElementById('missiles').textContent = missilesLeft;
+        }
+
+        // 웨이브 체크
+        function checkWave() {
+            if (enemyMissiles.length === 0 && explosions.length === 0) {
+                // 웨이브 클리어
+                wave++;
+                score += citiesLeft * 100;
+                score += missilesLeft * 5;
+                
+                // 미사일 보충
+                bases.forEach(base => {
+                    base.missiles = 10;
+                });
+                missilesLeft = 30;
+                
+                updateScore();
+                updateMissiles();
+            }
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            citiesLeft = 6;
+            missilesLeft = 30;
+            wave = 1;
+            gameRunning = true;
+            
+            enemyMissiles = [];
+            defenseMissiles = [];
+            explosions = [];
+            
+            initCities();
+            initBases();
+            
+            updateScore();
+            updateCities();
+            updateMissiles();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#000011';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 적 미사일 생성
+                createEnemyMissile();
+                
+                // 업데이트
+                updateEnemyMissiles();
+                updateDefenseMissiles();
+                updateExplosions();
+                
+                // 웨이브 체크
+                checkWave();
+                
+                // 게임 오버 체크
+                if (citiesLeft <= 0) {
+                    gameOver();
+                }
+            }
+
+            // 그리기
+            drawCities();
+            drawBases();
+            drawMissiles();
+            drawExplosions();
+            drawCrosshair();
+
+            // 웨이브 정보
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '20px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`WAVE ${wave}`, canvas.width / 2, 30);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initCities();
+            initBases();
+            updateScore();
+            updateCities();
+            updateMissiles();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>

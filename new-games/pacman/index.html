@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팩맨 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #ffff00;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives, .level {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ffff00;
+        }
+
+        #gameCanvas {
+            border: 3px solid #ffff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #ffff00;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffff00;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ffff00, #ffa500);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 255, 0, 0.4);
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+            
+            #gameCanvas {
+                width: 90vw;
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🟡 팩맨 게임</h1>
+        <p>화살표 키로 팩맨을 조종해서 모든 점을 먹고 유령들을 피하세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+        <div class="level">레벨: <span id="level">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>⬆️⬇️⬅️➡️ 화살표 키로 이동</p>
+        <p>🟡 노란 점을 모두 먹으면 다음 레벨!</p>
+        <p>👻 유령들을 피하세요!</p>
+        <p>🔵 파워 펠릿을 먹으면 잠시 유령을 먹을 수 있어요!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+        let powerMode = false;
+        let powerModeTimer = 0;
+        let gameSpeed = 0; // 게임 속도 조절용 카운터
+
+        // 게임 맵 (1: 벽, 0: 점, 2: 파워펠릿, 3: 빈공간)
+        const gameMap = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+            [1,2,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,2,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,1,1,1,1,1,0,1,0,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,3,1,1,3,1,1,1,0,1,1,1,1],
+            [3,3,3,1,0,1,3,3,3,3,3,3,3,3,1,0,1,3,3,3],
+            [1,1,1,1,0,1,3,1,1,3,3,1,1,3,1,0,1,1,1,1],
+            [0,0,0,0,0,3,3,1,3,3,3,3,1,3,3,0,0,0,0,0],
+            [1,1,1,1,0,1,3,1,1,1,1,1,1,3,1,0,1,1,1,1],
+            [3,3,3,1,0,1,3,3,3,3,3,3,3,3,1,0,1,3,3,3],
+            [1,1,1,1,0,1,1,1,3,1,1,3,1,1,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,2,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,2,1],
+            [1,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1,1],
+            [1,0,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        let currentMap = JSON.parse(JSON.stringify(gameMap)); // 맵 복사
+
+        const CELL_SIZE = 30;
+        const MAP_WIDTH = 20;
+        const MAP_HEIGHT = 20;
+
+        // 팩맨 객체
+        const pacman = {
+            x: 9,
+            y: 15,
+            direction: 0, // 0: 오른쪽, 1: 아래, 2: 왼쪽, 3: 위
+            nextDirection: 0,
+            mouthOpen: true,
+            animationTimer: 0
+        };
+
+        // 유령 객체들
+        const ghosts = [
+            { x: 9, y: 9, color: '#ff0000', direction: 0, mode: 'chase' },
+            { x: 10, y: 9, color: '#ffb8ff', direction: 1, mode: 'chase' },
+            { x: 9, y: 10, color: '#00ffff', direction: 2, mode: 'chase' },
+            { x: 10, y: 10, color: '#ffb852', direction: 3, mode: 'chase' }
+        ];
+
+        // 방향 벡터
+        const directions = [
+            { x: 1, y: 0 },  // 오른쪽
+            { x: 0, y: 1 },  // 아래
+            { x: -1, y: 0 }, // 왼쪽
+            { x: 0, y: -1 }  // 위
+        ];
+
+        // 키보드 입력 처리
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            switch(e.key) {
+                case 'ArrowRight':
+                    pacman.nextDirection = 0;
+                    break;
+                case 'ArrowDown':
+                    pacman.nextDirection = 1;
+                    break;
+                case 'ArrowLeft':
+                    pacman.nextDirection = 2;
+                    break;
+                case 'ArrowUp':
+                    pacman.nextDirection = 3;
+                    break;
+            }
+        });
+
+        // 벽 충돌 체크
+        function canMove(x, y) {
+            if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) {
+                return false;
+            }
+            return currentMap[y][x] !== 1;
+        }
+
+        // 팩맨 이동
+        function movePacman() {
+            const nextDir = directions[pacman.nextDirection];
+            const nextX = pacman.x + nextDir.x;
+            const nextY = pacman.y + nextDir.y;
+
+            // 다음 방향으로 이동 가능하면 방향 변경
+            if (canMove(nextX, nextY)) {
+                pacman.direction = pacman.nextDirection;
+            }
+
+            // 현재 방향으로 이동
+            const currentDir = directions[pacman.direction];
+            const newX = pacman.x + currentDir.x;
+            const newY = pacman.y + currentDir.y;
+
+            if (canMove(newX, newY)) {
+                pacman.x = newX;
+                pacman.y = newY;
+
+                // 터널 효과 (좌우 끝에서 반대편으로)
+                if (pacman.x < 0) pacman.x = MAP_WIDTH - 1;
+                if (pacman.x >= MAP_WIDTH) pacman.x = 0;
+
+                // 점 먹기
+                if (currentMap[pacman.y][pacman.x] === 0) {
+                    currentMap[pacman.y][pacman.x] = 3;
+                    score += 10;
+                    updateScore();
+                }
+
+                // 파워 펠릿 먹기
+                if (currentMap[pacman.y][pacman.x] === 2) {
+                    currentMap[pacman.y][pacman.x] = 3;
+                    score += 50;
+                    powerMode = true;
+                    powerModeTimer = 300; // 5초 (60fps 기준)
+                    updateScore();
+                }
+            }
+        }
+
+        // 유령 이동 (속도 조절)
+        function moveGhosts() {
+            // 유령들이 팩맨보다 느리게 움직이도록 조절
+            if (gameSpeed % 8 !== 0) return; // 2프레임마다 한 번씩만 이동
+            
+            ghosts.forEach(ghost => {
+                // 더 느린 방향 변경 (10% -> 5%로 감소)
+                if (Math.random() < 0.05) {
+                    ghost.direction = Math.floor(Math.random() * 4);
+                }
+
+                const dir = directions[ghost.direction];
+                const newX = ghost.x + dir.x;
+                const newY = ghost.y + dir.y;
+
+                if (canMove(newX, newY)) {
+                    ghost.x = newX;
+                    ghost.y = newY;
+                } else {
+                    // 벽에 부딪히면 방향 변경
+                    ghost.direction = Math.floor(Math.random() * 4);
+                }
+
+                // 터널 효과
+                if (ghost.x < 0) ghost.x = MAP_WIDTH - 1;
+                if (ghost.x >= MAP_WIDTH) ghost.x = 0;
+            });
+        }
+
+        // 충돌 체크
+        function checkCollisions() {
+            ghosts.forEach((ghost, index) => {
+                if (ghost.x === pacman.x && ghost.y === pacman.y) {
+                    if (powerMode) {
+                        // 파워 모드에서는 유령을 먹음
+                        score += 200;
+                        updateScore();
+                        // 유령을 원래 위치로 되돌림
+                        ghost.x = 9 + (index % 2);
+                        ghost.y = 9 + Math.floor(index / 2);
+                    } else {
+                        // 생명 감소
+                        lives--;
+                        updateLives();
+                        
+                        if (lives <= 0) {
+                            gameOver();
+                        } else {
+                            // 팩맨을 시작 위치로 되돌림
+                            pacman.x = 9;
+                            pacman.y = 15;
+                        }
+                    }
+                }
+            });
+        }
+
+        // 레벨 클리어 체크
+        function checkLevelComplete() {
+            let dotsRemaining = 0;
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (currentMap[y][x] === 0 || currentMap[y][x] === 2) {
+                        dotsRemaining++;
+                    }
+                }
+            }
+
+            if (dotsRemaining === 0) {
+                level++;
+                updateLevel();
+                // 맵 리셋
+                currentMap = JSON.parse(JSON.stringify(gameMap));
+                // 팩맨 위치 리셋
+                pacman.x = 9;
+                pacman.y = 15;
+            }
+        }
+
+        // 맵 그리기
+        function drawMap() {
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    const cellX = x * CELL_SIZE;
+                    const cellY = y * CELL_SIZE;
+
+                    switch (currentMap[y][x]) {
+                        case 1: // 벽
+                            ctx.fillStyle = '#0000ff';
+                            ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                            break;
+                        case 0: // 점
+                            ctx.fillStyle = '#ffff00';
+                            ctx.beginPath();
+                            ctx.arc(cellX + CELL_SIZE/2, cellY + CELL_SIZE/2, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                            break;
+                        case 2: // 파워 펠릿
+                            ctx.fillStyle = '#ffff00';
+                            ctx.beginPath();
+                            ctx.arc(cellX + CELL_SIZE/2, cellY + CELL_SIZE/2, 8, 0, Math.PI * 2);
+                            ctx.fill();
+                            break;
+                    }
+                }
+            }
+        }
+
+        // 팩맨 그리기
+        function drawPacman() {
+            const x = pacman.x * CELL_SIZE + CELL_SIZE/2;
+            const y = pacman.y * CELL_SIZE + CELL_SIZE/2;
+            const radius = CELL_SIZE/2 - 2;
+
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+
+            if (pacman.mouthOpen) {
+                // 입이 열린 팩맨
+                const startAngle = (pacman.direction * Math.PI/2) + Math.PI/6;
+                const endAngle = (pacman.direction * Math.PI/2) - Math.PI/6;
+                ctx.arc(x, y, radius, startAngle, endAngle);
+                ctx.lineTo(x, y);
+            } else {
+                // 입이 닫힌 팩맨 (원)
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+            }
+            
+            ctx.fill();
+
+            // 애니메이션
+            pacman.animationTimer++;
+            if (pacman.animationTimer > 10) {
+                pacman.mouthOpen = !pacman.mouthOpen;
+                pacman.animationTimer = 0;
+            }
+        }
+
+        // 유령 그리기
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                const x = ghost.x * CELL_SIZE + CELL_SIZE/2;
+                const y = ghost.y * CELL_SIZE + CELL_SIZE/2;
+                const radius = CELL_SIZE/2 - 2;
+
+                // 파워 모드에서는 파란색으로
+                ctx.fillStyle = powerMode ? '#0000ff' : ghost.color;
+                
+                // 유령 몸체
+                ctx.beginPath();
+                ctx.arc(x, y - radius/2, radius, Math.PI, 0);
+                ctx.lineTo(x + radius, y + radius/2);
+                
+                // 유령 하단 지그재그
+                for (let i = 0; i < 3; i++) {
+                    ctx.lineTo(x + radius - (i + 1) * radius/1.5, y + radius/2 - (i % 2) * radius/3);
+                }
+                
+                ctx.lineTo(x - radius, y + radius/2);
+                ctx.closePath();
+                ctx.fill();
+
+                // 눈
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(x - radius/3, y - radius/2, radius/4, 0, Math.PI * 2);
+                ctx.arc(x + radius/3, y - radius/2, radius/4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(x - radius/3, y - radius/2, radius/6, 0, Math.PI * 2);
+                ctx.arc(x + radius/3, y - radius/2, radius/6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function updateLevel() {
+            document.getElementById('level').textContent = level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            powerMode = false;
+            powerModeTimer = 0;
+            gameSpeed = 0; // 게임 속도 카운터 리셋
+            
+            // 맵 리셋
+            currentMap = JSON.parse(JSON.stringify(gameMap));
+            
+            // 팩맨 리셋
+            pacman.x = 9;
+            pacman.y = 15;
+            pacman.direction = 0;
+            pacman.nextDirection = 0;
+            
+            // 유령 리셋
+            ghosts[0] = { x: 9, y: 9, color: '#ff0000', direction: 0, mode: 'chase' };
+            ghosts[1] = { x: 10, y: 9, color: '#ffb8ff', direction: 1, mode: 'chase' };
+            ghosts[2] = { x: 9, y: 10, color: '#00ffff', direction: 2, mode: 'chase' };
+            ghosts[3] = { x: 10, y: 10, color: '#ffb852', direction: 3, mode: 'chase' };
+            
+            updateScore();
+            updateLives();
+            updateLevel();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // 게임 속도 카운터 증가
+            gameSpeed++;
+
+            // 화면 지우기
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 파워 모드 타이머
+            if (powerMode) {
+                powerModeTimer--;
+                if (powerModeTimer <= 0) {
+                    powerMode = false;
+                }
+            }
+
+            // 게임 로직 (팩맨은 매 프레임, 유령은 속도 조절됨)
+            movePacman();
+            moveGhosts(); // 내부에서 속도 조절
+            checkCollisions();
+            checkLevelComplete();
+
+            // 그리기
+            drawMap();
+            drawPacman();
+            drawGhosts();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 시작
+        updateScore();
+        updateLives();
+        updateLevel();
+        gameLoop();
+    </script>
+</body>
+</html>

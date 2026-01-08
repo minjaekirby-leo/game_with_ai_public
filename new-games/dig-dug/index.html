@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디그더그 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #4ecdc4;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives, .level {
+            background: rgba(78, 205, 196, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #4ecdc4;
+        }
+
+        #gameCanvas {
+            border: 4px solid #4ecdc4;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #4ecdc4;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>⛏️ 디그더그 게임</h1>
+        <p>땅을 파고 적들을 펌프로 부풀려 터뜨리세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+        <div class="level">레벨: <span id="level">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>⬅️➡️⬆️⬇️ 화살표 키로 이동 및 땅 파기</p>
+        <p>🎈 스페이스바로 펌프 발사</p>
+        <p>💥 적을 부풀려서 터뜨리세요!</p>
+        <p>🪨 바위를 떨어뜨려 적을 압사시킬 수 있어요!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+
+        // 그리드 설정
+        const GRID_SIZE = 20;
+        const COLS = canvas.width / GRID_SIZE;
+        const ROWS = canvas.height / GRID_SIZE;
+
+        // 지형 타입
+        const TERRAIN = {
+            EMPTY: 0,
+            DIRT: 1,
+            ROCK: 2,
+            TUNNEL: 3
+        };
+
+        // 플레이어 (디그더그)
+        let player = {
+            x: 1,
+            y: 1,
+            direction: 0, // 0: 오른쪽, 1: 아래, 2: 왼쪽, 3: 위
+            pumping: false,
+            pumpTarget: null,
+            pumpProgress: 0
+        };
+
+        // 게임 객체들
+        let terrain = [];
+        let enemies = [];
+        let rocks = [];
+        let pump = null;
+
+        // 키보드 입력
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 지형 초기화
+        function initTerrain() {
+            terrain = [];
+            for (let y = 0; y < ROWS; y++) {
+                terrain[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    if (y === 0 || y === 1) {
+                        terrain[y][x] = TERRAIN.EMPTY; // 상단 2줄은 빈 공간
+                    } else if (Math.random() < 0.1) {
+                        terrain[y][x] = TERRAIN.ROCK; // 10% 확률로 바위
+                    } else {
+                        terrain[y][x] = TERRAIN.DIRT; // 나머지는 흙
+                    }
+                }
+            }
+            
+            // 플레이어 시작 위치 주변 정리
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = player.x + dx;
+                    const ny = player.y + dy;
+                    if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                        terrain[ny][nx] = TERRAIN.TUNNEL;
+                    }
+                }
+            }
+        }
+
+        // 적 초기화
+        function initEnemies() {
+            enemies = [];
+            const enemyCount = Math.min(level + 2, 8);
+            
+            for (let i = 0; i < enemyCount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * (COLS - 4)) + 2;
+                    y = Math.floor(Math.random() * (ROWS - 4)) + 4;
+                } while (terrain[y][x] !== TERRAIN.DIRT || 
+                         Math.abs(x - player.x) < 3 || Math.abs(y - player.y) < 3);
+                
+                enemies.push({
+                    x: x,
+                    y: y,
+                    type: Math.random() < 0.7 ? 'pooka' : 'fygar',
+                    direction: Math.floor(Math.random() * 4),
+                    moveTimer: 0,
+                    inflated: 0,
+                    maxInflation: 4,
+                    stunned: 0
+                });
+                
+                // 적 주변에 터널 생성
+                terrain[y][x] = TERRAIN.TUNNEL;
+            }
+        }
+
+        // 바위 초기화
+        function initRocks() {
+            rocks = [];
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (terrain[y][x] === TERRAIN.ROCK) {
+                        rocks.push({
+                            x: x,
+                            y: y,
+                            falling: false,
+                            fallSpeed: 0
+                        });
+                    }
+                }
+            }
+        }
+
+        // 플레이어 업데이트
+        function updatePlayer() {
+            if (player.pumping) {
+                // 펌프 사용 중
+                if (keys[' ']) {
+                    player.pumpProgress++;
+                    if (player.pumpTarget && player.pumpProgress % 20 === 0) {
+                        player.pumpTarget.inflated++;
+                        if (player.pumpTarget.inflated >= player.pumpTarget.maxInflation) {
+                            // 적 터뜨리기
+                            score += player.pumpTarget.type === 'fygar' ? 200 : 100;
+                            updateScore();
+                            enemies = enemies.filter(e => e !== player.pumpTarget);
+                            player.pumping = false;
+                            player.pumpTarget = null;
+                        }
+                    }
+                } else {
+                    // 펌프 중단
+                    player.pumping = false;
+                    if (player.pumpTarget) {
+                        player.pumpTarget.stunned = 60; // 1초간 기절
+                    }
+                    player.pumpTarget = null;
+                }
+                return;
+            }
+
+            let newX = player.x;
+            let newY = player.y;
+            let moved = false;
+
+            // 이동
+            if (keys['ArrowLeft']) {
+                newX--;
+                player.direction = 2;
+                moved = true;
+            } else if (keys['ArrowRight']) {
+                newX++;
+                player.direction = 0;
+                moved = true;
+            } else if (keys['ArrowUp']) {
+                newY--;
+                player.direction = 3;
+                moved = true;
+            } else if (keys['ArrowDown']) {
+                newY++;
+                player.direction = 1;
+                moved = true;
+            }
+
+            // 펌프 사용
+            if (keys[' ']) {
+                const targetX = player.x + [1, 0, -1, 0][player.direction];
+                const targetY = player.y + [0, 1, 0, -1][player.direction];
+                
+                const target = enemies.find(e => e.x === targetX && e.y === targetY);
+                if (target && target.inflated < target.maxInflation) {
+                    player.pumping = true;
+                    player.pumpTarget = target;
+                    player.pumpProgress = 0;
+                }
+                return;
+            }
+
+            // 유효한 이동인지 확인
+            if (moved && newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS) {
+                if (terrain[newY][newX] !== TERRAIN.ROCK) {
+                    player.x = newX;
+                    player.y = newY;
+                    
+                    // 흙을 파서 터널로 만들기
+                    if (terrain[newY][newX] === TERRAIN.DIRT) {
+                        terrain[newY][newX] = TERRAIN.TUNNEL;
+                        score += 10;
+                        updateScore();
+                    }
+                    
+                    // 바위 떨어뜨리기 체크
+                    checkRockFalls();
+                }
+            }
+        }
+
+        // 적 업데이트
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                if (enemy.stunned > 0) {
+                    enemy.stunned--;
+                    return;
+                }
+
+                if (enemy.inflated > 0) {
+                    // 부풀어진 상태에서는 천천히 원래대로
+                    if (Math.random() < 0.02) {
+                        enemy.inflated--;
+                    }
+                    return;
+                }
+
+                enemy.moveTimer--;
+                if (enemy.moveTimer <= 0) {
+                    // 플레이어를 향해 이동 (간단한 AI)
+                    const dx = player.x - enemy.x;
+                    const dy = player.y - enemy.y;
+                    
+                    let newX = enemy.x;
+                    let newY = enemy.y;
+                    
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        newX += dx > 0 ? 1 : -1;
+                    } else {
+                        newY += dy > 0 ? 1 : -1;
+                    }
+                    
+                    // 유효한 이동인지 확인
+                    if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS &&
+                        terrain[newY][newX] !== TERRAIN.ROCK) {
+                        
+                        // 흙을 파면서 이동
+                        if (terrain[newY][newX] === TERRAIN.DIRT) {
+                            terrain[newY][newX] = TERRAIN.TUNNEL;
+                        }
+                        
+                        enemy.x = newX;
+                        enemy.y = newY;
+                    }
+                    
+                    enemy.moveTimer = 30 + Math.random() * 30;
+                }
+                
+                // 플레이어와 충돌
+                if (enemy.x === player.x && enemy.y === player.y) {
+                    lives--;
+                    updateLives();
+                    resetPlayer();
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+        }
+
+        // 바위 업데이트
+        function updateRocks() {
+            rocks.forEach(rock => {
+                if (rock.falling) {
+                    rock.fallSpeed += 0.2;
+                    rock.y += rock.fallSpeed;
+                    
+                    const gridY = Math.floor(rock.y);
+                    
+                    // 바닥이나 다른 바위에 닿으면 정지
+                    if (gridY >= ROWS - 1 || 
+                        (gridY < ROWS && terrain[gridY + 1] && terrain[gridY + 1][rock.x] === TERRAIN.ROCK)) {
+                        rock.falling = false;
+                        rock.y = gridY;
+                        rock.fallSpeed = 0;
+                        terrain[gridY][rock.x] = TERRAIN.ROCK;
+                        
+                        // 플레이어나 적 압사 체크
+                        if (player.x === rock.x && Math.floor(player.y) === gridY) {
+                            lives--;
+                            updateLives();
+                            resetPlayer();
+                            
+                            if (lives <= 0) {
+                                gameOver();
+                            }
+                        }
+                        
+                        enemies = enemies.filter(enemy => {
+                            if (enemy.x === rock.x && enemy.y === gridY) {
+                                score += 1000; // 바위로 적 처치 시 보너스
+                                updateScore();
+                                return false;
+                            }
+                            return true;
+                        });
+                    }
+                }
+            });
+        }
+
+        // 바위 떨어뜨리기 체크
+        function checkRockFalls() {
+            rocks.forEach(rock => {
+                if (!rock.falling && rock.y < ROWS - 1) {
+                    // 바위 아래가 빈 공간이면 떨어뜨리기
+                    if (terrain[rock.y + 1][rock.x] === TERRAIN.TUNNEL || 
+                        terrain[rock.y + 1][rock.x] === TERRAIN.EMPTY) {
+                        rock.falling = true;
+                        terrain[rock.y][rock.x] = TERRAIN.TUNNEL;
+                    }
+                }
+            });
+        }
+
+        // 플레이어 리셋
+        function resetPlayer() {
+            player.x = 1;
+            player.y = 1;
+            player.pumping = false;
+            player.pumpTarget = null;
+        }
+
+        // 레벨 완료 체크
+        function checkLevelComplete() {
+            if (enemies.length === 0) {
+                level++;
+                score += 2000;
+                updateLevel();
+                updateScore();
+                resetPlayer();
+                initTerrain();
+                initEnemies();
+                initRocks();
+            }
+        }
+
+        // 그리기 함수들
+        function drawTerrain() {
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cellX = x * GRID_SIZE;
+                    const cellY = y * GRID_SIZE;
+                    
+                    switch (terrain[y][x]) {
+                        case TERRAIN.DIRT:
+                            ctx.fillStyle = '#8b4513';
+                            ctx.fillRect(cellX, cellY, GRID_SIZE, GRID_SIZE);
+                            // 흙 텍스처
+                            ctx.fillStyle = '#654321';
+                            for (let i = 0; i < 3; i++) {
+                                ctx.fillRect(
+                                    cellX + Math.random() * GRID_SIZE,
+                                    cellY + Math.random() * GRID_SIZE,
+                                    2, 2
+                                );
+                            }
+                            break;
+                        case TERRAIN.ROCK:
+                            ctx.fillStyle = '#696969';
+                            ctx.fillRect(cellX, cellY, GRID_SIZE, GRID_SIZE);
+                            ctx.fillStyle = '#808080';
+                            ctx.fillRect(cellX + 2, cellY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+                            break;
+                        case TERRAIN.TUNNEL:
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(cellX, cellY, GRID_SIZE, GRID_SIZE);
+                            break;
+                    }
+                }
+            }
+        }
+
+        function drawRocks() {
+            rocks.forEach(rock => {
+                const cellX = rock.x * GRID_SIZE;
+                const cellY = rock.y * GRID_SIZE;
+                
+                ctx.fillStyle = '#696969';
+                ctx.fillRect(cellX, cellY, GRID_SIZE, GRID_SIZE);
+                ctx.fillStyle = '#808080';
+                ctx.fillRect(cellX + 2, cellY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+            });
+        }
+
+        function drawPlayer() {
+            const cellX = player.x * GRID_SIZE;
+            const cellY = player.y * GRID_SIZE;
+            
+            // 디그더그 (파란색 캐릭터)
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillRect(cellX + 2, cellY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+            
+            // 얼굴
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(cellX + 6, cellY + 4, 3, 3);
+            ctx.fillRect(cellX + 11, cellY + 4, 3, 3);
+            
+            // 펌프 호스 (펌프 사용 중일 때)
+            if (player.pumping && player.pumpTarget) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cellX + GRID_SIZE/2, cellY + GRID_SIZE/2);
+                ctx.lineTo(
+                    player.pumpTarget.x * GRID_SIZE + GRID_SIZE/2,
+                    player.pumpTarget.y * GRID_SIZE + GRID_SIZE/2
+                );
+                ctx.stroke();
+            }
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                const cellX = enemy.x * GRID_SIZE;
+                const cellY = enemy.y * GRID_SIZE;
+                const size = GRID_SIZE - 4 + enemy.inflated * 3;
+                const offset = (GRID_SIZE - size) / 2;
+                
+                if (enemy.type === 'pooka') {
+                    // 푸카 (빨간색 고글 몬스터)
+                    ctx.fillStyle = enemy.inflated > 0 ? '#ff69b4' : '#ff0000';
+                    ctx.fillRect(cellX + offset, cellY + offset, size, size);
+                    
+                    // 고글
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(cellX + offset + 2, cellY + offset + 2, size/3, size/3);
+                    ctx.fillRect(cellX + offset + size - size/3 - 2, cellY + offset + 2, size/3, size/3);
+                } else {
+                    // 파이가 (초록색 드래곤)
+                    ctx.fillStyle = enemy.inflated > 0 ? '#90ee90' : '#00ff00';
+                    ctx.fillRect(cellX + offset, cellY + offset, size, size);
+                    
+                    // 눈
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(cellX + offset + 2, cellY + offset + 2, 3, 3);
+                    ctx.fillRect(cellX + offset + size - 5, cellY + offset + 2, 3, 3);
+                }
+                
+                // 기절 상태 표시
+                if (enemy.stunned > 0) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.font = '12px monospace';
+                    ctx.fillText('*', cellX + GRID_SIZE/2 - 3, cellY - 2);
+                }
+            });
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function updateLevel() {
+            document.getElementById('level').textContent = level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            
+            resetPlayer();
+            initTerrain();
+            initEnemies();
+            initRocks();
+            
+            updateScore();
+            updateLives();
+            updateLevel();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#87ceeb';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 업데이트
+                updatePlayer();
+                updateEnemies();
+                updateRocks();
+                checkLevelComplete();
+            }
+
+            // 그리기
+            drawTerrain();
+            drawRocks();
+            drawEnemies();
+            drawPlayer();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initTerrain();
+            initEnemies();
+            initRocks();
+            updateScore();
+            updateLives();
+            updateLevel();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>
