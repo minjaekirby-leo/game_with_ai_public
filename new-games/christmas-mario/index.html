@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎄 크리스마스 마리오 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 20px auto;
+            background: #87CEEB;
+            border: 4px solid #8B4513;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .game-info {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal h2 {
+            color: #c41e3a;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .modal button {
+            background: #c41e3a;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .modal button:hover {
+            background: #a01729;
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="game-info">🎄 레벨: <span id="level">1</span> | 점수: <span id="score">0</span> | 목표: <span id="goal">500</span></div>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div class="controls">⬅️ 왼쪽 화살표: 왼쪽 | ➡️ 오른쪽 화살표: 오른쪽 | 스페이스바 or ⬆️: 점프 | 💎 코인 1개 먹고 Enter: 비밀 워프!</div>
+
+    <div class="modal" id="gameOver">
+        <h2>🎮 게임 오버!</h2>
+        <p style="font-size: 24px; margin: 20px 0;">최종 점수: <span id="finalScore">0</span></p>
+        <p style="font-size: 20px; margin: 20px 0;">도달 레벨: <span id="finalLevel">1</span></p>
+        <button onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <div class="modal" id="levelComplete">
+        <h2>🎉 레벨 클리어!</h2>
+        <p style="font-size: 24px; margin: 20px 0;">레벨 <span id="completedLevel">1</span> 완료!</p>
+        <p style="font-size: 20px; margin: 20px 0;">현재 점수: <span id="currentScore">0</span></p>
+        <button onclick="nextLevel()">다음 레벨</button>
+    </div>
+
+    <div class="modal" id="gameWin">
+        <h2>🏆 게임 클리어!</h2>
+        <p style="font-size: 24px; margin: 20px 0;">모든 레벨을 클리어했습니다!</p>
+        <p style="font-size: 20px; margin: 20px 0;">최종 점수: <span id="winScore">0</span></p>
+        <button onclick="restartGame()">처음부터 다시</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let currentLevel = 1;
+        let gameRunning = true;
+        let cameraX = 0;
+        let coinsCollected = 0;
+        let canWarp = false;
+
+        // 레벨 설정
+        const levelData = {
+            1: {
+                goal: 500,
+                worldWidth: 3000,
+                finishLine: 2900,
+                platforms: [
+                    { x: 0, y: 450, width: 3000, height: 50 },
+                    { x: 300, y: 350, width: 150, height: 20 },
+                    { x: 600, y: 280, width: 150, height: 20 },
+                    { x: 900, y: 200, width: 150, height: 20 },
+                    { x: 1200, y: 300, width: 150, height: 20 },
+                    { x: 1500, y: 250, width: 150, height: 20 },
+                    { x: 1800, y: 350, width: 150, height: 20 },
+                    { x: 2100, y: 280, width: 150, height: 20 },
+                    { x: 2400, y: 200, width: 150, height: 20 },
+                    { x: 2700, y: 350, width: 200, height: 20 }
+                ],
+                coins: [
+                    { x: 350, y: 300 }, { x: 650, y: 230 }, { x: 950, y: 150 },
+                    { x: 1250, y: 250 }, { x: 1550, y: 200 }, { x: 1850, y: 300 },
+                    { x: 2150, y: 230 }, { x: 2450, y: 150 }, { x: 2750, y: 300 }
+                ],
+                obstacleSpeed: 2
+            },
+            2: {
+                goal: 1200,
+                worldWidth: 4000,
+                finishLine: 3900,
+                platforms: [
+                    { x: 0, y: 450, width: 4000, height: 50 },
+                    { x: 250, y: 380, width: 120, height: 20 },
+                    { x: 500, y: 300, width: 120, height: 20 },
+                    { x: 750, y: 220, width: 120, height: 20 },
+                    { x: 1000, y: 150, width: 120, height: 20 },
+                    { x: 1300, y: 250, width: 150, height: 20 },
+                    { x: 1600, y: 180, width: 120, height: 20 },
+                    { x: 1900, y: 300, width: 150, height: 20 },
+                    { x: 2200, y: 200, width: 120, height: 20 },
+                    { x: 2500, y: 320, width: 150, height: 20 },
+                    { x: 2800, y: 240, width: 120, height: 20 },
+                    { x: 3100, y: 350, width: 150, height: 20 },
+                    { x: 3500, y: 280, width: 200, height: 20 }
+                ],
+                coins: [
+                    { x: 300, y: 330 }, { x: 550, y: 250 }, { x: 800, y: 170 },
+                    { x: 1050, y: 100 }, { x: 1350, y: 200 }, { x: 1650, y: 130 },
+                    { x: 1950, y: 250 }, { x: 2250, y: 150 }, { x: 2550, y: 270 },
+                    { x: 2850, y: 190 }, { x: 3150, y: 300 }, { x: 3550, y: 230 }
+                ],
+                obstacleSpeed: 2.5
+            },
+            3: {
+                goal: 2000,
+                worldWidth: 5000,
+                finishLine: 4900,
+                platforms: [
+                    { x: 0, y: 450, width: 5000, height: 50 },
+                    { x: 200, y: 370, width: 100, height: 20 },
+                    { x: 400, y: 290, width: 100, height: 20 },
+                    { x: 650, y: 210, width: 100, height: 20 },
+                    { x: 900, y: 350, width: 150, height: 20 },
+                    { x: 1200, y: 270, width: 100, height: 20 },
+                    { x: 1450, y: 190, width: 100, height: 20 },
+                    { x: 1700, y: 320, width: 150, height: 20 },
+                    { x: 2000, y: 240, width: 100, height: 20 },
+                    { x: 2300, y: 160, width: 100, height: 20 },
+                    { x: 2600, y: 300, width: 150, height: 20 },
+                    { x: 2950, y: 220, width: 100, height: 20 },
+                    { x: 3250, y: 350, width: 150, height: 20 },
+                    { x: 3600, y: 270, width: 100, height: 20 },
+                    { x: 3900, y: 190, width: 100, height: 20 },
+                    { x: 4200, y: 310, width: 150, height: 20 },
+                    { x: 4550, y: 350, width: 200, height: 20 }
+                ],
+                coins: [
+                    { x: 250, y: 320 }, { x: 450, y: 240 }, { x: 700, y: 160 },
+                    { x: 950, y: 300 }, { x: 1250, y: 220 }, { x: 1500, y: 140 },
+                    { x: 1750, y: 270 }, { x: 2050, y: 190 }, { x: 2350, y: 110 },
+                    { x: 2650, y: 250 }, { x: 3000, y: 170 }, { x: 3300, y: 300 },
+                    { x: 3650, y: 220 }, { x: 3950, y: 140 }, { x: 4250, y: 260 },
+                    { x: 4600, y: 300 }
+                ],
+                obstacleSpeed: 3
+            },
+            4: {
+                goal: 3000,
+                worldWidth: 6000,
+                finishLine: 5900,
+                platforms: [
+                    { x: 0, y: 450, width: 6000, height: 50 },
+                    { x: 180, y: 380, width: 90, height: 20 },
+                    { x: 350, y: 300, width: 90, height: 20 },
+                    { x: 520, y: 220, width: 90, height: 20 },
+                    { x: 700, y: 140, width: 90, height: 20 },
+                    { x: 950, y: 320, width: 120, height: 20 },
+                    { x: 1200, y: 240, width: 90, height: 20 },
+                    { x: 1450, y: 360, width: 120, height: 20 },
+                    { x: 1700, y: 280, width: 90, height: 20 },
+                    { x: 1950, y: 200, width: 90, height: 20 },
+                    { x: 2200, y: 340, width: 120, height: 20 },
+                    { x: 2500, y: 260, width: 90, height: 20 },
+                    { x: 2800, y: 180, width: 90, height: 20 },
+                    { x: 3100, y: 300, width: 120, height: 20 },
+                    { x: 3400, y: 220, width: 90, height: 20 },
+                    { x: 3700, y: 350, width: 120, height: 20 },
+                    { x: 4050, y: 270, width: 90, height: 20 },
+                    { x: 4350, y: 190, width: 90, height: 20 },
+                    { x: 4650, y: 320, width: 120, height: 20 },
+                    { x: 5000, y: 240, width: 90, height: 20 },
+                    { x: 5350, y: 350, width: 200, height: 20 }
+                ],
+                coins: [
+                    { x: 230, y: 330 }, { x: 400, y: 250 }, { x: 570, y: 170 },
+                    { x: 750, y: 90 }, { x: 1000, y: 270 }, { x: 1250, y: 190 },
+                    { x: 1500, y: 310 }, { x: 1750, y: 230 }, { x: 2000, y: 150 },
+                    { x: 2250, y: 290 }, { x: 2550, y: 210 }, { x: 2850, y: 130 },
+                    { x: 3150, y: 250 }, { x: 3450, y: 170 }, { x: 3750, y: 300 },
+                    { x: 4100, y: 220 }, { x: 4400, y: 140 }, { x: 4700, y: 270 },
+                    { x: 5050, y: 190 }, { x: 5400, y: 300 }
+                ],
+                obstacleSpeed: 3.5
+            },
+            5: {
+                goal: 4500,
+                worldWidth: 7500,
+                finishLine: 7400,
+                platforms: [
+                    { x: 0, y: 450, width: 7500, height: 50 },
+                    { x: 150, y: 380, width: 80, height: 20 },
+                    { x: 300, y: 310, width: 80, height: 20 },
+                    { x: 450, y: 240, width: 80, height: 20 },
+                    { x: 600, y: 170, width: 80, height: 20 },
+                    { x: 800, y: 350, width: 100, height: 20 },
+                    { x: 1000, y: 270, width: 80, height: 20 },
+                    { x: 1200, y: 190, width: 80, height: 20 },
+                    { x: 1450, y: 330, width: 100, height: 20 },
+                    { x: 1700, y: 250, width: 80, height: 20 },
+                    { x: 1950, y: 170, width: 80, height: 20 },
+                    { x: 2200, y: 360, width: 100, height: 20 },
+                    { x: 2500, y: 280, width: 80, height: 20 },
+                    { x: 2800, y: 200, width: 80, height: 20 },
+                    { x: 3100, y: 320, width: 100, height: 20 },
+                    { x: 3400, y: 240, width: 80, height: 20 },
+                    { x: 3700, y: 160, width: 80, height: 20 },
+                    { x: 4000, y: 340, width: 100, height: 20 },
+                    { x: 4350, y: 260, width: 80, height: 20 },
+                    { x: 4700, y: 180, width: 80, height: 20 },
+                    { x: 5050, y: 310, width: 100, height: 20 },
+                    { x: 5400, y: 230, width: 80, height: 20 },
+                    { x: 5750, y: 350, width: 100, height: 20 },
+                    { x: 6100, y: 270, width: 80, height: 20 },
+                    { x: 6450, y: 190, width: 80, height: 20 },
+                    { x: 6800, y: 330, width: 100, height: 20 },
+                    { x: 7150, y: 360, width: 250, height: 20 }
+                ],
+                coins: [
+                    { x: 200, y: 330 }, { x: 350, y: 260 }, { x: 500, y: 190 },
+                    { x: 650, y: 120 }, { x: 850, y: 300 }, { x: 1050, y: 220 },
+                    { x: 1250, y: 140 }, { x: 1500, y: 280 }, { x: 1750, y: 200 },
+                    { x: 2000, y: 120 }, { x: 2250, y: 310 }, { x: 2550, y: 230 },
+                    { x: 2850, y: 150 }, { x: 3150, y: 270 }, { x: 3450, y: 190 },
+                    { x: 3750, y: 110 }, { x: 4050, y: 290 }, { x: 4400, y: 210 },
+                    { x: 4750, y: 130 }, { x: 5100, y: 260 }, { x: 5450, y: 180 },
+                    { x: 5800, y: 300 }, { x: 6150, y: 220 }, { x: 6500, y: 140 },
+                    { x: 6850, y: 280 }, { x: 7200, y: 310 }
+                ],
+                obstacleSpeed: 4
+            }
+        };
+
+        // 플레이어
+        const player = {
+            x: 100,
+            y: 350,
+            width: 40,
+            height: 50,
+            velocityY: 0,
+            velocityX: 0,
+            jumping: false,
+            speed: 6,
+            jumpPower: 15,
+            gravity: 0.6
+        };
+
+        let platforms = [];
+        let coins = [];
+        let obstacles = [];
+        let obstacleTimer = 0;
+        let santaGrandma = null;
+
+        // 레벨 로드
+        function loadLevel(level) {
+            const data = levelData[level];
+            platforms = JSON.parse(JSON.stringify(data.platforms));
+            coins = data.coins.map(c => ({ ...c, collected: false }));
+            obstacles = [];
+            obstacleTimer = 0;
+            cameraX = 0;
+            player.x = 100;
+            player.y = 350;
+            player.velocityY = 0;
+            player.velocityX = 0;
+            player.jumping = false;
+
+            // 5스테이지면 산타할머니 생성
+            if (level === 5) {
+                santaGrandma = {
+                    x: 7200,
+                    y: 250,
+                    width: 80,
+                    height: 100,
+                    health: 3,
+                    direction: 1,
+                    moveSpeed: 2
+                };
+            } else {
+                santaGrandma = null;
+            }
+
+            document.getElementById('level').textContent = level;
+            document.getElementById('goal').textContent = data.goal;
+        }
+
+        // 키 입력
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if ((e.key === ' ' || e.key === 'ArrowUp') && !player.jumping) {
+                player.velocityY = -player.jumpPower;
+                player.jumping = true;
+            }
+
+            // 비밀 워프 (코인 1개 먹고 Enter)
+            if (e.key === 'Enter' && canWarp && currentLevel < 5) {
+                currentLevel = 5;
+                loadLevel(5);
+                // 할머니 앞으로 워프
+                player.x = 7000;
+                cameraX = 6600;
+                canWarp = false;
+                coinsCollected = 0;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 장애물 생성
+        function createObstacle() {
+            const data = levelData[currentLevel];
+            obstacleTimer++;
+            if (obstacleTimer > 120) {
+                obstacles.push({
+                    x: cameraX + canvas.width + 50,
+                    y: 400,
+                    width: 30,
+                    height: 30,
+                    speed: data.obstacleSpeed
+                });
+                obstacleTimer = 0;
+            }
+        }
+
+        // 산타할머니 그리기
+        function drawSantaGrandma() {
+            if (!santaGrandma) return;
+            const screenX = santaGrandma.x - cameraX;
+            if (screenX < -100 || screenX > canvas.width + 100) return;
+
+            // 몸통 (빨간 드레스)
+            ctx.fillStyle = '#c41e3a';
+            ctx.fillRect(screenX, santaGrandma.y + 40, santaGrandma.width, 60);
+
+            // 머리
+            ctx.fillStyle = '#ffcccb';
+            ctx.beginPath();
+            ctx.arc(screenX + santaGrandma.width/2, santaGrandma.y + 25, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 흰 머리카락
+            ctx.fillStyle = '#f0f0f0';
+            ctx.beginPath();
+            ctx.arc(screenX + santaGrandma.width/2 - 15, santaGrandma.y + 15, 12, 0, Math.PI * 2);
+            ctx.arc(screenX + santaGrandma.width/2 + 15, santaGrandma.y + 15, 12, 0, Math.PI * 2);
+            ctx.arc(screenX + santaGrandma.width/2, santaGrandma.y + 5, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 산타 모자
+            ctx.fillStyle = '#c41e3a';
+            ctx.beginPath();
+            ctx.moveTo(screenX + santaGrandma.width/2 - 20, santaGrandma.y + 15);
+            ctx.lineTo(screenX + santaGrandma.width/2 + 20, santaGrandma.y + 15);
+            ctx.lineTo(screenX + santaGrandma.width/2, santaGrandma.y - 15);
+            ctx.fill();
+
+            // 모자 끝 흰색 볼
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(screenX + santaGrandma.width/2, santaGrandma.y - 15, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 눈
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(screenX + santaGrandma.width/2 - 8, santaGrandma.y + 20, 3, 0, Math.PI * 2);
+            ctx.arc(screenX + santaGrandma.width/2 + 8, santaGrandma.y + 20, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 미소
+            ctx.beginPath();
+            ctx.arc(screenX + santaGrandma.width/2, santaGrandma.y + 25, 8, 0, Math.PI);
+            ctx.stroke();
+
+            // 이름
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('산타 할머니 👵', screenX - 10, santaGrandma.y - 20);
+        }
+
+        // 결승선 그리기
+        function drawFinishLine() {
+            const data = levelData[currentLevel];
+            const screenX = data.finishLine - cameraX;
+            if (screenX > -100 && screenX < canvas.width + 100) {
+                // 결승선 깃발 기둥
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(screenX, 300, 8, 150);
+
+                // 체크무늬 깃발
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        ctx.fillStyle = (i + j) % 2 === 0 ? '#000' : '#fff';
+                        ctx.fillRect(screenX + 8 + j * 20, 300 + i * 15, 20, 15);
+                    }
+                }
+
+                // 축하 텍스트
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('🏁 GOAL!', screenX - 20, 280);
+            }
+        }
+
+        // 플레이어 그리기
+        function drawPlayer() {
+            const screenX = player.x - cameraX;
+            
+            // 몸통
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(screenX, player.y + 20, player.width, player.height - 20);
+            
+            // 머리
+            ctx.fillStyle = '#ffcccb';
+            ctx.beginPath();
+            ctx.arc(screenX + player.width/2, player.y + 15, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 산타 모자
+            ctx.fillStyle = '#c41e3a';
+            ctx.beginPath();
+            ctx.moveTo(screenX + player.width/2 - 12, player.y + 8);
+            ctx.lineTo(screenX + player.width/2 + 12, player.y + 8);
+            ctx.lineTo(screenX + player.width/2, player.y - 10);
+            ctx.fill();
+            
+            // 모자 끝 흰색 볼
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(screenX + player.width/2, player.y - 10, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 플랫폼 그리기
+        function drawPlatforms() {
+            platforms.forEach(platform => {
+                const screenX = platform.x - cameraX;
+                if (screenX + platform.width > 0 && screenX < canvas.width) {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(screenX, platform.y, platform.width, platform.height);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(screenX, platform.y, platform.width, 5);
+                }
+            });
+        }
+
+        // 장애물 그리기
+        function drawObstacles() {
+            obstacles.forEach(obs => {
+                const screenX = obs.x - cameraX;
+                if (screenX + obs.width > 0 && screenX < canvas.width) {
+                    // 눈사람
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(screenX + 15, obs.y + 20, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(screenX + 15, obs.y + 5, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 눈
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(screenX + 12, obs.y + 3, 2, 0, Math.PI * 2);
+                    ctx.arc(screenX + 18, obs.y + 3, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // 코인 그리기
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    const screenX = coin.x - cameraX;
+                    if (screenX > -20 && screenX < canvas.width + 20) {
+                        ctx.fillStyle = '#FFD700';
+                        ctx.beginPath();
+                        ctx.arc(screenX, coin.y, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#FFA500';
+                        ctx.beginPath();
+                        ctx.arc(screenX, coin.y, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            });
+        }
+
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 업데이트
+        function update() {
+            if (!gameRunning) return;
+
+            // 플레이어 좌우 이동 (점프 중에도 가능!)
+            player.velocityX = 0;
+            if (keys['ArrowLeft']) {
+                player.velocityX = -player.speed;
+            }
+            if (keys['ArrowRight']) {
+                player.velocityX = player.speed;
+            }
+            player.x += player.velocityX;
+
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // 카메라 이동 (스크롤)
+            if (player.x - cameraX > canvas.width * 0.6) {
+                cameraX = player.x - canvas.width * 0.6;
+            }
+            if (player.x - cameraX < canvas.width * 0.3) {
+                cameraX = player.x - canvas.width * 0.3;
+            }
+
+            const data = levelData[currentLevel];
+            if (cameraX < 0) cameraX = 0;
+            if (cameraX > data.worldWidth - canvas.width) {
+                cameraX = data.worldWidth - canvas.width;
+            }
+
+            // 플랫폼 충돌
+            player.jumping = true;
+            platforms.forEach(platform => {
+                if (checkCollision(player, platform) && player.velocityY > 0) {
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.jumping = false;
+                }
+            });
+
+            // 아래로 떨어지면 게임 오버
+            if (player.y > canvas.height) {
+                endGame();
+            }
+
+            // 장애물 업데이트
+            createObstacle();
+            obstacles = obstacles.filter(obs => {
+                obs.x -= obs.speed;
+                if (checkCollision(player, obs)) {
+                    endGame();
+                    return false;
+                }
+                return obs.x > cameraX - 100;
+            });
+
+            // 코인 수집
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    const distance = Math.sqrt(Math.pow(player.x + player.width/2 - coin.x, 2) + Math.pow(player.y + player.height/2 - coin.y, 2));
+                    if (distance < 30) {
+                        coin.collected = true;
+                        score += 10;
+                        coinsCollected++;
+                        document.getElementById('score').textContent = score;
+
+                        // 첫 코인 먹으면 워프 가능
+                        if (coinsCollected === 1 && currentLevel < 5) {
+                            canWarp = true;
+                        }
+                    }
+                }
+            });
+
+            // 산타할머니 업데이트 (5스테이지)
+            if (santaGrandma) {
+                // 좌우 이동
+                santaGrandma.x += santaGrandma.direction * santaGrandma.moveSpeed;
+
+                // 범위 제한 (7000 ~ 7400)
+                if (santaGrandma.x <= 7000) {
+                    santaGrandma.direction = 1;
+                } else if (santaGrandma.x >= 7400) {
+                    santaGrandma.direction = -1;
+                }
+
+                // 플레이어와 충돌하면 게임 오버
+                if (checkCollision(player, santaGrandma)) {
+                    endGame();
+                }
+            }
+
+            // 레벨 클리어 체크 (결승선 도달 또는 목표 점수)
+            const levelInfo = levelData[currentLevel];
+            if (player.x >= levelInfo.finishLine || score >= levelInfo.goal) {
+                completeLevel();
+            }
+
+            // 점수 증가
+            if (Math.random() < 0.01) {
+                score += 1;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        // 그리기
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 배경 그라디언트
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#E0F6FF');
+            gradient.addColorStop(0.7, '#90EE90');
+            gradient.addColorStop(1, '#228B22');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawPlatforms();
+            drawFinishLine();
+            drawCoins();
+            drawObstacles();
+            drawSantaGrandma();
+            drawPlayer();
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 오버
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = currentLevel;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 레벨 완료
+        function completeLevel() {
+            gameRunning = false;
+            document.getElementById('completedLevel').textContent = currentLevel;
+            document.getElementById('currentScore').textContent = score;
+
+            if (currentLevel >= 5) {
+                document.getElementById('winScore').textContent = score;
+                document.getElementById('gameWin').style.display = 'block';
+            } else {
+                document.getElementById('levelComplete').style.display = 'block';
+            }
+        }
+
+        // 다음 레벨
+        function nextLevel() {
+            document.getElementById('levelComplete').style.display = 'none';
+            currentLevel++;
+            loadLevel(currentLevel);
+            gameRunning = true;
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameWin').style.display = 'none';
+            gameRunning = true;
+            score = 0;
+            currentLevel = 1;
+            coinsCollected = 0;
+            canWarp = false;
+            document.getElementById('score').textContent = score;
+            loadLevel(currentLevel);
+        }
+
+        // 게임 시작
+        loadLevel(1);
+        gameLoop();
+    </script>
+</body>
+</html>

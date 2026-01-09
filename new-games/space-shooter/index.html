@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 우주 슈팅 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .level-stat {
+            background: rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+        }
+
+        .score-stat {
+            background: rgba(255, 255, 0, 0.2);
+            color: #ffff00;
+        }
+
+        .high-score-stat {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+
+        #gameCanvas {
+            border: 4px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            background: #000011;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+        }
+
+        .overlay-title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .ready-title {
+            color: #00ff00;
+        }
+
+        .game-over-title {
+            color: #ff0000;
+        }
+
+        .victory-title {
+            color: #ffff00;
+        }
+
+        .overlay-text {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .game-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .start-button {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .start-button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+
+        .restart-button {
+            background: #0088ff;
+            color: white;
+        }
+
+        .restart-button:hover {
+            background: #0066cc;
+            transform: scale(1.05);
+        }
+
+        .victory-button {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .victory-button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+            color: #aaa;
+        }
+
+        .controls p {
+            margin: 5px 0;
+        }
+
+        .game-info {
+            margin-top: 20px;
+            text-align: center;
+            color: #aaa;
+            max-width: 600px;
+        }
+
+        .game-info p {
+            margin: 5px 0;
+        }
+
+        .record-badge {
+            color: #ffff00;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ffff00;
+        }
+
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 2rem;
+            }
+
+            .game-stats {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+
+            #gameCanvas {
+                width: 100vw;
+                height: 60vh;
+                border-radius: 0;
+            }
+
+            .overlay-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="game-header">
+        <h1 class="game-title">🚀 우주 슈팅 게임</h1>
+        <div class="game-stats">
+            <div class="stat level-stat">레벨: <span id="levelDisplay">1</span>/10</div>
+            <div class="stat score-stat">점수: <span id="scoreDisplay">0</span></div>
+            <div class="stat high-score-stat">최고 점수: <span id="highScoreDisplay">0</span></div>
+        </div>
+    </div>
+
+    <div style="position: relative;">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <!-- 게임 시작 화면 -->
+        <div id="readyOverlay" class="game-overlay">
+            <h2 class="overlay-title ready-title">게임 시작 준비!</h2>
+            <p class="overlay-text">10단계를 클리어하세요!</p>
+            <button id="startButton" class="game-button start-button">시작하기</button>
+            <div class="controls">
+                <p>← → ↑ ↓: 이동</p>
+                <p>스페이스바: 발사</p>
+            </div>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="gameOverOverlay" class="game-overlay" style="display: none;">
+            <h2 class="overlay-title game-over-title">게임 오버!</h2>
+            <p class="overlay-text">최종 점수: <span id="finalScore">0</span></p>
+            <p class="overlay-text">도달 레벨: <span id="finalLevel">1</span>/10</p>
+            <p id="newRecordText" class="overlay-text record-badge" style="display: none;">🏆 신기록!</p>
+            <button id="restartButton" class="game-button restart-button">다시 하기</button>
+        </div>
+
+        <!-- 승리 화면 -->
+        <div id="victoryOverlay" class="game-overlay" style="display: none;">
+            <h2 class="overlay-title victory-title">🎉 승리! 🎉</h2>
+            <p class="overlay-text">10단계 클리어!</p>
+            <p class="overlay-text">최종 점수: <span id="victoryScore">0</span></p>
+            <p id="victoryRecordText" class="overlay-text record-badge" style="display: none;">🏆 최고 기록 달성!</p>
+            <button id="victoryButton" class="game-button victory-button">다시 도전하기</button>
+        </div>
+    </div>
+
+    <div class="game-info">
+        <p>다양한 색의 적 비행기를 파괴하세요!</p>
+        <p>5단계부터 적이 미사일을 쏩니다! 10단계에서 보스 등장! 🎯</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameState = 'ready';
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('spaceShooterHighScore') || '0');
+        let level = 1;
+
+        // 게임 객체들
+        const player = { x: 375, y: 500, width: 50, height: 50, speed: 7 };
+        let bullets = [];
+        let enemyBullets = [];
+        let enemies = [];
+        let boss = null;
+        let particles = [];
+
+        // 게임 변수들
+        const keys = {};
+        let lastEnemySpawn = 0;
+        let enemySpawnRate = 1000;
+        let lastShot = 0;
+        let animationId = null;
+        let enemiesDestroyed = 0;
+        let levelComplete = false;
+        let finishLineY = -100;
+
+        // 오디오 컨텍스트
+        let audioContext = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            switch (type) {
+                case 'shoot':
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'explosion':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+                    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    break;
+                case 'engine':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(120, audioContext.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(100, audioContext.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    break;
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('levelDisplay').textContent = level;
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('highScoreDisplay').textContent = highScore;
+        }
+
+        function shootBullet() {
+            const now = Date.now();
+            if (now - lastShot > 200) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 2.5,
+                    y: player.y,
+                    width: 5,
+                    height: 15,
+                    speed: 10
+                });
+                lastShot = now;
+                playSound('shoot');
+            }
+        }
+
+        function getEnemyColor(type) {
+            const colors = ['#ff4444', '#4444ff', '#ff44ff', '#ffaa44', '#44ff44'];
+            return colors[type % colors.length];
+        }
+
+        function spawnEnemy() {
+            const size = 30 + Math.random() * 20;
+            const type = Math.floor(Math.random() * 5);
+            const canShoot = level >= 5;
+            
+            enemies.push({
+                x: Math.random() * (750 - size),
+                y: -size,
+                width: size,
+                height: size,
+                speed: 1.5 + Math.random() * 2 + (level * 0.3),
+                health: Math.floor(size / 20) + Math.floor(level / 3),
+                maxHealth: Math.floor(size / 20) + Math.floor(level / 3),
+                type: type,
+                color: getEnemyColor(type),
+                canShoot: canShoot,
+                lastShot: 0
+            });
+        }
+
+        function spawnBoss() {
+            boss = {
+                x: 300,
+                y: -200,
+                width: 200,
+                height: 150,
+                speed: 0.5,
+                health: 30,
+                maxHealth: 30,
+                lastShot: 0,
+                moveDirection: 1,
+                phase: 'entering'
+            };
+        }
+
+        function enemyShoot(enemy) {
+            const now = Date.now();
+            if (now - enemy.lastShot > 1500) {
+                enemyBullets.push({
+                    x: enemy.x + enemy.width / 2 - 3,
+                    y: enemy.y + enemy.height,
+                    width: 6,
+                    height: 12,
+                    speed: 5
+                });
+                enemy.lastShot = now;
+            }
+        }
+
+        function bossShoot() {
+            if (!boss) return;
+            const now = Date.now();
+            if (now - boss.lastShot > 800) {
+                // 3방향 미사일
+                for (let i = -1; i <= 1; i++) {
+                    enemyBullets.push({
+                        x: boss.x + boss.width / 2 - 3 + (i * 50),
+                        y: boss.y + boss.height,
+                        width: 8,
+                        height: 15,
+                        speed: 6,
+                        vx: i * 2
+                    });
+                }
+                boss.lastShot = now;
+                playSound('shoot');
+            }
+        }
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x,
+                    y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color
+                });
+            }
+        }
+
+        function drawEnemyShip(enemy) {
+            ctx.fillStyle = enemy.color;
+            ctx.beginPath();
+            ctx.moveTo(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+            ctx.lineTo(enemy.x, enemy.y);
+            ctx.lineTo(enemy.x + enemy.width / 2, enemy.y + 10);
+            ctx.lineTo(enemy.x + enemy.width, enemy.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // 윙
+            ctx.fillStyle = enemy.color;
+            ctx.fillRect(enemy.x - 5, enemy.y + enemy.height / 3, 10, 5);
+            ctx.fillRect(enemy.x + enemy.width - 5, enemy.y + enemy.height / 3, 10, 5);
+        }
+
+        function checkLevelUp() {
+            const enemiesPerLevel = 10;
+            const newLevel = Math.floor(enemiesDestroyed / enemiesPerLevel) + 1;
+            if (newLevel > level && newLevel <= 10) {
+                if (enemies.length === 0 && !boss) {
+                    levelComplete = true;
+                    finishLineY = -100;
+                }
+            }
+        }
+
+        function completeLevel() {
+            level++;
+            enemySpawnRate = Math.max(300, 1000 - (level * 70));
+            levelComplete = false;
+            updateDisplay();
+
+            // 10단계에서 보스 등장
+            if (level === 10) {
+                enemies = [];
+                spawnBoss();
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function gameLoop() {
+            if (gameState !== 'playing') return;
+
+            // 배경 그라데이션
+            const gradient = ctx.createLinearGradient(0, 0, 0, 600);
+            gradient.addColorStop(0, '#000011');
+            gradient.addColorStop(1, '#1a0033');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 800, 600);
+
+            // 별
+            for (let i = 0; i < 100; i++) {
+                const starX = (i * 37) % 800;
+                const starY = ((i * 67 + Date.now() * 0.05) % 600);
+                const brightness = Math.sin(Date.now() * 0.001 + i) * 0.5 + 0.5;
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.fillRect(starX, starY, 2, 2);
+            }
+
+            // 레벨 표시
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(`LEVEL ${level}`, 20, 40);
+
+            // 결승선 그리기 (레벨 완료 시)
+            if (levelComplete) {
+                finishLineY += 3;
+                // 체크무늬 결승선
+                for (let i = 0; i < 20; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        ctx.fillStyle = (i + j) % 2 === 0 ? '#ffffff' : '#000000';
+                        ctx.fillRect(i * 40, finishLineY + j * 20, 40, 20);
+                    }
+                }
+                // "LEVEL CLEAR!" 텍스트
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 36px Arial';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffff00';
+                ctx.fillText('LEVEL CLEAR!', 250, finishLineY + 80);
+                ctx.shadowBlur = 0;
+
+                // 플레이어가 결승선을 통과하면 다음 레벨
+                if (finishLineY > player.y + player.height) {
+                    completeLevel();
+                }
+            }
+
+            // 플레이어 이동
+            if (keys['ArrowLeft'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] && player.x < 800 - player.width) {
+                player.x += player.speed;
+            }
+            if (keys['ArrowUp'] && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (keys['ArrowDown'] && player.y < 600 - player.height) {
+                player.y += player.speed;
+            }
+
+            // 연사
+            if (keys[' ']) {
+                shootBullet();
+            }
+
+            // 플레이어 그리기 (밝은 초록색 전투기)
+            const px = player.x;
+            const py = player.y;
+            const pw = player.width;
+            const ph = player.height;
+
+            // 전투기 본체
+            ctx.fillStyle = '#00ff88';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ff88';
+            ctx.beginPath();
+            ctx.moveTo(px + pw / 2, py);
+            ctx.lineTo(px + 5, py + ph);
+            ctx.lineTo(px + pw / 2, py + ph - 10);
+            ctx.lineTo(px + pw - 5, py + ph);
+            ctx.closePath();
+            ctx.fill();
+
+            // 날개
+            ctx.fillStyle = '#00ddff';
+            ctx.fillRect(px - 8, py + ph / 2, 15, 8);
+            ctx.fillRect(px + pw - 7, py + ph / 2, 15, 8);
+
+            // 조종석
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + pw / 2 - 5, py + 15, 10, 10);
+
+            // 엔진 불꽃
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff6600';
+            ctx.fillStyle = '#ff6600';
+            const flameSize = 8 + Math.sin(Date.now() * 0.02) * 3;
+            ctx.fillRect(px + pw / 2 - 4, py + ph, 8, flameSize);
+            ctx.fillStyle = '#ffff00';
+            ctx.fillRect(px + pw / 2 - 2, py + ph, 4, flameSize * 0.7);
+            ctx.shadowBlur = 0;
+
+            // 총알 업데이트
+            bullets = bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                ctx.fillStyle = '#ffff00';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffff00';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                ctx.shadowBlur = 0;
+                return bullet.y > 0;
+            });
+
+            // 적 생성 (10단계가 아니고 레벨 완료 중이 아닐 때만)
+            const now = Date.now();
+            if (!levelComplete && level < 10 && now - lastEnemySpawn > enemySpawnRate) {
+                spawnEnemy();
+                lastEnemySpawn = now;
+            }
+
+            // 적 업데이트
+            enemies = enemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                drawEnemyShip(enemy);
+
+                // 적 미사일 발사 (5단계부터)
+                if (enemy.canShoot && enemy.y > 0 && enemy.y < 300) {
+                    enemyShoot(enemy);
+                }
+
+                // 체력 바
+                if (enemy.health > 1) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(enemy.x, enemy.y - 8, enemy.width, 4);
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(enemy.x, enemy.y - 8, enemy.width * (enemy.health / enemy.maxHealth), 4);
+                }
+
+                // 총알-적 충돌
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const bullet = bullets[i];
+                    if (checkCollision(bullet, enemy)) {
+                        enemy.health--;
+                        bullets.splice(i, 1);
+                        createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 5, enemy.color);
+                        
+                        if (enemy.health <= 0) {
+                            score += Math.floor(enemy.width) * level;
+                            enemiesDestroyed++;
+                            checkLevelUp();
+                            createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 15, enemy.color);
+                            playSound('explosion');
+                            updateDisplay();
+                            return false;
+                        }
+                    }
+                }
+
+                // 플레이어-적 충돌
+                if (checkCollision(enemy, player)) {
+                    endGame();
+                    return true;
+                }
+
+                return enemy.y < 600;
+            });
+
+            // 보스 업데이트
+            if (boss) {
+                // 보스 입장
+                if (boss.phase === 'entering' && boss.y < 50) {
+                    boss.y += 2;
+                } else if (boss.phase === 'entering') {
+                    boss.phase = 'fighting';
+                }
+
+                // 보스 좌우 이동
+                if (boss.phase === 'fighting') {
+                    boss.x += boss.speed * boss.moveDirection;
+                    if (boss.x <= 0 || boss.x >= 800 - boss.width) {
+                        boss.moveDirection *= -1;
+                    }
+                    bossShoot();
+                }
+
+                // 보스 그리기
+                ctx.fillStyle = '#ff0000';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff0000';
+                // 보스 본체
+                ctx.fillRect(boss.x + 50, boss.y + 20, 100, 80);
+                ctx.fillRect(boss.x + 20, boss.y + 50, 160, 40);
+                // 보스 날개
+                ctx.fillStyle = '#ff6600';
+                ctx.fillRect(boss.x, boss.y + 60, 30, 30);
+                ctx.fillRect(boss.x + 170, boss.y + 60, 30, 30);
+                // 보스 눈
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(boss.x + 70, boss.y + 40, 20, 20);
+                ctx.fillRect(boss.x + 110, boss.y + 40, 20, 20);
+                ctx.shadowBlur = 0;
+
+                // 보스 체력 바
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(100, 20, 600, 20);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(100, 20, 600 * (boss.health / boss.maxHealth), 20);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(100, 20, 600, 20);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(`BOSS HP: ${boss.health}/${boss.maxHealth}`, 320, 35);
+
+                // 보스와 플레이어 총알 충돌
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const bullet = bullets[i];
+                    if (checkCollision(bullet, boss)) {
+                        boss.health--;
+                        bullets.splice(i, 1);
+                        createParticles(bullet.x, bullet.y, 10, '#ff6600');
+                        playSound('explosion');
+                        
+                        if (boss.health <= 0) {
+                            score += 1000;
+                            createParticles(boss.x + boss.width / 2, boss.y + boss.height / 2, 50, '#ff0000');
+                            boss = null;
+                            victory();
+                            return;
+                        }
+                    }
+                }
+
+                // 보스와 플레이어 충돌
+                if (checkCollision(boss, player)) {
+                    endGame();
+                    return;
+                }
+            }
+
+            // 적 미사일 업데이트
+            enemyBullets = enemyBullets.filter(bullet => {
+                bullet.y += bullet.speed;
+                if (bullet.vx) {
+                    bullet.x += bullet.vx;
+                }
+                ctx.fillStyle = '#ff0000';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff0000';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                ctx.shadowBlur = 0;
+
+                // 플레이어와 적 미사일 충돌
+                if (checkCollision(bullet, player)) {
+                    endGame();
+                    return false;
+                }
+
+                return bullet.y < 600 && bullet.x > -20 && bullet.x < 820;
+            });
+
+            // 파티클 업데이트
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1;
+                return p.life > 0;
+            });
+
+            // 10단계 클리어 체크 (보스 없을 때만)
+            if (level >= 10 && !boss && enemies.length === 0) {
+                victory();
+                return;
+            }
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            
+            // 게임 상태 초기화
+            player.x = 375;
+            player.y = 500;
+            bullets = [];
+            enemyBullets = [];
+            enemies = [];
+            boss = null;
+            particles = [];
+            lastEnemySpawn = Date.now();
+            enemySpawnRate = 1000;
+            lastShot = 0;
+            score = 0;
+            level = 1;
+            enemiesDestroyed = 0;
+            levelComplete = false;
+            finishLineY = -100;
+
+            updateDisplay();
+            gameState = 'playing';
+            
+            // 오버레이 숨기기
+            document.getElementById('readyOverlay').style.display = 'none';
+            document.getElementById('gameOverOverlay').style.display = 'none';
+            document.getElementById('victoryOverlay').style.display = 'none';
+
+            gameLoop();
+        }
+
+        function endGame() {
+            gameState = 'gameOver';
+            createParticles(player.x + player.width / 2, player.y + player.height / 2, 30, '#00ff88');
+            playSound('explosion');
+            
+            // 최고 점수 업데이트
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('spaceShooterHighScore', highScore.toString());
+                document.getElementById('newRecordText').style.display = 'block';
+            } else {
+                document.getElementById('newRecordText').style.display = 'none';
+            }
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('gameOverOverlay').style.display = 'flex';
+            updateDisplay();
+
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function victory() {
+            gameState = 'victory';
+            
+            // 최고 점수 업데이트
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('spaceShooterHighScore', highScore.toString());
+                document.getElementById('victoryRecordText').style.display = 'block';
+            } else {
+                document.getElementById('victoryRecordText').style.display = 'none';
+            }
+
+            document.getElementById('victoryScore').textContent = score;
+            document.getElementById('victoryOverlay').style.display = 'flex';
+            updateDisplay();
+
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 버튼 이벤트
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('restartButton').addEventListener('click', startGame);
+        document.getElementById('victoryButton').addEventListener('click', startGame);
+
+        // 초기화
+        updateDisplay();
+
+        // 모바일 터치 컨트롤 (간단한 버전)
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            touchStartX = touch.clientX - rect.left;
+            touchStartY = touch.clientY - rect.top;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (gameState !== 'playing') return;
+            
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const touchX = touch.clientX - rect.left;
+            const touchY = touch.clientY - rect.top;
+            
+            // 터치 위치로 플레이어 이동
+            const targetX = (touchX / rect.width) * 800 - player.width / 2;
+            const targetY = (touchY / rect.height) * 600 - player.height / 2;
+            
+            player.x = Math.max(0, Math.min(800 - player.width, targetX));
+            player.y = Math.max(0, Math.min(600 - player.height, targetY));
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing') {
+                shootBullet();
+            }
+        });
+    </script>
+</body>
+</html>

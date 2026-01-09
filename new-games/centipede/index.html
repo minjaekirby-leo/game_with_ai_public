@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>센티피드 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #00ff00;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+        }
+
+        #gameCanvas {
+            border: 4px solid #00ff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00ff00;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00ff00, #00aa00);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🐛 센티피드 게임</h1>
+        <p>마우스로 조준하고 클릭해서 센티피드를 물리치세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>🖱️ 마우스로 조준</p>
+        <p>🔫 클릭으로 발사</p>
+        <p>🐛 센티피드를 모두 물리치세요!</p>
+        <p>🍄 버섯을 파괴할 수 있어요!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let gameRunning = true;
+
+        // 플레이어
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            size: 15
+        };
+
+        // 게임 객체들
+        let bullets = [];
+        let centipede = [];
+        let mushrooms = [];
+        let spider = null;
+        let flea = null;
+
+        // 마우스 위치
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+
+        // 마우스 이벤트
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', () => {
+            if (gameRunning) {
+                shoot();
+            }
+        });
+
+        // 센티피드 초기화
+        function initCentipede() {
+            centipede = [];
+            for (let i = 0; i < 12; i++) {
+                centipede.push({
+                    x: i * 20,
+                    y: 50,
+                    size: 10,
+                    direction: 1,
+                    isHead: i === 0
+                });
+            }
+        }
+
+        // 버섯 초기화
+        function initMushrooms() {
+            mushrooms = [];
+            for (let i = 0; i < 30; i++) {
+                mushrooms.push({
+                    x: Math.random() * (canvas.width - 20),
+                    y: Math.random() * (canvas.height - 200) + 100,
+                    size: 15,
+                    health: 4
+                });
+            }
+        }
+
+        // 발사
+        function shoot() {
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * 8,
+                vy: Math.sin(angle) * 8,
+                size: 3
+            });
+        }
+
+        // 거미 생성
+        function createSpider() {
+            if (!spider && Math.random() < 0.002) {
+                spider = {
+                    x: Math.random() < 0.5 ? -20 : canvas.width + 20,
+                    y: canvas.height - 200 + Math.random() * 150,
+                    vx: Math.random() < 0.5 ? 2 : -2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: 12
+                };
+            }
+        }
+
+        // 벼룩 생성
+        function createFlea() {
+            if (!flea && Math.random() < 0.001) {
+                flea = {
+                    x: Math.random() * canvas.width,
+                    y: -20,
+                    vy: 3,
+                    size: 8
+                };
+            }
+        }
+
+        // 센티피드 업데이트
+        function updateCentipede() {
+            for (let i = 0; i < centipede.length; i++) {
+                const segment = centipede[i];
+                segment.x += segment.direction * 2;
+
+                // 벽이나 버섯에 부딪히면 아래로 이동하고 방향 전환
+                let hitWall = segment.x <= 0 || segment.x >= canvas.width - segment.size;
+                let hitMushroom = false;
+
+                for (let mushroom of mushrooms) {
+                    if (segment.x < mushroom.x + mushroom.size &&
+                        segment.x + segment.size > mushroom.x &&
+                        segment.y < mushroom.y + mushroom.size &&
+                        segment.y + segment.size > mushroom.y) {
+                        hitMushroom = true;
+                        break;
+                    }
+                }
+
+                if (hitWall || hitMushroom) {
+                    segment.direction *= -1;
+                    segment.y += 20;
+                    
+                    // 플레이어 영역에 도달하면 게임 오버
+                    if (segment.y > canvas.height - 100) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 거미 업데이트
+        function updateSpider() {
+            if (spider) {
+                spider.x += spider.vx;
+                spider.y += spider.vy;
+
+                // 화면 밖으로 나가면 제거
+                if (spider.x < -50 || spider.x > canvas.width + 50 ||
+                    spider.y < canvas.height - 250 || spider.y > canvas.height) {
+                    spider = null;
+                }
+
+                // 플레이어와 충돌
+                if (spider && 
+                    Math.abs(spider.x - player.x) < spider.size + player.size &&
+                    Math.abs(spider.y - player.y) < spider.size + player.size) {
+                    lives--;
+                    updateLives();
+                    spider = null;
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+        }
+
+        // 벼룩 업데이트
+        function updateFlea() {
+            if (flea) {
+                flea.y += flea.vy;
+
+                // 화면 밖으로 나가면 제거
+                if (flea.y > canvas.height) {
+                    flea = null;
+                }
+
+                // 플레이어와 충돌
+                if (flea && 
+                    Math.abs(flea.x - player.x) < flea.size + player.size &&
+                    Math.abs(flea.y - player.y) < flea.size + player.size) {
+                    lives--;
+                    updateLives();
+                    flea = null;
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+
+                // 랜덤하게 버섯 생성
+                if (flea && Math.random() < 0.1) {
+                    mushrooms.push({
+                        x: flea.x,
+                        y: flea.y,
+                        size: 15,
+                        health: 4
+                    });
+                }
+            }
+        }
+
+        // 총알 업데이트
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // 화면 밖으로 나가면 제거
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    return false;
+                }
+
+                // 센티피드와 충돌
+                for (let i = 0; i < centipede.length; i++) {
+                    const segment = centipede[i];
+                    if (bullet.x < segment.x + segment.size &&
+                        bullet.x + bullet.size > segment.x &&
+                        bullet.y < segment.y + segment.size &&
+                        bullet.y + bullet.size > segment.y) {
+                        
+                        // 센티피드 분할
+                        const leftPart = centipede.slice(0, i);
+                        const rightPart = centipede.slice(i + 1);
+                        
+                        centipede = leftPart.concat(rightPart);
+                        
+                        // 버섯 생성
+                        mushrooms.push({
+                            x: segment.x,
+                            y: segment.y,
+                            size: 15,
+                            health: 4
+                        });
+
+                        score += 10;
+                        updateScore();
+                        return false;
+                    }
+                }
+
+                // 버섯과 충돌
+                for (let mushroom of mushrooms) {
+                    if (bullet.x < mushroom.x + mushroom.size &&
+                        bullet.x + bullet.size > mushroom.x &&
+                        bullet.y < mushroom.y + mushroom.size &&
+                        bullet.y + bullet.size > mushroom.y) {
+                        mushroom.health--;
+                        if (mushroom.health <= 0) {
+                            mushrooms = mushrooms.filter(m => m !== mushroom);
+                            score += 1;
+                            updateScore();
+                        }
+                        return false;
+                    }
+                }
+
+                // 거미와 충돌
+                if (spider &&
+                    bullet.x < spider.x + spider.size &&
+                    bullet.x + bullet.size > spider.x &&
+                    bullet.y < spider.y + spider.size &&
+                    bullet.y + bullet.size > spider.y) {
+                    spider = null;
+                    score += 300;
+                    updateScore();
+                    return false;
+                }
+
+                // 벼룩과 충돌
+                if (flea &&
+                    bullet.x < flea.x + flea.size &&
+                    bullet.x + bullet.size > flea.x &&
+                    bullet.y < flea.y + flea.size &&
+                    bullet.y + flea.size > flea.y) {
+                    flea = null;
+                    score += 200;
+                    updateScore();
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        // 그리기 함수들
+        function drawPlayer() {
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 조준선
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(mouseX, mouseY);
+            ctx.stroke();
+        }
+
+        function drawCentipede() {
+            centipede.forEach((segment, index) => {
+                ctx.fillStyle = segment.isHead ? '#ff0000' : '#ff6600';
+                ctx.beginPath();
+                ctx.arc(segment.x + segment.size/2, segment.y + segment.size/2, segment.size/2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawMushrooms() {
+            mushrooms.forEach(mushroom => {
+                const alpha = mushroom.health / 4;
+                ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
+                ctx.fillRect(mushroom.x, mushroom.y, mushroom.size, mushroom.size);
+            });
+        }
+
+        function drawSpider() {
+            if (spider) {
+                ctx.fillStyle = '#800080';
+                ctx.beginPath();
+                ctx.arc(spider.x, spider.y, spider.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawFlea() {
+            if (flea) {
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(flea.x, flea.y, flea.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#ffffff';
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            gameRunning = true;
+            
+            bullets = [];
+            spider = null;
+            flea = null;
+            
+            initCentipede();
+            initMushrooms();
+            
+            updateScore();
+            updateLives();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 업데이트
+                updateCentipede();
+                updateBullets();
+                updateSpider();
+                updateFlea();
+                createSpider();
+                createFlea();
+
+                // 승리 조건
+                if (centipede.length === 0) {
+                    initCentipede();
+                    score += 1000;
+                    updateScore();
+                }
+            }
+
+            // 그리기
+            drawMushrooms();
+            drawCentipede();
+            drawSpider();
+            drawFlea();
+            drawBullets();
+            drawPlayer();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initCentipede();
+            initMushrooms();
+            updateScore();
+            updateLives();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 아스테로이드 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 10;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 10;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ff00;
+            z-index: 20;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .game-over button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .game-over button:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 30;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                width: 100vw;
+                height: 100vh;
+                border: none;
+                border-radius: 0;
+            }
+            
+            canvas {
+                border-radius: 0;
+            }
+            
+            .ui {
+                font-size: 14px;
+            }
+            
+            .controls {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+        
+        <div class="ui">
+            <div>점수: <span id="score">0</span></div>
+            <div>생명: <span id="lives">3</span></div>
+            <div>레벨: <span id="level">1</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            화살표 키: 회전 및 추진 | 스페이스바: 발사 | 모든 소행성을 파괴하세요!
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">다시 시작</button>
+            <button onclick="location.href='../../index.html'">홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameState = {
+            score: 0,
+            lives: 3,
+            level: 1,
+            gameRunning: true,
+            keys: {}
+        };
+
+        // 우주선 클래스
+        class Ship {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.angle = 0;
+                this.velocity = { x: 0, y: 0 };
+                this.thrust = 0.3;
+                this.friction = 0.98;
+                this.size = 8;
+                this.invulnerable = 0;
+            }
+
+            update() {
+                // 회전
+                if (gameState.keys['ArrowLeft']) {
+                    this.angle -= 0.1;
+                }
+                if (gameState.keys['ArrowRight']) {
+                    this.angle += 0.1;
+                }
+
+                // 추진
+                if (gameState.keys['ArrowUp']) {
+                    this.velocity.x += Math.cos(this.angle) * this.thrust;
+                    this.velocity.y += Math.sin(this.angle) * this.thrust;
+                }
+
+                // 마찰력 적용
+                this.velocity.x *= this.friction;
+                this.velocity.y *= this.friction;
+
+                // 위치 업데이트
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                // 화면 경계 처리 (반대편으로 나타남)
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+
+                // 무적 시간 감소
+                if (this.invulnerable > 0) {
+                    this.invulnerable--;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // 무적 상태일 때 깜빡임
+                if (this.invulnerable > 0 && Math.floor(this.invulnerable / 5) % 2) {
+                    ctx.restore();
+                    return;
+                }
+
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.size, 0);
+                ctx.lineTo(-this.size, -this.size/2);
+                ctx.lineTo(-this.size/2, 0);
+                ctx.lineTo(-this.size, this.size/2);
+                ctx.closePath();
+                ctx.stroke();
+
+                // 추진 불꽃
+                if (gameState.keys['ArrowUp']) {
+                    ctx.strokeStyle = '#ff4400';
+                    ctx.beginPath();
+                    ctx.moveTo(-this.size, -2);
+                    ctx.lineTo(-this.size - 8, 0);
+                    ctx.lineTo(-this.size, 2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            getCollisionPoints() {
+                const cos = Math.cos(this.angle);
+                const sin = Math.sin(this.angle);
+                return [
+                    {
+                        x: this.x + cos * this.size,
+                        y: this.y + sin * this.size
+                    },
+                    {
+                        x: this.x + cos * (-this.size) + sin * (-this.size/2),
+                        y: this.y + sin * (-this.size) + cos * (this.size/2)
+                    },
+                    {
+                        x: this.x + cos * (-this.size) + sin * (this.size/2),
+                        y: this.y + sin * (-this.size) + cos * (-this.size/2)
+                    }
+                ];
+            }
+        }
+
+        // 소행성 클래스
+        class Asteroid {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size; // 1=작음, 2=중간, 3=큼
+                this.velocity = {
+                    x: (Math.random() - 0.5) * (4 - size),
+                    y: (Math.random() - 0.5) * (4 - size)
+                };
+                this.angle = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.radius = size * 15;
+                this.points = this.generatePoints();
+            }
+
+            generatePoints() {
+                const points = [];
+                const numPoints = 8 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const radius = this.radius * (0.8 + Math.random() * 0.4);
+                    points.push({
+                        x: Math.cos(angle) * radius,
+                        y: Math.sin(angle) * radius
+                    });
+                }
+                return points;
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.angle += this.rotationSpeed;
+
+                // 화면 경계 처리
+                if (this.x < -this.radius) this.x = canvas.width + this.radius;
+                if (this.x > canvas.width + this.radius) this.x = -this.radius;
+                if (this.y < -this.radius) this.y = canvas.height + this.radius;
+                if (this.y > canvas.height + this.radius) this.y = -this.radius;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.strokeStyle = '#888888';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.points[0].x, this.points[0].y);
+                for (let i = 1; i < this.points.length; i++) {
+                    ctx.lineTo(this.points[i].x, this.points[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            split() {
+                if (this.size > 1) {
+                    const newAsteroids = [];
+                    for (let i = 0; i < 2; i++) {
+                        const asteroid = new Asteroid(this.x, this.y, this.size - 1);
+                        asteroid.velocity.x += (Math.random() - 0.5) * 2;
+                        asteroid.velocity.y += (Math.random() - 0.5) * 2;
+                        newAsteroids.push(asteroid);
+                    }
+                    return newAsteroids;
+                }
+                return [];
+            }
+        }
+
+        // 총알 클래스
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: Math.cos(angle) * 8,
+                    y: Math.sin(angle) * 8
+                };
+                this.life = 60; // 60프레임 후 사라짐
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.life--;
+
+                // 화면 경계 처리
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 파티클 클래스
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6
+                };
+                this.life = 30;
+                this.maxLife = 30;
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.velocity.x *= 0.98;
+                this.velocity.y *= 0.98;
+                this.life--;
+            }
+
+            draw() {
+                const alpha = this.life / this.maxLife;
+                ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 게임 객체들
+        let ship = new Ship(canvas.width / 2, canvas.height / 2);
+        let asteroids = [];
+        let bullets = [];
+        let particles = [];
+
+        // 충돌 감지
+        function checkCollision(obj1, obj2, radius1, radius2) {
+            const dx = obj1.x - obj2.x;
+            const dy = obj1.y - obj2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < radius1 + radius2;
+        }
+
+        // 소행성 생성
+        function createAsteroids(count) {
+            asteroids = [];
+            for (let i = 0; i < count; i++) {
+                let x, y;
+                do {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() * canvas.height;
+                } while (checkCollision({x, y}, ship, 100, ship.size));
+                
+                asteroids.push(new Asteroid(x, y, 3));
+            }
+        }
+
+        // 파티클 생성
+        function createParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.code] = true;
+            
+            if (e.code === 'Space' && gameState.gameRunning) {
+                e.preventDefault();
+                bullets.push(new Bullet(ship.x, ship.y, ship.angle));
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.code] = false;
+        });
+
+        // 게임 초기화
+        function initGame() {
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.gameRunning = true;
+            ship = new Ship(canvas.width / 2, canvas.height / 2);
+            bullets = [];
+            particles = [];
+            createAsteroids(4 + gameState.level);
+            updateUI();
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('level').textContent = gameState.level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            initGame();
+        }
+
+        // 다음 레벨
+        function nextLevel() {
+            gameState.level++;
+            createAsteroids(4 + gameState.level);
+            ship.x = canvas.width / 2;
+            ship.y = canvas.height / 2;
+            ship.velocity = { x: 0, y: 0 };
+            ship.invulnerable = 120;
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameState.gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // 우주선 업데이트
+            ship.update();
+            ship.draw();
+
+            // 소행성 업데이트
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                asteroids[i].update();
+                asteroids[i].draw();
+
+                // 우주선과 소행성 충돌
+                if (ship.invulnerable === 0 && 
+                    checkCollision(ship, asteroids[i], ship.size, asteroids[i].radius)) {
+                    gameState.lives--;
+                    ship.invulnerable = 120;
+                    createParticles(ship.x, ship.y, 10);
+                    
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+
+            // 총알 업데이트
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].update();
+                bullets[i].draw();
+
+                // 총알 수명 체크
+                if (bullets[i].life <= 0) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // 총알과 소행성 충돌
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    if (checkCollision(bullets[i], asteroids[j], 2, asteroids[j].radius)) {
+                        // 점수 추가
+                        gameState.score += (4 - asteroids[j].size) * 20;
+                        
+                        // 파티클 생성
+                        createParticles(asteroids[j].x, asteroids[j].y, 8);
+                        
+                        // 소행성 분할
+                        const newAsteroids = asteroids[j].split();
+                        asteroids.splice(j, 1);
+                        asteroids.push(...newAsteroids);
+                        
+                        // 총알 제거
+                        bullets.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            // 파티클 업데이트
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // 모든 소행성이 파괴되면 다음 레벨
+            if (asteroids.length === 0) {
+                nextLevel();
+            }
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 시작
+        initGame();
+        gameLoop();
+
+        // 모바일 터치 컨트롤
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            touchStartX = touch.clientX - rect.left;
+            touchStartY = touch.clientY - rect.top;
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // 터치로 발사
+            if (gameState.gameRunning) {
+                bullets.push(new Bullet(ship.x, ship.y, ship.angle));
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const touchX = touch.clientX - rect.left;
+            const touchY = touch.clientY - rect.top;
+            
+            // 터치 방향으로 우주선 회전
+            const angle = Math.atan2(touchY - ship.y, touchX - ship.x);
+            ship.angle = angle;
+            
+            // 터치 이동으로 추진
+            gameState.keys['ArrowUp'] = true;
+        });
+
+        // 화면 크기 조정
+        function resizeCanvas() {
+            if (window.innerWidth < 768) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            } else {
+                canvas.width = 800;
+                canvas.height = 600;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    </script>
+</body>
+</html>

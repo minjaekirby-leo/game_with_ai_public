@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>트론 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #00bfff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .speed {
+            background: rgba(0, 191, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #00bfff;
+        }
+
+        #gameCanvas {
+            border: 4px solid #00bfff;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #00bfff;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00bfff;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00bfff, #0080ff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 191, 255, 0.4);
+        }
+
+        .mode-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .mode-btn {
+            background: rgba(0, 191, 255, 0.2);
+            color: #00bfff;
+            border: 2px solid #00bfff;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 0 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover, .mode-btn.active {
+            background: rgba(0, 191, 255, 0.4);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>💫 트론 게임</h1>
+        <p>라이트 사이클로 상대방을 가두세요!</p>
+    </div>
+
+    <div class="mode-selector">
+        <button class="mode-btn active" onclick="setMode('single')">싱글 플레이</button>
+        <button class="mode-btn" onclick="setMode('multi')">2인 플레이</button>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="speed">속도: <span id="speed">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <div id="singleControls">
+            <p>⬅️➡️⬆️⬇️ 화살표 키로 방향 전환</p>
+            <p>💫 자신의 궤적이나 벽에 부딪히지 마세요!</p>
+            <p>🤖 AI를 이기고 살아남으세요!</p>
+        </div>
+        <div id="multiControls" style="display: none;">
+            <p>플레이어 1: ⬅️➡️⬆️⬇️ 화살표 키</p>
+            <p>플레이어 2: W, A, S, D 키</p>
+            <p>💫 상대방을 가두고 살아남으세요!</p>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2 id="gameOverTitle">게임 오버!</h2>
+        <p id="gameOverMessage">최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let speed = 1;
+        let gameRunning = false;
+        let gameMode = 'single'; // 'single' 또는 'multi'
+
+        // 그리드 설정
+        const GRID_SIZE = 10;
+        const COLS = canvas.width / GRID_SIZE;
+        const ROWS = canvas.height / GRID_SIZE;
+
+        // 플레이어들
+        let players = [];
+        let trails = [];
+
+        // 키보드 입력
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            handleKeyPress(e.key);
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 게임 모드 설정
+        function setMode(mode) {
+            gameMode = mode;
+            
+            // 버튼 활성화 상태 변경
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 조작법 표시 변경
+            if (mode === 'single') {
+                document.getElementById('singleControls').style.display = 'block';
+                document.getElementById('multiControls').style.display = 'none';
+            } else {
+                document.getElementById('singleControls').style.display = 'none';
+                document.getElementById('multiControls').style.display = 'block';
+            }
+            
+            if (!gameRunning) {
+                initGame();
+            }
+        }
+
+        // 플레이어 초기화
+        function initPlayers() {
+            players = [];
+            trails = [];
+            
+            if (gameMode === 'single') {
+                // 플레이어
+                players.push({
+                    x: Math.floor(COLS / 4),
+                    y: Math.floor(ROWS / 2),
+                    direction: 0, // 0: 오른쪽, 1: 아래, 2: 왼쪽, 3: 위
+                    color: '#00bfff',
+                    alive: true,
+                    isAI: false,
+                    name: 'Player'
+                });
+                
+                // AI
+                players.push({
+                    x: Math.floor(COLS * 3 / 4),
+                    y: Math.floor(ROWS / 2),
+                    direction: 2,
+                    color: '#ff6600',
+                    alive: true,
+                    isAI: true,
+                    name: 'AI',
+                    aiTimer: 0
+                });
+            } else {
+                // 플레이어 1
+                players.push({
+                    x: Math.floor(COLS / 4),
+                    y: Math.floor(ROWS / 2),
+                    direction: 0,
+                    color: '#00bfff',
+                    alive: true,
+                    isAI: false,
+                    name: 'Player 1'
+                });
+                
+                // 플레이어 2
+                players.push({
+                    x: Math.floor(COLS * 3 / 4),
+                    y: Math.floor(ROWS / 2),
+                    direction: 2,
+                    color: '#ff6600',
+                    alive: true,
+                    isAI: false,
+                    name: 'Player 2'
+                });
+            }
+            
+            // 궤적 초기화
+            players.forEach((player, index) => {
+                trails[index] = [];
+                trails[index].push({ x: player.x, y: player.y });
+            });
+        }
+
+        // 키 입력 처리
+        function handleKeyPress(key) {
+            if (!gameRunning) {
+                if (key === ' ') {
+                    startGame();
+                }
+                return;
+            }
+            
+            // 플레이어 1 (화살표 키)
+            if (players[0] && players[0].alive) {
+                switch(key) {
+                    case 'ArrowLeft':
+                        if (players[0].direction !== 0) players[0].direction = 2;
+                        break;
+                    case 'ArrowRight':
+                        if (players[0].direction !== 2) players[0].direction = 0;
+                        break;
+                    case 'ArrowUp':
+                        if (players[0].direction !== 1) players[0].direction = 3;
+                        break;
+                    case 'ArrowDown':
+                        if (players[0].direction !== 3) players[0].direction = 1;
+                        break;
+                }
+            }
+            
+            // 플레이어 2 (WASD)
+            if (gameMode === 'multi' && players[1] && players[1].alive) {
+                switch(key.toLowerCase()) {
+                    case 'a':
+                        if (players[1].direction !== 0) players[1].direction = 2;
+                        break;
+                    case 'd':
+                        if (players[1].direction !== 2) players[1].direction = 0;
+                        break;
+                    case 'w':
+                        if (players[1].direction !== 1) players[1].direction = 3;
+                        break;
+                    case 's':
+                        if (players[1].direction !== 3) players[1].direction = 1;
+                        break;
+                }
+            }
+        }
+
+        // AI 업데이트
+        function updateAI(player, index) {
+            player.aiTimer++;
+            if (player.aiTimer < 5) return; // AI 반응 속도 조절
+            
+            player.aiTimer = 0;
+            
+            const directions = [
+                { x: 1, y: 0 },  // 오른쪽
+                { x: 0, y: 1 },  // 아래
+                { x: -1, y: 0 }, // 왼쪽
+                { x: 0, y: -1 }  // 위
+            ];
+            
+            // 현재 방향으로 계속 갈 수 있는지 확인
+            const currentDir = directions[player.direction];
+            const nextX = player.x + currentDir.x;
+            const nextY = player.y + currentDir.y;
+            
+            if (isValidMove(nextX, nextY)) {
+                return; // 계속 직진
+            }
+            
+            // 방향 전환 필요
+            const possibleDirections = [];
+            
+            for (let i = 0; i < 4; i++) {
+                if (i === (player.direction + 2) % 4) continue; // 뒤로 가기 금지
+                
+                const dir = directions[i];
+                const testX = player.x + dir.x;
+                const testY = player.y + dir.y;
+                
+                if (isValidMove(testX, testY)) {
+                    // 더 멀리 갈 수 있는 방향인지 확인
+                    let distance = 0;
+                    let checkX = testX;
+                    let checkY = testY;
+                    
+                    while (isValidMove(checkX, checkY) && distance < 10) {
+                        checkX += dir.x;
+                        checkY += dir.y;
+                        distance++;
+                    }
+                    
+                    possibleDirections.push({ direction: i, distance: distance });
+                }
+            }
+            
+            if (possibleDirections.length > 0) {
+                // 가장 멀리 갈 수 있는 방향 선택
+                possibleDirections.sort((a, b) => b.distance - a.distance);
+                player.direction = possibleDirections[0].direction;
+            }
+        }
+
+        // 유효한 이동인지 확인
+        function isValidMove(x, y) {
+            // 벽 충돌
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) {
+                return false;
+            }
+            
+            // 궤적 충돌
+            for (let trail of trails) {
+                for (let segment of trail) {
+                    if (segment.x === x && segment.y === y) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        // 플레이어 업데이트
+        function updatePlayers() {
+            const directions = [
+                { x: 1, y: 0 },  // 오른쪽
+                { x: 0, y: 1 },  // 아래
+                { x: -1, y: 0 }, // 왼쪽
+                { x: 0, y: -1 }  // 위
+            ];
+            
+            players.forEach((player, index) => {
+                if (!player.alive) return;
+                
+                // AI 업데이트
+                if (player.isAI) {
+                    updateAI(player, index);
+                }
+                
+                // 이동
+                const dir = directions[player.direction];
+                const newX = player.x + dir.x;
+                const newY = player.y + dir.y;
+                
+                // 충돌 체크
+                if (!isValidMove(newX, newY)) {
+                    player.alive = false;
+                    
+                    if (gameMode === 'single' && !player.isAI) {
+                        // 싱글 플레이에서 플레이어가 죽으면 게임 오버
+                        gameOver('Game Over!', `점수: ${score}`);
+                    }
+                    return;
+                }
+                
+                // 위치 업데이트
+                player.x = newX;
+                player.y = newY;
+                
+                // 궤적 추가
+                trails[index].push({ x: newX, y: newY });
+                
+                // 점수 증가 (싱글 플레이어만)
+                if (gameMode === 'single' && !player.isAI) {
+                    score++;
+                    updateScore();
+                    
+                    // 속도 증가
+                    if (score % 100 === 0) {
+                        speed++;
+                        updateSpeed();
+                    }
+                }
+            });
+            
+            // 게임 종료 체크
+            const alivePlayers = players.filter(p => p.alive);
+            
+            if (alivePlayers.length === 0) {
+                gameOver('무승부!', '모든 플레이어가 동시에 충돌했습니다!');
+            } else if (alivePlayers.length === 1) {
+                if (gameMode === 'multi') {
+                    gameOver(`${alivePlayers[0].name} 승리!`, `${alivePlayers[0].name}이(가) 이겼습니다!`);
+                } else if (alivePlayers[0].isAI) {
+                    gameOver('AI 승리!', `점수: ${score}`);
+                }
+            }
+        }
+
+        // 그리기 함수들
+        function drawGrid() {
+            ctx.strokeStyle = '#003366';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * GRID_SIZE, 0);
+                ctx.lineTo(x * GRID_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * GRID_SIZE);
+                ctx.lineTo(canvas.width, y * GRID_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function drawPlayers() {
+            players.forEach((player, index) => {
+                if (!player.alive) return;
+                
+                // 플레이어 헤드
+                ctx.fillStyle = player.color;
+                ctx.fillRect(
+                    player.x * GRID_SIZE + 1,
+                    player.y * GRID_SIZE + 1,
+                    GRID_SIZE - 2,
+                    GRID_SIZE - 2
+                );
+                
+                // 궤적
+                ctx.fillStyle = player.color;
+                ctx.globalAlpha = 0.7;
+                
+                trails[index].forEach(segment => {
+                    ctx.fillRect(
+                        segment.x * GRID_SIZE + 1,
+                        segment.y * GRID_SIZE + 1,
+                        GRID_SIZE - 2,
+                        GRID_SIZE - 2
+                    );
+                });
+                
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawStartScreen() {
+            ctx.fillStyle = '#00bfff';
+            ctx.font = '24px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('TRON', canvas.width / 2, canvas.height / 2 - 50);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px monospace';
+            ctx.fillText('스페이스바를 눌러 시작', canvas.width / 2, canvas.height / 2);
+            
+            if (gameMode === 'single') {
+                ctx.fillText('AI와 대결하세요!', canvas.width / 2, canvas.height / 2 + 30);
+            } else {
+                ctx.fillText('2인 대전 모드', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        // 게임 시작
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            speed = 1;
+            updateScore();
+            updateSpeed();
+            initPlayers();
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateSpeed() {
+            document.getElementById('speed').textContent = speed;
+        }
+
+        // 게임 오버
+        function gameOver(title, message) {
+            gameRunning = false;
+            document.getElementById('gameOverTitle').textContent = title;
+            document.getElementById('gameOverMessage').textContent = message;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            gameRunning = false;
+            document.getElementById('gameOver').style.display = 'none';
+            initGame();
+        }
+
+        // 게임 초기화
+        function initGame() {
+            score = 0;
+            speed = 1;
+            updateScore();
+            updateSpeed();
+            initPlayers();
+        }
+
+        // 게임 루프
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            const frameRate = 1000 / (5 + (10 - speed)); // 속도에 따른 프레임 레이트
+            
+            if (deltaTime >= frameRate) {
+                // 화면 지우기
+                ctx.fillStyle = '#000011';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                drawGrid();
+                
+                if (gameRunning) {
+                    updatePlayers();
+                    drawPlayers();
+                } else {
+                    drawStartScreen();
+                }
+                
+                lastTime = currentTime;
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 시작
+        initGame();
+        gameLoop(0);
+    </script>
+</body>
+</html>

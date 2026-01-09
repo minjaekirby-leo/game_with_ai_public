@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q*bert 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #ffa500;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives, .level {
+            background: rgba(255, 165, 0, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ffa500;
+        }
+
+        #gameCanvas {
+            border: 4px solid #ffa500;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #ffa500;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffa500;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ffa500, #ff8c00);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 165, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🟧 Q*bert 게임</h1>
+        <p>피라미드의 모든 블록을 색칠하세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+        <div class="level">레벨: <span id="level">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="700"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>Q, W - 왼쪽 위, 오른쪽 위로 점프</p>
+        <p>A, S - 왼쪽 아래, 오른쪽 아래로 점프</p>
+        <p>🟧 모든 블록을 목표 색으로 바꾸세요!</p>
+        <p>👾 적들을 피하세요!</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+
+        // 피라미드 설정
+        const PYRAMID_SIZE = 7;
+        const CUBE_SIZE = 40;
+        const CUBE_HEIGHT = 30;
+
+        // Q*bert
+        let qbert = {
+            row: PYRAMID_SIZE - 1,
+            col: 0,
+            x: 0,
+            y: 0,
+            jumping: false,
+            jumpProgress: 0,
+            targetRow: 0,
+            targetCol: 0
+        };
+
+        // 피라미드 블록들
+        let pyramid = [];
+        let enemies = [];
+        let targetColor = 0;
+
+        // 키보드 입력
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || qbert.jumping) return;
+            
+            const key = e.key.toLowerCase();
+            if (['q', 'w', 'a', 's'].includes(key)) {
+                moveQbert(key);
+            }
+        });
+
+        // 피라미드 초기화
+        function initPyramid() {
+            pyramid = [];
+            for (let row = 0; row < PYRAMID_SIZE; row++) {
+                pyramid[row] = [];
+                for (let col = 0; col <= row; col++) {
+                    pyramid[row][col] = {
+                        color: 0,
+                        targetColor: level % 3 + 1,
+                        x: 0,
+                        y: 0
+                    };
+                }
+            }
+            targetColor = level % 3 + 1;
+            calculatePositions();
+        }
+
+        // 블록 위치 계산 (아이소메트릭)
+        function calculatePositions() {
+            const centerX = canvas.width / 2;
+            const startY = 100;
+
+            for (let row = 0; row < PYRAMID_SIZE; row++) {
+                for (let col = 0; col <= row; col++) {
+                    const x = centerX + (col - row/2) * CUBE_SIZE;
+                    const y = startY + row * CUBE_HEIGHT;
+                    pyramid[row][col].x = x;
+                    pyramid[row][col].y = y;
+                }
+            }
+
+            // Q*bert 위치 업데이트
+            if (pyramid[qbert.row] && pyramid[qbert.row][qbert.col]) {
+                qbert.x = pyramid[qbert.row][qbert.col].x;
+                qbert.y = pyramid[qbert.row][qbert.col].y - 40;
+            }
+        }
+
+        // 적 초기화
+        function initEnemies() {
+            enemies = [];
+            const enemyCount = Math.min(level + 1, 4);
+            
+            for (let i = 0; i < enemyCount; i++) {
+                enemies.push({
+                    row: 0,
+                    col: 0,
+                    x: pyramid[0][0].x,
+                    y: pyramid[0][0].y - 40,
+                    type: Math.random() < 0.5 ? 'coily' : 'wrongway',
+                    direction: Math.random() < 0.5 ? 'left' : 'right',
+                    moveTimer: Math.random() * 60 + 30,
+                    jumping: false,
+                    jumpProgress: 0,
+                    targetRow: 0,
+                    targetCol: 0
+                });
+            }
+        }
+
+        // Q*bert 이동
+        function moveQbert(direction) {
+            let newRow = qbert.row;
+            let newCol = qbert.col;
+
+            switch(direction) {
+                case 'q': // 왼쪽 위
+                    newRow--;
+                    break;
+                case 'w': // 오른쪽 위
+                    newRow--;
+                    newCol++;
+                    break;
+                case 'a': // 왼쪽 아래
+                    newRow++;
+                    break;
+                case 's': // 오른쪽 아래
+                    newRow++;
+                    newCol++;
+                    break;
+            }
+
+            // 유효한 위치인지 확인
+            if (newRow >= 0 && newRow < PYRAMID_SIZE && 
+                newCol >= 0 && newCol <= newRow) {
+                
+                qbert.jumping = true;
+                qbert.jumpProgress = 0;
+                qbert.targetRow = newRow;
+                qbert.targetCol = newCol;
+            } else {
+                // 피라미드 밖으로 떨어짐
+                lives--;
+                updateLives();
+                resetQbert();
+                
+                if (lives <= 0) {
+                    gameOver();
+                }
+            }
+        }
+
+        // Q*bert 업데이트
+        function updateQbert() {
+            if (qbert.jumping) {
+                qbert.jumpProgress += 0.15;
+                
+                if (qbert.jumpProgress >= 1) {
+                    // 점프 완료
+                    qbert.jumping = false;
+                    qbert.row = qbert.targetRow;
+                    qbert.col = qbert.targetCol;
+                    
+                    // 블록 색칠
+                    const block = pyramid[qbert.row][qbert.col];
+                    if (block.color < block.targetColor) {
+                        block.color++;
+                        score += 25;
+                        updateScore();
+                    } else if (block.color > block.targetColor) {
+                        block.color--;
+                        score += 25;
+                        updateScore();
+                    }
+                    
+                    calculatePositions();
+                    checkLevelComplete();
+                } else {
+                    // 점프 중 위치 보간
+                    const startX = pyramid[qbert.row][qbert.col].x;
+                    const startY = pyramid[qbert.row][qbert.col].y - 40;
+                    const endX = pyramid[qbert.targetRow][qbert.targetCol].x;
+                    const endY = pyramid[qbert.targetRow][qbert.targetCol].y - 40;
+                    
+                    const t = qbert.jumpProgress;
+                    const jumpHeight = Math.sin(t * Math.PI) * 30;
+                    
+                    qbert.x = startX + (endX - startX) * t;
+                    qbert.y = startY + (endY - startY) * t - jumpHeight;
+                }
+            }
+        }
+
+        // 적 업데이트
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                enemy.moveTimer--;
+                
+                if (!enemy.jumping && enemy.moveTimer <= 0) {
+                    // 적 이동
+                    let newRow = enemy.row;
+                    let newCol = enemy.col;
+                    
+                    if (enemy.type === 'coily') {
+                        // Q*bert를 따라감
+                        if (enemy.row < qbert.row) {
+                            newRow++;
+                            if (enemy.col < qbert.col) newCol++;
+                        } else if (enemy.row > 0) {
+                            newRow--;
+                            if (Math.random() < 0.5) newCol++;
+                        }
+                    } else {
+                        // 랜덤 이동
+                        if (Math.random() < 0.5) {
+                            newRow++;
+                            if (Math.random() < 0.5) newCol++;
+                        } else if (enemy.row > 0) {
+                            newRow--;
+                            if (Math.random() < 0.5) newCol++;
+                        }
+                    }
+                    
+                    // 유효한 위치인지 확인
+                    if (newRow >= 0 && newRow < PYRAMID_SIZE && 
+                        newCol >= 0 && newCol <= newRow) {
+                        enemy.jumping = true;
+                        enemy.jumpProgress = 0;
+                        enemy.targetRow = newRow;
+                        enemy.targetCol = newCol;
+                    }
+                    
+                    enemy.moveTimer = Math.random() * 120 + 60;
+                }
+                
+                if (enemy.jumping) {
+                    enemy.jumpProgress += 0.1;
+                    
+                    if (enemy.jumpProgress >= 1) {
+                        enemy.jumping = false;
+                        enemy.row = enemy.targetRow;
+                        enemy.col = enemy.targetCol;
+                        
+                        enemy.x = pyramid[enemy.row][enemy.col].x;
+                        enemy.y = pyramid[enemy.row][enemy.col].y - 40;
+                    } else {
+                        // 점프 중 위치 보간
+                        const startX = pyramid[enemy.row][enemy.col].x;
+                        const startY = pyramid[enemy.row][enemy.col].y - 40;
+                        const endX = pyramid[enemy.targetRow][enemy.targetCol].x;
+                        const endY = pyramid[enemy.targetRow][enemy.targetCol].y - 40;
+                        
+                        const t = enemy.jumpProgress;
+                        const jumpHeight = Math.sin(t * Math.PI) * 20;
+                        
+                        enemy.x = startX + (endX - startX) * t;
+                        enemy.y = startY + (endY - startY) * t - jumpHeight;
+                    }
+                }
+                
+                // Q*bert와 충돌 체크
+                if (enemy.row === qbert.row && enemy.col === qbert.col) {
+                    lives--;
+                    updateLives();
+                    resetQbert();
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+        }
+
+        // 레벨 완료 체크
+        function checkLevelComplete() {
+            let allComplete = true;
+            for (let row = 0; row < PYRAMID_SIZE; row++) {
+                for (let col = 0; col <= row; col++) {
+                    if (pyramid[row][col].color !== pyramid[row][col].targetColor) {
+                        allComplete = false;
+                        break;
+                    }
+                }
+                if (!allComplete) break;
+            }
+            
+            if (allComplete) {
+                level++;
+                score += 1000;
+                updateLevel();
+                updateScore();
+                resetQbert();
+                initPyramid();
+                initEnemies();
+            }
+        }
+
+        // Q*bert 리셋
+        function resetQbert() {
+            qbert.row = PYRAMID_SIZE - 1;
+            qbert.col = 0;
+            qbert.jumping = false;
+            qbert.jumpProgress = 0;
+            calculatePositions();
+        }
+
+        // 그리기 함수들
+        function drawPyramid() {
+            for (let row = 0; row < PYRAMID_SIZE; row++) {
+                for (let col = 0; col <= row; col++) {
+                    const block = pyramid[row][col];
+                    const colors = ['#666666', '#ffff00', '#ff6600', '#ff0000'];
+                    
+                    // 블록 그리기 (아이소메트릭)
+                    ctx.fillStyle = colors[block.color];
+                    
+                    // 윗면
+                    ctx.beginPath();
+                    ctx.moveTo(block.x, block.y);
+                    ctx.lineTo(block.x + CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.lineTo(block.x, block.y - CUBE_HEIGHT);
+                    ctx.lineTo(block.x - CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 왼쪽면
+                    ctx.fillStyle = colors[block.color];
+                    ctx.filter = 'brightness(0.7)';
+                    ctx.beginPath();
+                    ctx.moveTo(block.x - CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.lineTo(block.x, block.y - CUBE_HEIGHT);
+                    ctx.lineTo(block.x, block.y);
+                    ctx.lineTo(block.x - CUBE_SIZE/2, block.y + CUBE_HEIGHT/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 오른쪽면
+                    ctx.filter = 'brightness(0.5)';
+                    ctx.beginPath();
+                    ctx.moveTo(block.x + CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.lineTo(block.x, block.y - CUBE_HEIGHT);
+                    ctx.lineTo(block.x, block.y);
+                    ctx.lineTo(block.x + CUBE_SIZE/2, block.y + CUBE_HEIGHT/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.filter = 'none';
+                    
+                    // 테두리
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(block.x, block.y);
+                    ctx.lineTo(block.x + CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.lineTo(block.x, block.y - CUBE_HEIGHT);
+                    ctx.lineTo(block.x - CUBE_SIZE/2, block.y - CUBE_HEIGHT/2);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawQbert() {
+            // Q*bert (오렌지 캐릭터)
+            ctx.fillStyle = '#ffa500';
+            ctx.beginPath();
+            ctx.arc(qbert.x, qbert.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 눈
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(qbert.x - 5, qbert.y - 5, 3, 0, Math.PI * 2);
+            ctx.arc(qbert.x + 5, qbert.y - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(qbert.x - 5, qbert.y - 5, 1, 0, Math.PI * 2);
+            ctx.arc(qbert.x + 5, qbert.y - 5, 1, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 코
+            ctx.fillStyle = '#ff6600';
+            ctx.beginPath();
+            ctx.arc(qbert.x, qbert.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                if (enemy.type === 'coily') {
+                    // 코일리 (보라색 뱀)
+                    ctx.fillStyle = '#800080';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 눈
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x - 4, enemy.y - 4, 2, 0, Math.PI * 2);
+                    ctx.arc(enemy.x + 4, enemy.y - 4, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 웡웨이 (빨간색)
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 눈
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x - 3, enemy.y - 3, 2, 0, Math.PI * 2);
+                    ctx.arc(enemy.x + 3, enemy.y - 3, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function updateLevel() {
+            document.getElementById('level').textContent = level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            
+            resetQbert();
+            initPyramid();
+            initEnemies();
+            
+            updateScore();
+            updateLives();
+            updateLevel();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#000033';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 업데이트
+                updateQbert();
+                updateEnemies();
+            }
+
+            // 그리기
+            drawPyramid();
+            drawEnemies();
+            drawQbert();
+
+            // 목표 색상 표시
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px monospace';
+            ctx.fillText(`목표 색상: ${targetColor}단계`, 20, 30);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initPyramid();
+            initEnemies();
+            updateScore();
+            updateLives();
+            updateLevel();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>

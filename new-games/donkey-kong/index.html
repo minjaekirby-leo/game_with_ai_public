@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동키콩 게임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428, #004e92);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #ff6b6b;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score, .lives, .level {
+            background: rgba(255, 107, 107, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b6b;
+        }
+
+        #gameCanvas {
+            border: 4px solid #ff6b6b;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #ff6b6b;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ff6b6b;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+    
+    <div class="header">
+        <h1>🦍 동키콩 게임</h1>
+        <p>마리오를 조종해서 공주를 구하러 가세요!</p>
+    </div>
+
+    <div class="game-info">
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="lives">생명: <span id="lives">3</span></div>
+        <div class="level">레벨: <span id="level">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+
+    <div class="controls">
+        <h3>🎮 조작법</h3>
+        <p>⬅️➡️ 화살표 키로 좌우 이동</p>
+        <p>⬆️ 위 화살표로 사다리 올라가기</p>
+        <p>⬇️ 아래 화살표로 사다리 내려가기</p>
+        <p>🔨 스페이스바로 망치 사용 (아이템 획득 시)</p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+
+        // 플레이어 (마리오)
+        let player = {
+            x: 50,
+            y: canvas.height - 100,
+            width: 20,
+            height: 30,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            onLadder: false,
+            hasHammer: false,
+            hammerTime: 0
+        };
+
+        // 게임 객체들
+        let platforms = [];
+        let ladders = [];
+        let barrels = [];
+        let hammers = [];
+        let donkeyKong = { x: 50, y: 50, throwing: false };
+        let princess = { x: 50, y: 30 };
+
+        // 키보드 입력
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 레벨 초기화
+        function initLevel() {
+            platforms = [
+                // 바닥
+                { x: 0, y: canvas.height - 50, width: canvas.width, height: 20 },
+                // 플랫폼들
+                { x: 100, y: canvas.height - 150, width: 400, height: 20 },
+                { x: 50, y: canvas.height - 250, width: 450, height: 20 },
+                { x: 100, y: canvas.height - 350, width: 400, height: 20 },
+                { x: 50, y: canvas.height - 450, width: 450, height: 20 },
+                { x: 100, y: canvas.height - 550, width: 400, height: 20 },
+                // 맨 위 플랫폼
+                { x: 0, y: 80, width: canvas.width, height: 20 }
+            ];
+
+            ladders = [
+                { x: 520, y: canvas.height - 150, width: 20, height: 100 },
+                { x: 80, y: canvas.height - 250, width: 20, height: 100 },
+                { x: 480, y: canvas.height - 350, width: 20, height: 100 },
+                { x: 100, y: canvas.height - 450, width: 20, height: 100 },
+                { x: 450, y: canvas.height - 550, width: 20, height: 100 },
+                { x: 280, y: 80, width: 20, height: 470 }
+            ];
+
+            barrels = [];
+            hammers = [
+                { x: 200, y: canvas.height - 180, collected: false },
+                { x: 350, y: canvas.height - 380, collected: false }
+            ];
+
+            // 동키콩과 공주 위치
+            donkeyKong.x = 50;
+            donkeyKong.y = 50;
+            princess.x = 500;
+            princess.y = 30;
+        }
+
+        // 배럴 생성
+        function createBarrel() {
+            if (Math.random() < 0.02 + level * 0.005) {
+                barrels.push({
+                    x: donkeyKong.x + 30,
+                    y: donkeyKong.y + 40,
+                    vx: 2 + level * 0.5,
+                    vy: 0,
+                    onGround: false
+                });
+            }
+        }
+
+        // 플레이어 업데이트
+        function updatePlayer() {
+            // 좌우 이동
+            if (keys['ArrowLeft']) {
+                player.vx = -3;
+            } else if (keys['ArrowRight']) {
+                player.vx = 3;
+            } else {
+                player.vx = 0;
+            }
+
+            // 사다리 이동
+            player.onLadder = false;
+            for (let ladder of ladders) {
+                if (player.x + player.width > ladder.x && 
+                    player.x < ladder.x + ladder.width &&
+                    player.y + player.height > ladder.y && 
+                    player.y < ladder.y + ladder.height) {
+                    player.onLadder = true;
+                    
+                    if (keys['ArrowUp']) {
+                        player.vy = -2;
+                        player.vx = 0;
+                    } else if (keys['ArrowDown']) {
+                        player.vy = 2;
+                        player.vx = 0;
+                    } else {
+                        player.vy = 0;
+                    }
+                    break;
+                }
+            }
+
+            // 망치 사용
+            if (keys[' '] && player.hasHammer) {
+                player.hammerTime = 30;
+            }
+
+            if (player.hammerTime > 0) {
+                player.hammerTime--;
+                player.vx = 0; // 망치 사용 중에는 이동 불가
+            }
+
+            // 중력 적용 (사다리에 있지 않을 때)
+            if (!player.onLadder) {
+                player.vy += 0.5; // 중력
+            }
+
+            // 이동
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // 플랫폼 충돌
+            player.onGround = false;
+            for (let platform of platforms) {
+                if (player.x + player.width > platform.x && 
+                    player.x < platform.x + platform.width &&
+                    player.y + player.height > platform.y && 
+                    player.y + player.height < platform.y + platform.height + 10 &&
+                    player.vy >= 0) {
+                    player.y = platform.y - player.height;
+                    player.vy = 0;
+                    player.onGround = true;
+                }
+            }
+
+            // 화면 경계
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            // 떨어지면 생명 감소
+            if (player.y > canvas.height) {
+                lives--;
+                updateLives();
+                resetPlayer();
+                
+                if (lives <= 0) {
+                    gameOver();
+                }
+            }
+
+            // 망치 수집
+            for (let hammer of hammers) {
+                if (!hammer.collected &&
+                    player.x + player.width > hammer.x && 
+                    player.x < hammer.x + 20 &&
+                    player.y + player.height > hammer.y && 
+                    player.y < hammer.y + 20) {
+                    hammer.collected = true;
+                    player.hasHammer = true;
+                    score += 500;
+                    updateScore();
+                }
+            }
+
+            // 공주에게 도달
+            if (player.x + player.width > princess.x && 
+                player.x < princess.x + 30 &&
+                player.y + player.height > princess.y && 
+                player.y < princess.y + 40) {
+                nextLevel();
+            }
+        }
+
+        // 배럴 업데이트
+        function updateBarrels() {
+            barrels = barrels.filter(barrel => {
+                // 중력
+                barrel.vy += 0.3;
+                
+                // 이동
+                barrel.x += barrel.vx;
+                barrel.y += barrel.vy;
+
+                // 플랫폼 충돌
+                barrel.onGround = false;
+                for (let platform of platforms) {
+                    if (barrel.x + 15 > platform.x && 
+                        barrel.x < platform.x + platform.width &&
+                        barrel.y + 15 > platform.y && 
+                        barrel.y + 15 < platform.y + platform.height + 10 &&
+                        barrel.vy >= 0) {
+                        barrel.y = platform.y - 15;
+                        barrel.vy = 0;
+                        barrel.onGround = true;
+                        
+                        // 플랫폼 끝에서 떨어지기
+                        if (barrel.x <= platform.x || barrel.x + 15 >= platform.x + platform.width) {
+                            barrel.vy = 1;
+                        }
+                    }
+                }
+
+                // 사다리에서 떨어질 확률
+                for (let ladder of ladders) {
+                    if (barrel.x + 15 > ladder.x && 
+                        barrel.x < ladder.x + ladder.width &&
+                        barrel.onGround && Math.random() < 0.3) {
+                        barrel.vy = 2;
+                        barrel.onGround = false;
+                    }
+                }
+
+                // 플레이어와 충돌 (망치로 파괴 가능)
+                if (player.x + player.width > barrel.x && 
+                    player.x < barrel.x + 15 &&
+                    player.y + player.height > barrel.y && 
+                    player.y < barrel.y + 15) {
+                    
+                    if (player.hammerTime > 0) {
+                        // 망치로 파괴
+                        score += 300;
+                        updateScore();
+                        return false;
+                    } else {
+                        // 플레이어 피해
+                        lives--;
+                        updateLives();
+                        resetPlayer();
+                        
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                        return false;
+                    }
+                }
+
+                // 화면 밖으로 나가면 제거
+                return barrel.y < canvas.height + 50;
+            });
+        }
+
+        // 플레이어 리셋
+        function resetPlayer() {
+            player.x = 50;
+            player.y = canvas.height - 100;
+            player.vx = 0;
+            player.vy = 0;
+            player.hasHammer = false;
+            player.hammerTime = 0;
+        }
+
+        // 다음 레벨
+        function nextLevel() {
+            level++;
+            score += 2000;
+            updateLevel();
+            updateScore();
+            resetPlayer();
+            initLevel();
+        }
+
+        // 그리기 함수들
+        function drawPlayer() {
+            // 마리오
+            ctx.fillStyle = player.hammerTime > 0 ? '#ffff00' : '#ff0000';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // 모자
+            ctx.fillStyle = '#0000ff';
+            ctx.fillRect(player.x + 2, player.y, player.width - 4, 8);
+            
+            // 망치 (사용 중일 때)
+            if (player.hammerTime > 0) {
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(player.x + player.width, player.y + 5, 15, 5);
+                ctx.fillRect(player.x + player.width + 5, player.y, 5, 15);
+            }
+        }
+
+        function drawPlatforms() {
+            ctx.fillStyle = '#8b4513';
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        function drawLadders() {
+            ctx.fillStyle = '#ffff00';
+            ladders.forEach(ladder => {
+                // 사다리 기둥
+                ctx.fillRect(ladder.x + 5, ladder.y, 3, ladder.height);
+                ctx.fillRect(ladder.x + 12, ladder.y, 3, ladder.height);
+                
+                // 사다리 가로대
+                for (let i = 0; i < ladder.height; i += 20) {
+                    ctx.fillRect(ladder.x, ladder.y + i, ladder.width, 3);
+                }
+            });
+        }
+
+        function drawBarrels() {
+            ctx.fillStyle = '#8b4513';
+            barrels.forEach(barrel => {
+                ctx.beginPath();
+                ctx.arc(barrel.x + 7.5, barrel.y + 7.5, 7.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 배럴 띠
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(barrel.x, barrel.y + 3, 15, 2);
+                ctx.fillRect(barrel.x, barrel.y + 10, 15, 2);
+                ctx.fillStyle = '#8b4513';
+            });
+        }
+
+        function drawHammers() {
+            hammers.forEach(hammer => {
+                if (!hammer.collected) {
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(hammer.x, hammer.y, 20, 5);
+                    ctx.fillRect(hammer.x + 7, hammer.y - 10, 6, 20);
+                }
+            });
+        }
+
+        function drawDonkeyKong() {
+            // 동키콩
+            ctx.fillStyle = '#8b4513';
+            ctx.fillRect(donkeyKong.x, donkeyKong.y, 60, 50);
+            
+            // 얼굴
+            ctx.fillStyle = '#deb887';
+            ctx.fillRect(donkeyKong.x + 10, donkeyKong.y + 10, 40, 30);
+            
+            // 눈
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(donkeyKong.x + 15, donkeyKong.y + 15, 5, 5);
+            ctx.fillRect(donkeyKong.x + 40, donkeyKong.y + 15, 5, 5);
+        }
+
+        function drawPrincess() {
+            // 공주
+            ctx.fillStyle = '#ffb6c1';
+            ctx.fillRect(princess.x, princess.y, 30, 40);
+            
+            // 드레스
+            ctx.fillStyle = '#ff69b4';
+            ctx.fillRect(princess.x + 5, princess.y + 20, 20, 20);
+            
+            // 머리
+            ctx.fillStyle = '#ffd700';
+            ctx.fillRect(princess.x + 5, princess.y, 20, 15);
+        }
+
+        // UI 업데이트
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function updateLevel() {
+            document.getElementById('level').textContent = level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            
+            resetPlayer();
+            initLevel();
+            
+            updateScore();
+            updateLives();
+            updateLevel();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            // 화면 지우기
+            ctx.fillStyle = '#000033';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameRunning) {
+                // 배럴 생성
+                createBarrel();
+                
+                // 업데이트
+                updatePlayer();
+                updateBarrels();
+            }
+
+            // 그리기
+            drawPlatforms();
+            drawLadders();
+            drawDonkeyKong();
+            drawPrincess();
+            drawHammers();
+            drawBarrels();
+            drawPlayer();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        function initGame() {
+            initLevel();
+            updateScore();
+            updateLives();
+            updateLevel();
+            gameLoop();
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>
