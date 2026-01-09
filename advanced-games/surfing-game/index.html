@@ -2,6 +2,9 @@
 <html>
 <head>
     <title>서핑 게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     
     <!-- Google Analytics -->
     <script src="../../analytics.js"></script>
@@ -16,10 +19,17 @@
             text-align: center;
             min-height: 100vh;
             overflow-x: hidden;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         h1 {
-            font-size: 2.5rem;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             margin-bottom: 20px;
             animation: wave 2s ease-in-out infinite;
@@ -41,6 +51,9 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             background: linear-gradient(180deg, #87CEEB 0%, #4169E1 100%);
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
         }
         
         .game-info {
@@ -56,10 +69,11 @@
             border: 2px solid #ffffff;
             padding: 10px 20px;
             border-radius: 20px;
-            font-size: 1.1rem;
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
             font-weight: bold;
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-width: 80px;
         }
         
         .instructions {
@@ -79,14 +93,16 @@
             background: linear-gradient(45deg, #4169E1, #87CEEB);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 15px 30px;
             border-radius: 25px;
-            font-size: 1rem;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
             font-weight: bold;
             cursor: pointer;
             margin: 5px;
             transition: all 0.3s;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-height: 44px;
+            min-width: 120px;
         }
         
         button:hover {
@@ -160,6 +176,107 @@
             display: none;
             z-index: 100;
             border: 3px solid #4169E1;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        
+        .control-instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px auto;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+        }
+        
+        .device-controls {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .control-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 2px solid #ffffff;
+        }
+        
+        .control-icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 15px;
+            z-index: 200;
+        }
+        
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid #ffffff;
+            color: white;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            touch-action: manipulation;
+            backdrop-filter: blur(10px);
+        }
+        
+        .mobile-btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-bottom: 100px;
+            }
+            
+            .game-info {
+                gap: 10px;
+            }
+            
+            .info-box {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .instructions, .control-instructions {
+                padding: 15px;
+                margin: 10px auto;
+            }
+            
+            .control-item {
+                min-width: 150px;
+            }
+            
+            .mobile-controls {
+                display: flex;
+            }
+            
+            .speed-meter, .trick-indicator, .weather-indicator, .combo-display {
+                font-size: 0.8rem;
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -167,10 +284,28 @@
     <h1>🏄‍♂️ 서핑 게임</h1>
     
     <div class="instructions">
-        <p><strong>🎮 조작법:</strong></p>
-        <p>← → 화살표: 좌우 이동 | ↑ 화살표: 점프 | 스페이스: 트릭</p>
-        <p><strong>🌊 목표:</strong> 파도를 타면서 트릭을 성공시키고 장애물을 피하세요!</p>
-        <p><strong>⭐ 트릭:</strong> 공중에서 스페이스바를 눌러 트릭을 시도하세요!</p>
+        <p><strong>🎮 게임 목표:</strong></p>
+        <p>파도를 타면서 트릭을 성공시키고 장애물을 피하세요!</p>
+        <p><strong>⭐ 트릭:</strong> 공중에서 트릭 버튼을 눌러 트릭을 시도하세요!</p>
+    </div>
+    
+    <div class="control-instructions">
+        <p><strong>📱 조작법</strong></p>
+        <div class="device-controls">
+            <div class="control-item">
+                <div class="control-icon">🖥️</div>
+                <strong>PC</strong><br>
+                ← → 화살표: 좌우 이동<br>
+                ↑ 화살표: 점프<br>
+                스페이스: 트릭
+            </div>
+            <div class="control-item">
+                <div class="control-icon">📱</div>
+                <strong>모바일</strong><br>
+                하단 버튼으로<br>
+                이동, 점프, 트릭 조작
+            </div>
+        </div>
     </div>
     
     <div class="game-info">
@@ -211,6 +346,14 @@
         <button onclick="startGame()">게임 시작</button>
         <button onclick="pauseGame()">일시정지</button>
         <button onclick="resetGame()">다시 시작</button>
+    </div>
+    
+    <!-- 모바일 전용 컨트롤 -->
+    <div class="mobile-controls">
+        <div class="mobile-btn" id="leftBtn">←</div>
+        <div class="mobile-btn" id="jumpBtn">↑</div>
+        <div class="mobile-btn" id="rightBtn">→</div>
+        <div class="mobile-btn" id="trickBtn">✨</div>
     </div>
     
     <script src="surfing-game.js"></script>

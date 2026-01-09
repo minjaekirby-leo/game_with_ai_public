@@ -8,6 +8,9 @@
     <!-- Google Analytics -->
     <script src="analytics.js"></script>
     
+    <!-- Game Manager CSS -->
+    <link rel="stylesheet" href="game-manager.css">
+    
     <style>
         * {
             margin: 0;
@@ -553,118 +556,18 @@
                 <p>가장 인기 있고 재미있는 게임들을 먼저 즐겨보세요!</p>
             </div>
             
-            <div class="best-games-grid">
-                <div class="game-card best-game">
-                    <span class="game-icon">🐸</span>
-                    <h3 class="game-title">개구리 점프 게임</h3>
-                    <p class="game-description">스페이스바로 점프 파워를 조절해서 연꽃잎에 착지하세요!</p>
-                    <div class="game-tech">물리 시뮬레이션</div>
-                    <a href="advanced-games/frog-jump/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
+            <div class="best-games-grid" id="best-games-grid">
+            </div>
+        </div>
 
-                <div class="game-card best-game">
-                    <span class="game-icon">🧟‍♂️</span>
-                    <h3 class="game-title">좀비 서바이벌</h3>
-                    <p class="game-description">좀비들을 피하면서 무기로 사격하세요!</p>
-                    <div class="game-tech">액션 서바이벌</div>
-                    <a href="new-games/zombie-survival/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🧪</span>
-                    <h3 class="game-title">화학 실험실</h3>
-                    <p class="game-description">원소들을 조합해서 새로운 화합물을 만드세요!</p>
-                    <div class="game-tech">교육용 시뮬레이션</div>
-                    <a href="new-games/chemistry-lab/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🌀</span>
-                    <h3 class="game-title">미로 탈출</h3>
-                    <p class="game-description">복잡한 미로에서 출구를 찾아 탈출하세요!</p>
-                    <div class="game-tech">미로 알고리즘</div>
-                    <a href="new-games/maze-escape/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🔍</span>
-                    <h3 class="game-title">단어 찾기</h3>
-                    <p class="game-description">글자 격자에서 숨어있는 단어들을 찾아보세요!</p>
-                    <div class="game-tech">단어 퍼즐</div>
-                    <a href="new-games/word-search/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🦸‍♂️</span>
-                    <h3 class="game-title">슈퍼히어로 게임</h3>
-                    <p class="game-description">슈퍼히어로가 되어 도시를 구하세요!</p>
-                    <div class="game-tech">액션 어드벤처</div>
-                    <a href="new-games/superhero/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🎮</span>
-                    <h3 class="game-title">레트로 아케이드</h3>
-                    <p class="game-description">80년대 아케이드 게임의 향수를 느껴보세요!</p>
-                    <div class="game-tech">레트로 게임</div>
-                    <a href="new-games/retro-arcade/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🎪</span>
-                    <h3 class="game-title">트램펄린 점프</h3>
-                    <p class="game-description">트램펄린에서 높이 점프해서 공중 묘기를 해보세요!</p>
-                    <div class="game-tech">점프 시뮬레이션</div>
-                    <a href="new-games/trampoline-jump/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🚗</span>
-                    <h3 class="game-title">자동차 주차</h3>
-                    <p class="game-description">좁은 공간에 자동차를 주차해보세요!</p>
-                    <div class="game-tech">물리 엔진</div>
-                    <a href="new-games/car-parking/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🧮</span>
-                    <h3 class="game-title">수학 퍼즐</h3>
-                    <p class="game-description">다양한 수학 문제를 풀어보세요!</p>
-                    <div class="game-tech">교육용 퍼즐</div>
-                    <a href="new-games/math-puzzle/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🧩</span>
-                    <h3 class="game-title">테트리스</h3>
-                    <p class="game-description">떨어지는 블록들을 회전시키고 배치해서 가로줄을 완성하세요!</p>
-                    <div class="game-tech">클래식 퍼즐 게임</div>
-                    <a href="new-games/tetris/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🐦</span>
-                    <h3 class="game-title">플래피 버드</h3>
-                    <p class="game-description">스페이스바나 클릭으로 새를 날게 해서 파이프 사이를 통과하세요!</p>
-                    <div class="game-tech">물리 시뮬레이션</div>
-                    <a href="new-games/flappy-bird/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🎨</span>
-                    <h3 class="game-title">픽셀 아트 에디터</h3>
-                    <p class="game-description">16x16 캔버스에서 픽셀 아트를 그려보세요!</p>
-                    <div class="game-tech">그래픽 에디터</div>
-                    <a href="creative-games/pixel-art-editor/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
-
-                <div class="game-card best-game">
-                    <span class="game-icon">🏰</span>
-                    <h3 class="game-title">타워 디펜스</h3>
-                    <p class="game-description">적들이 기지에 도달하지 못하도록 타워를 설치하여 방어하세요!</p>
-                    <div class="game-tech">전략과 알고리즘</div>
-                    <a href="advanced-games/tower-defense/index.html" class="play-button">게임 시작 🚀</a>
-                </div>
+        <!-- New Games Section -->
+        <div class="new-games-section" style="margin: 50px 0; padding: 40px 20px; background: rgba(76, 175, 80, 0.1); border-radius: 30px; backdrop-filter: blur(15px); border: 2px solid rgba(76, 175, 80, 0.3); position: relative; overflow: hidden;">
+            <div class="new-games-header" style="text-align: center; margin-bottom: 40px; position: relative; z-index: 1;">
+                <h2 style="font-size: 2.5rem; margin-bottom: 15px; background: linear-gradient(45deg, #4CAF50, #8BC34A, #CDDC39); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 0 20px rgba(76, 175, 80, 0.5); animation: glow 2s ease-in-out infinite alternate;">🆕 새로운 게임 코너</h2>
+                <p style="font-size: 1.2rem; opacity: 0.9; color: #fff;">최근에 추가된 신선하고 재미있는 게임들을 만나보세요!</p>
+            </div>
+            
+            <div class="new-games-grid" id="new-games-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; position: relative; z-index: 1;">
             </div>
         </div>
 
@@ -676,7 +579,7 @@
             </div>
         </div>
 
-        <div class="games-grid">
+        <div class="games-grid" id="all-games-grid">
             <div class="game-card">
                 <span class="game-icon">🏀</span>
                 <h2 class="game-title">튀는 공 게임</h2>
@@ -1832,5 +1735,8 @@
             });
         });
     </script>
+    
+    <!-- Game Manager Script -->
+    <script src="game-manager.js"></script>
 </body>
 </html>

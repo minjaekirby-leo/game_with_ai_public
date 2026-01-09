@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>팩맨 게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- Google Analytics -->
+    <script src="../../analytics.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000428 0%, #004e92 100%);
+            color: #FFFF00;
+            text-align: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0,0,0,0.5); }
+            to { text-shadow: 3px 3px 20px rgba(255, 255, 0, 0.8); }
+        }
+        
+        .game-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 0, 0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 0, 0.5);
+            min-width: 80px;
+        }
+        
+        canvas {
+            border: 3px solid #FFFF00;
+            border-radius: 10px;
+            background: #000;
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FFFF00, #FFD700);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: clamp(1rem, 2.5vw, 1.1rem);
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            min-height: 44px;
+            min-width: 120px;
+            touch-action: manipulation;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 255, 0, 0.4);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+        }
+        
+        .control-instructions {
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px auto;
+            max-width: 600px;
+            backdrop-filter: blur(5px);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+        }
+        
+        .device-controls {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .control-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 0, 0.3);
+        }
+        
+        .control-icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 200;
+        }
+        
+        .dpad {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .dpad-btn {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 0, 0.8);
+            border: 2px solid #FFFF00;
+            border-radius: 8px;
+            color: #000;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            touch-action: manipulation;
+        }
+        
+        .dpad-btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 0, 1);
+        }
+        
+        .dpad-up { top: 0; left: 40px; }
+        .dpad-down { bottom: 0; left: 40px; }
+        .dpad-left { top: 40px; left: 0; }
+        .dpad-right { top: 40px; right: 0; }
+        
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #FFFF00;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 3px solid #FFFF00;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-bottom: 160px;
+            }
+            
+            .game-container {
+                padding: 20px;
+                margin: 10px auto;
+            }
+            
+            .game-info {
+                gap: 15px;
+            }
+            
+            .info-box {
+                padding: 10px 15px;
+                font-size: 1rem;
+            }
+            
+            .instructions, .control-instructions {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .control-item {
+                min-width: 150px;
+            }
+            
+            .mobile-controls {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🟡 팩맨 게임</h1>
+    
+    <div class="instructions">
+        <p><strong>🎮 게임 목표:</strong></p>
+        <p>모든 점을 먹으면서 유령들을 피하세요! 파워 펠릿을 먹으면 잠시 유령을 잡을 수 있어요!</p>
+    </div>
+    
+    <div class="control-instructions">
+        <p><strong>📱 조작법</strong></p>
+        <div class="device-controls">
+            <div class="control-item">
+                <div class="control-icon">🖥️</div>
+                <strong>PC</strong><br>
+                화살표 키로<br>
+                팩맨 이동
+            </div>
+            <div class="control-item">
+                <div class="control-icon">📱</div>
+                <strong>모바일</strong><br>
+                하단 방향패드로<br>
+                팩맨 이동
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-info">
+            <div class="info-box">점수: <span id="score">0</span></div>
+            <div class="info-box">레벨: <span id="level">1</span></div>
+            <div class="info-box">생명: <span id="lives">3</span></div>
+            <div class="info-box">최고 기록: <span id="bestScore">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="startGame()">게임 시작</button>
+            <button onclick="pauseGame()">일시정지</button>
+            <button onclick="resetGame()">다시 시작</button>
+        </div>
+    </div>
+    
+    <!-- 모바일 전용 컨트롤 -->
+    <div class="mobile-controls">
+        <div class="dpad">
+            <div class="dpad-btn dpad-up" id="upBtn">↑</div>
+            <div class="dpad-btn dpad-down" id="downBtn">↓</div>
+            <div class="dpad-btn dpad-left" id="leftBtn">←</div>
+            <div class="dpad-btn dpad-right" id="rightBtn">→</div>
+        </div>
+    </div>
+    
+    <div class="game-over" id="gameOver">
+        <h2>🟡 게임 오버!</h2>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <p>레벨: <span id="finalLevel">1</span></p>
+        <p id="newRecord" style="display: none; color: #FFD700;">🏆 새로운 기록!</p>
+        <button onclick="resetGame()">다시 도전하기</button>
+    </div>
+    
+    <script src="pacman.js"></script>
+</body>
+</html>
