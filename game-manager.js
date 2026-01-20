@@ -159,6 +159,15 @@ class GameManager {
         if (this.games.newGames.length === 0) {
             this.games.newGames = [
                 {
+                    id: 'mario-game',
+                    title: '슈퍼 마리오 게임',
+                    description: '마리오와 함께 모험을 떠나보세요! 코인을 모으고 굴바를 피해 깃발에 도달하세요!',
+                    icon: '🍄',
+                    tech: '플랫포머 액션',
+                    url: 'new-games/mario-game/index.html',
+                    addedDate: new Date().toISOString()
+                },
+                {
                     id: 'pacman',
                     title: '팩맨 게임',
                     description: '클래식 팩맨! 점을 먹고 유령을 피하세요!',
