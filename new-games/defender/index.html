@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 디펜더 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 10;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 10;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ff00;
+            z-index: 20;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .game-over button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .game-over button:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 30;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                width: 100vw;
+                height: 100vh;
+                border: none;
+                border-radius: 0;
+            }
+            
+            canvas {
+                border-radius: 0;
+            }
+            
+            .ui {
+                font-size: 14px;
+            }
+            
+            .controls {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+        
+        <div class="ui">
+            <div>점수: <span id="score">0</span></div>
+            <div>생명: <span id="lives">3</span></div>
+            <div>인간: <span id="humans">10</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            화살표 키: 이동 | 스페이스바: 발사 | 인간들을 구하세요!
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">다시 시작</button>
+            <button onclick="location.href='../../index.html'">홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameState = {
+            score: 0,
+            lives: 3,
+            humans: 10,
+            gameRunning: true,
+            keys: {},
+            cameraX: 0,
+            worldWidth: 2400
+        };
+
+        // 플레이어 우주선
+        class Ship {
+            constructor() {
+                this.x = 400;
+                this.y = 300;
+                this.width = 40;
+                this.height = 20;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.speed = 5;
+                this.maxSpeed = 8;
+                this.friction = 0.95;
+            }
+
+            update() {
+                // 좌우 이동
+                if (gameState.keys['ArrowLeft']) {
+                    this.velocityX -= 0.5;
+                }
+                if (gameState.keys['ArrowRight']) {
+                    this.velocityX += 0.5;
+                }
+                
+                // 상하 이동
+                if (gameState.keys['ArrowUp']) {
+                    this.velocityY -= 0.3;
+                }
+                if (gameState.keys['ArrowDown']) {
+                    this.velocityY += 0.3;
+                }
+
+                // 속도 제한
+                this.velocityX = Math.max(-this.maxSpeed, Math.min(this.maxSpeed, this.velocityX));
+                this.velocityY = Math.max(-this.maxSpeed, Math.min(this.maxSpeed, this.velocityY));
+
+                // 마찰력 적용
+                this.velocityX *= this.friction;
+                this.velocityY *= this.friction;
+
+                // 위치 업데이트
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                // 화면 경계 처리 (횡스크롤)
+                if (this.x < 0) this.x = 0;
+                if (this.x > gameState.worldWidth) this.x = gameState.worldWidth;
+                if (this.y < 50) this.y = 50;
+                if (this.y > canvas.height - 100) this.y = canvas.height - 100;
+
+                // 카메라 업데이트
+                gameState.cameraX = this.x - canvas.width / 2;
+                if (gameState.cameraX < 0) gameState.cameraX = 0;
+                if (gameState.cameraX > gameState.worldWidth - canvas.width) {
+                    gameState.cameraX = gameState.worldWidth - canvas.width;
+                }
+            }
+
+            draw() {
+                const screenX = this.x - gameState.cameraX;
+                
+                // 우주선 본체
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.moveTo(screenX + this.width, this.y);
+                ctx.lineTo(screenX, this.y - this.height/2);
+                ctx.lineTo(screenX + this.width/3, this.y);
+                ctx.lineTo(screenX, this.y + this.height/2);
+                ctx.closePath();
+                ctx.fill();
+
+                // 엔진 불꽃
+                if (gameState.keys['ArrowLeft'] || gameState.keys['ArrowRight']) {
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(screenX - 10, this.y - 3, 8, 6);
+                }
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y - this.height/2,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 총알 클래스
+        class Bullet {
+            constructor(x, y, direction = 1) {
+                this.x = x;
+                this.y = y;
+                this.width = 8;
+                this.height = 3;
+                this.speed = 12 * direction;
+                this.life = 100;
+            }
+
+            update() {
+                this.x += this.speed;
+                this.life--;
+            }
+
+            draw() {
+                const screenX = this.x - gameState.cameraX;
+                if (screenX > -20 && screenX < canvas.width + 20) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(screenX, this.y, this.width, this.height);
+                }
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 적 클래스
+        class Enemy {
+            constructor(x, y, type = 'lander') {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 20;
+                this.type = type;
+                this.speed = 1 + Math.random() * 2;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.health = type === 'mutant' ? 2 : 1;
+                this.carryingHuman = null;
+                this.shootTimer = 0;
+            }
+
+            update() {
+                this.shootTimer++;
+                
+                if (this.type === 'lander') {
+                    // 랜더는 인간을 찾아 납치
+                    if (!this.carryingHuman) {
+                        const nearestHuman = this.findNearestHuman();
+                        if (nearestHuman && Math.abs(this.x - nearestHuman.x) < 50) {
+                            this.carryingHuman = nearestHuman;
+                            nearestHuman.captured = true;
+                        }
+                    }
+                    
+                    if (this.carryingHuman) {
+                        this.y -= 1; // 위로 올라감
+                        this.carryingHuman.x = this.x;
+                        this.carryingHuman.y = this.y + 25;
+                        
+                        // 너무 높이 올라가면 뮤턴트로 변환
+                        if (this.y < 100) {
+                            this.type = 'mutant';
+                            this.carryingHuman = null;
+                            gameState.humans--;
+                            updateUI();
+                        }
+                    } else {
+                        // 좌우로 이동
+                        this.x += this.speed * this.direction;
+                        if (this.x < 0 || this.x > gameState.worldWidth) {
+                            this.direction *= -1;
+                        }
+                    }
+                } else if (this.type === 'mutant') {
+                    // 뮤턴트는 플레이어를 추적
+                    const dx = ship.x - this.x;
+                    const dy = ship.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        this.x += (dx / distance) * this.speed;
+                        this.y += (dy / distance) * this.speed;
+                    }
+                }
+
+                // 적 미사일 발사
+                if (this.shootTimer > 60 + Math.random() * 60) {
+                    this.shoot();
+                    this.shootTimer = 0;
+                }
+            }
+
+            findNearestHuman() {
+                let nearest = null;
+                let minDistance = Infinity;
+                
+                humans.forEach(human => {
+                    if (!human.captured && !human.falling) {
+                        const distance = Math.abs(this.x - human.x);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearest = human;
+                        }
+                    }
+                });
+                
+                return nearest;
+            }
+
+            shoot() {
+                const dx = ship.x - this.x;
+                const dy = ship.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 300) {
+                    enemyBullets.push(new Bullet(this.x, this.y, dx > 0 ? 1 : -1));
+                }
+            }
+
+            draw() {
+                const screenX = this.x - gameState.cameraX;
+                if (screenX > -50 && screenX < canvas.width + 50) {
+                    if (this.type === 'lander') {
+                        ctx.fillStyle = '#ff0000';
+                    } else {
+                        ctx.fillStyle = '#ff00ff';
+                    }
+                    
+                    // 적 우주선
+                    ctx.fillRect(screenX, this.y, this.width, this.height);
+                    
+                    // 적 특징
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(screenX + 5, this.y + 5, 5, 5);
+                    ctx.fillRect(screenX + 20, this.y + 5, 5, 5);
+                }
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 인간 클래스
+        class Human {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 10;
+                this.height = 15;
+                this.captured = false;
+                this.falling = false;
+                this.fallSpeed = 0;
+            }
+
+            update() {
+                if (this.falling) {
+                    this.fallSpeed += 0.3;
+                    this.y += this.fallSpeed;
+                    
+                    // 땅에 닿으면 죽음
+                    if (this.y > canvas.height - 120) {
+                        this.y = canvas.height - 120;
+                        this.falling = false;
+                        // 인간 사망 처리는 별도로
+                    }
+                }
+            }
+
+            draw() {
+                if (this.captured) return;
+                
+                const screenX = this.x - gameState.cameraX;
+                if (screenX > -20 && screenX < canvas.width + 20) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillRect(screenX, this.y, this.width, this.height);
+                    
+                    // 인간 머리
+                    ctx.beginPath();
+                    ctx.arc(screenX + this.width/2, this.y - 5, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 게임 객체들
+        let ship = new Ship();
+        let bullets = [];
+        let enemyBullets = [];
+        let enemies = [];
+        let humans = [];
+        let lastShot = 0;
+
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 총알 발사
+        function shootBullet() {
+            const now = Date.now();
+            if (now - lastShot > 150) {
+                bullets.push(new Bullet(ship.x + ship.width, ship.y));
+                lastShot = now;
+            }
+        }
+
+        // 인간 생성
+        function createHumans() {
+            humans = [];
+            for (let i = 0; i < 10; i++) {
+                humans.push(new Human(
+                    100 + i * 200 + Math.random() * 100,
+                    canvas.height - 120
+                ));
+            }
+        }
+
+        // 적 생성
+        function createEnemies() {
+            enemies = [];
+            for (let i = 0; i < 5; i++) {
+                enemies.push(new Enemy(
+                    Math.random() * gameState.worldWidth,
+                    100 + Math.random() * 200,
+                    'lander'
+                ));
+            }
+        }
+
+        // 배경 그리기
+        function drawBackground() {
+            // 우주 배경
+            ctx.fillStyle = '#000011';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 별들
+            for (let i = 0; i < 100; i++) {
+                const starX = (i * 37 - gameState.cameraX * 0.1) % canvas.width;
+                const starY = (i * 67) % canvas.height;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(starX, starY, 1, 1);
+            }
+            
+            // 지면
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+            
+            // 지면 디테일
+            ctx.fillStyle = '#8B4513';
+            for (let x = 0; x < canvas.width; x += 50) {
+                const height = 10 + Math.sin((x + gameState.cameraX) * 0.01) * 5;
+                ctx.fillRect(x, canvas.height - 100, 50, height);
+            }
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('humans').textContent = gameState.humans;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.humans = 10;
+            gameState.gameRunning = true;
+            gameState.cameraX = 0;
+            ship = new Ship();
+            bullets = [];
+            enemyBullets = [];
+            createEnemies();
+            createHumans();
+            updateUI();
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameState.gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // 화면 지우기
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 배경 그리기
+            drawBackground();
+
+            // 우주선 업데이트
+            ship.update();
+            ship.draw();
+
+            // 발사
+            if (gameState.keys[' ']) {
+                shootBullet();
+            }
+
+            // 총알 업데이트
+            bullets = bullets.filter(bullet => {
+                bullet.update();
+                bullet.draw();
+                return bullet.life > 0 && bullet.x < gameState.worldWidth + 100;
+            });
+
+            // 적 미사일 업데이트
+            enemyBullets = enemyBullets.filter(bullet => {
+                bullet.update();
+                bullet.draw();
+                
+                // 플레이어와 충돌 체크
+                if (checkCollision(bullet.getCollisionBox(), ship.getCollisionBox())) {
+                    gameState.lives--;
+                    updateUI();
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                    }
+                    return false;
+                }
+                
+                return bullet.life > 0;
+            });
+
+            // 적 업데이트
+            enemies = enemies.filter(enemy => {
+                enemy.update();
+                enemy.draw();
+
+                // 총알과 적 충돌
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    if (checkCollision(bullets[i].getCollisionBox(), enemy.getCollisionBox())) {
+                        enemy.health--;
+                        bullets.splice(i, 1);
+                        
+                        if (enemy.health <= 0) {
+                            gameState.score += enemy.type === 'mutant' ? 150 : 100;
+                            
+                            // 인간을 납치 중이었다면 떨어뜨림
+                            if (enemy.carryingHuman) {
+                                enemy.carryingHuman.captured = false;
+                                enemy.carryingHuman.falling = true;
+                                enemy.carryingHuman.fallSpeed = 0;
+                            }
+                            
+                            updateUI();
+                            return false;
+                        }
+                    }
+                }
+
+                // 플레이어와 적 충돌
+                if (checkCollision(enemy.getCollisionBox(), ship.getCollisionBox())) {
+                    gameState.lives--;
+                    updateUI();
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                    }
+                    return false;
+                }
+
+                return true;
+            });
+
+            // 인간 업데이트
+            humans = humans.filter(human => {
+                human.update();
+                human.draw();
+                
+                // 떨어지는 인간을 구조
+                if (human.falling && checkCollision(human.getCollisionBox(), ship.getCollisionBox())) {
+                    human.falling = false;
+                    human.y = canvas.height - 120;
+                    gameState.score += 50;
+                    updateUI();
+                }
+                
+                // 땅에 떨어진 인간은 사망
+                if (human.falling && human.y >= canvas.height - 120) {
+                    gameState.humans--;
+                    updateUI();
+                    return false;
+                }
+                
+                return !human.captured || human.falling;
+            });
+
+            // 모든 인간이 사라지면 게임 오버
+            if (gameState.humans <= 0) {
+                gameOver();
+            }
+
+            // 모든 적을 처치하면 새로운 웨이브
+            if (enemies.length === 0) {
+                createEnemies();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.key] = true;
+            if (e.key === ' ') {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.key] = false;
+        });
+
+        // 게임 초기화
+        function initGame() {
+            createEnemies();
+            createHumans();
+            updateUI();
+        }
+
+        // 게임 시작
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>

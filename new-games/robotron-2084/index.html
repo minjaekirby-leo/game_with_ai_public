@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 로보트론 2084 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000000, #1a0033, #330066);
+            color: #00ff00;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000011;
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #00ff00;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 100;
+        }
+
+        .controls {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: #00ff00;
+            font-size: 14px;
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 100;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        canvas {
+            display: block;
+            background: #000011;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 30px #00ff00;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 30px #00ff00;
+            display: none;
+            z-index: 200;
+        }
+
+        .wave-info {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffff00;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ffff00;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+        
+        <div class="hud">
+            <div>점수: <span id="score">0</span></div>
+            <div>🤖 로보트론 2084</div>
+            <div>웨이브: <span id="wave">1</span> | 생명: <span id="lives">3</span></div>
+        </div>
+
+        <div class="controls">
+            조작법: WASD - 이동, 화살표 키 - 발사 방향
+        </div>
+
+        <div class="wave-info" id="waveInfo">웨이브 1 시작!</div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>도달 웨이브: <span id="finalWave">1</span></p>
+            <button onclick="restartGame()" style="background: #00ff00; color: black; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 15px;">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 캔버스 크기 설정
+        canvas.width = 800;
+        canvas.height = 600;
+        canvas.style.position = 'absolute';
+        canvas.style.left = '50%';
+        canvas.style.top = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+
+        // 게임 상태
+        let gameState = {
+            score: 0,
+            lives: 3,
+            wave: 1,
+            gameRunning: true,
+            keys: {},
+            waveStartTime: 0,
+            showWaveInfo: false
+        };
+
+        // 플레이어
+        class Player {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.width = 20;
+                this.height = 20;
+                this.speed = 4;
+                this.color = '#00ff00';
+            }
+
+            update() {
+                // 이동 처리
+                if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) this.y -= this.speed;
+                if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) this.y += this.speed;
+                if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) this.x -= this.speed;
+                if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) this.x += this.speed;
+
+                // 화면 경계 처리
+                this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));
+                this.y = Math.max(this.height/2, Math.min(canvas.height - this.height/2, this.y));
+
+                // 발사 처리 (화살표 키)
+                if (gameState.keys['ArrowUp'] && !gameState.keys['KeyW']) this.shoot(0, -1);
+                if (gameState.keys['ArrowDown'] && !gameState.keys['KeyS']) this.shoot(0, 1);
+                if (gameState.keys['ArrowLeft'] && !gameState.keys['KeyA']) this.shoot(-1, 0);
+                if (gameState.keys['ArrowRight'] && !gameState.keys['KeyD']) this.shoot(1, 0);
+            }
+
+            shoot(dirX, dirY) {
+                if (bullets.length < 10) { // 최대 총알 수 제한
+                    bullets.push(new Bullet(this.x, this.y, dirX * 8, dirY * 8));
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // 글로우 효과
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+
+            takeDamage() {
+                gameState.lives--;
+                if (gameState.lives <= 0) {
+                    gameOver();
+                } else {
+                    // 잠시 무적 상태
+                    this.color = '#ff0000';
+                    setTimeout(() => this.color = '#00ff00', 1000);
+                }
+            }
+        }
+
+        // 총알
+        class Bullet {
+            constructor(x, y, vx, vy) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.width = 4;
+                this.height = 4;
+                this.color = '#ffff00';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // 글로우 효과
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 5;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+
+            isOffScreen() {
+                return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+            }
+        }
+
+        // 로봇 적
+        class Robot {
+            constructor(x, y, type = 'grunt') {
+                this.x = x;
+                this.y = y;
+                this.width = 16;
+                this.height = 16;
+                this.type = type;
+                this.speed = type === 'grunt' ? 1 : type === 'hulk' ? 0.5 : 2;
+                this.health = type === 'hulk' ? 3 : 1;
+                this.maxHealth = this.health;
+                this.color = type === 'grunt' ? '#ff0000' : type === 'hulk' ? '#ff8800' : '#ff00ff';
+                this.points = type === 'grunt' ? 25 : type === 'hulk' ? 100 : 50;
+            }
+
+            update() {
+                // 플레이어를 향해 이동
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    this.x += (dx / distance) * this.speed;
+                    this.y += (dy / distance) * this.speed;
+                }
+            }
+
+            draw() {
+                // 체력에 따른 색상 변화
+                const healthRatio = this.health / this.maxHealth;
+                let color = this.color;
+                if (healthRatio < 0.5) {
+                    color = this.type === 'hulk' ? '#ff4400' : '#800000';
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // 글로우 효과
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                ctx.shadowBlur = 0;
+
+                // 타입별 특징 표시
+                if (this.type === 'hulk') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
+                } else if (this.type === 'brain') {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                }
+            }
+
+            takeDamage() {
+                this.health--;
+                return this.health <= 0;
+            }
+        }
+
+        // 인간 (구조해야 할 대상)
+        class Human {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 12;
+                this.height = 12;
+                this.color = '#00ffff';
+                this.points = 1000;
+                this.panic = false;
+            }
+
+            update() {
+                // 로봇이 가까이 있으면 패닉 상태
+                this.panic = false;
+                robots.forEach(robot => {
+                    const distance = Math.sqrt((robot.x - this.x) ** 2 + (robot.y - this.y) ** 2);
+                    if (distance < 50) {
+                        this.panic = true;
+                        // 로봇에서 멀어지려고 함
+                        const dx = this.x - robot.x;
+                        const dy = this.y - robot.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            this.x += (dx / dist) * 0.5;
+                            this.y += (dy / dist) * 0.5;
+                        }
+                    }
+                });
+
+                // 화면 경계 처리
+                this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));
+                this.y = Math.max(this.height/2, Math.min(canvas.height - this.height/2, this.y));
+            }
+
+            draw() {
+                const color = this.panic ? '#ffff00' : this.color;
+                ctx.fillStyle = color;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // 글로우 효과
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 6;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // 게임 객체들
+        const player = new Player();
+        let bullets = [];
+        let robots = [];
+        let humans = [];
+
+        // 웨이브 시작
+        function startWave() {
+            robots = [];
+            humans = [];
+            
+            // 웨이브 정보 표시
+            document.getElementById('waveInfo').textContent = `웨이브 ${gameState.wave} 시작!`;
+            document.getElementById('waveInfo').style.opacity = '1';
+            setTimeout(() => {
+                document.getElementById('waveInfo').style.opacity = '0';
+            }, 2000);
+
+            // 로봇 생성
+            const robotCount = 5 + gameState.wave * 2;
+            for (let i = 0; i < robotCount; i++) {
+                let x, y;
+                do {
+                    x = Math.random() * (canvas.width - 40) + 20;
+                    y = Math.random() * (canvas.height - 40) + 20;
+                } while (Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2) < 100);
+
+                let type = 'grunt';
+                if (Math.random() < 0.1 + gameState.wave * 0.05) type = 'hulk';
+                else if (Math.random() < 0.15) type = 'brain';
+
+                robots.push(new Robot(x, y, type));
+            }
+
+            // 인간 생성
+            const humanCount = Math.max(1, 8 - gameState.wave);
+            for (let i = 0; i < humanCount; i++) {
+                let x, y;
+                do {
+                    x = Math.random() * (canvas.width - 40) + 20;
+                    y = Math.random() * (canvas.height - 40) + 20;
+                } while (Math.sqrt((x - player.x) ** 2 + (y - player.y) ** 2) < 80);
+
+                humans.push(new Human(x, y));
+            }
+        }
+
+        // 충돌 검사
+        function checkCollisions() {
+            // 총알과 로봇 충돌
+            bullets.forEach((bullet, bulletIndex) => {
+                robots.forEach((robot, robotIndex) => {
+                    if (bullet.x < robot.x + robot.width/2 &&
+                        bullet.x > robot.x - robot.width/2 &&
+                        bullet.y < robot.y + robot.height/2 &&
+                        bullet.y > robot.y - robot.height/2) {
+                        
+                        if (robot.takeDamage()) {
+                            gameState.score += robot.points;
+                            robots.splice(robotIndex, 1);
+                        }
+                        bullets.splice(bulletIndex, 1);
+                    }
+                });
+            });
+
+            // 플레이어와 로봇 충돌
+            robots.forEach(robot => {
+                if (player.x < robot.x + robot.width/2 &&
+                    player.x > robot.x - robot.width/2 &&
+                    player.y < robot.y + robot.height/2 &&
+                    player.y > robot.y - robot.height/2) {
+                    player.takeDamage();
+                }
+            });
+
+            // 플레이어와 인간 충돌 (구조)
+            humans.forEach((human, index) => {
+                if (player.x < human.x + human.width/2 &&
+                    player.x > human.x - human.width/2 &&
+                    player.y < human.y + human.height/2 &&
+                    player.y > human.y - human.height/2) {
+                    gameState.score += human.points;
+                    humans.splice(index, 1);
+                }
+            });
+
+            // 로봇과 인간 충돌 (인간 사망)
+            robots.forEach(robot => {
+                humans.forEach((human, index) => {
+                    if (robot.x < human.x + human.width/2 &&
+                        robot.x > human.x - human.width/2 &&
+                        robot.y < human.y + human.height/2 &&
+                        robot.y > human.y - human.height/2) {
+                        humans.splice(index, 1);
+                    }
+                });
+            });
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+
+            // 화면 지우기
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 게임 객체 업데이트
+            player.update();
+            
+            bullets.forEach((bullet, index) => {
+                bullet.update();
+                if (bullet.isOffScreen()) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            robots.forEach(robot => robot.update());
+            humans.forEach(human => human.update());
+
+            // 충돌 검사
+            checkCollisions();
+
+            // 웨이브 클리어 체크
+            if (robots.length === 0) {
+                gameState.wave++;
+                startWave();
+            }
+
+            // 그리기
+            player.draw();
+            bullets.forEach(bullet => bullet.draw());
+            robots.forEach(robot => robot.draw());
+            humans.forEach(human => human.draw());
+
+            // HUD 업데이트
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('wave').textContent = gameState.wave;
+            document.getElementById('lives').textContent = gameState.lives;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.code] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.code] = false;
+        });
+
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalWave').textContent = gameState.wave;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.wave = 1;
+            gameState.gameRunning = true;
+            bullets = [];
+            robots = [];
+            humans = [];
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.color = '#00ff00';
+            document.getElementById('gameOver').style.display = 'none';
+            startWave();
+            gameLoop();
+        }
+
+        // 게임 시작
+        startWave();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -91,66 +91,6 @@
             line-height: 1.6;
         }
 
-        .new-badge {
-            display: inline-block;
-            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            margin-left: 10px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .countdown-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 40px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .countdown-section h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: #ffff00;
-        }
-
-        .countdown-timer {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .time-unit {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px 20px;
-            border-radius: 10px;
-            text-align: center;
-            min-width: 80px;
-        }
-
-        .time-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #ff6b6b;
-        }
-
-        .time-label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-top: 5px;
-        }
-
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -178,10 +118,6 @@
             flex-direction: column;
             justify-content: space-between;
         }
-
-        .game-card:nth-child(1) { animation-delay: 0.1s; }
-        .game-card:nth-child(2) { animation-delay: 0.2s; }
-        .game-card:nth-child(3) { animation-delay: 0.3s; }
 
         @keyframes slideUp {
             from {
@@ -235,6 +171,23 @@
             flex-shrink: 0;
         }
 
+        .new-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-left: 10px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         .game-description {
             font-size: 1rem;
             margin-bottom: 20px;
@@ -253,13 +206,6 @@
             border-radius: 20px;
             display: inline-block;
             flex-shrink: 0;
-        }
-
-        .added-date {
-            font-size: 0.8rem;
-            opacity: 0.7;
-            margin-bottom: 20px;
-            color: #ffff00;
         }
 
         .play-button {
@@ -299,25 +245,6 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            opacity: 0.8;
-        }
-
-        .empty-state p {
-            opacity: 0.6;
-            line-height: 1.6;
-        }
-
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2.2rem;
@@ -334,20 +261,6 @@
                 max-width: 100%;
                 min-height: 400px;
             }
-
-            .countdown-timer {
-                flex-wrap: wrap;
-                gap: 15px;
-            }
-
-            .time-unit {
-                min-width: 70px;
-                padding: 10px 15px;
-            }
-
-            .time-number {
-                font-size: 1.5rem;
-            }
         }
 
         @media (max-width: 480px) {
@@ -363,10 +276,6 @@
                 padding: 15px;
                 min-height: 350px;
             }
-
-            .countdown-section {
-                padding: 20px 15px;
-            }
         }
     </style>
 </head>
@@ -378,340 +287,208 @@
             <h1>🆕 새로운 게임 쇼케이스</h1>
             <div class="subtitle">🕹️ 80년대 클래식 아케이드 게임 컬렉션!</div>
             <div class="description">
-                새로 추가된 8개의 클래식 아케이드 게임들을 가장 먼저 만나보세요!<br>
-                <strong>센티피드, 미사일 커맨드, 동키콩, Q*bert, 디그더그, 템페스트, 트론, 아스테로이드</strong><br>
-                7일 후에는 메인 게임 목록으로 이동됩니다.
+                새로 추가된 클래식 아케이드 게임들을 가장 먼저 만나보세요!<br>
+                <strong>총 18개의 새로운 게임이 준비되어 있습니다!</strong>
             </div>
         </div>
 
-        <div class="countdown-section">
-            <h2>⏰ 쇼케이스 남은 시간</h2>
-            <div class="countdown-timer" id="countdownTimer">
-                <div class="time-unit">
-                    <div class="time-number" id="days">0</div>
-                    <div class="time-label">일</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="hours">0</div>
-                    <div class="time-label">시간</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="minutes">0</div>
-                    <div class="time-label">분</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="seconds">0</div>
-                    <div class="time-label">초</div>
-                </div>
+        <div class="games-grid">
+            <!-- 조우스트 -->
+            <div class="game-card">
+                <span class="game-icon">🏇</span>
+                <h3 class="game-title">조우스트<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">날개 달린 기사가 되어 적들과 공중전을 벌이세요! 위에서 적을 공격하면 승리! 용암에 빠지지 않게 조심하세요!</p>
+                <div class="game-tech">클래식 아케이드</div>
+                <a href="../new-games/joust/index.html" class="play-button">게임 시작 🚀</a>
             </div>
-            <p>이 시간이 지나면 게임들이 메인 목록으로 이동됩니다!</p>
-        </div>
 
-        <div class="games-grid" id="gamesGrid">
-            <!-- 새로운 게임들이 여기에 동적으로 추가됩니다 -->
-        </div>
+            <!-- 로보트론 2084 -->
+            <div class="game-card">
+                <span class="game-icon">🤖</span>
+                <h3 class="game-title">로보트론 2084<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">로봇들로부터 인간을 구하세요! WASD로 이동, 화살표로 발사하는 트윈스틱 슈터!</p>
+                <div class="game-tech">트윈스틱 슈터</div>
+                <a href="../new-games/robotron-2084/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
 
-        <div class="empty-state" id="emptyState" style="display: none;">
-            <h3>🎮 현재 새로운 게임이 없습니다</h3>
-            <p>새로운 게임이 추가되면 여기에 7일간 표시됩니다!<br>
-            메인 페이지에서 다른 재미있는 게임들을 즐겨보세요.</p>
+            <!-- 잭슨 -->
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h3 class="game-title">잭슨<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">3D 등각투영 우주 슈팅! 고도를 조절하며 적과 장애물을 피하세요!</p>
+                <div class="game-tech">등각투영 슈터</div>
+                <a href="../new-games/zaxxon/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 폴 포지션 -->
+            <div class="game-card">
+                <span class="game-icon">🏎️</span>
+                <h3 class="game-title">폴 포지션<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">F1 레이싱 게임! 3랩을 완주하며 다른 차들과 경쟁하세요!</p>
+                <div class="game-tech">레이싱 시뮬레이션</div>
+                <a href="../new-games/pole-position/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 버거타임 -->
+            <div class="game-card">
+                <span class="game-icon">🍔</span>
+                <h3 class="game-title">버거타임<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">요리사가 되어 버거를 완성하세요! 재료를 밟아 떨어뜨리고 적들을 피하세요!</p>
+                <div class="game-tech">플랫폼 액션</div>
+                <a href="../new-games/burgertime/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 팩맨 게임 -->
+            <div class="game-card">
+                <span class="game-icon">🟡</span>
+                <h3 class="game-title">팩맨 게임<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">화살표 키로 팩맨을 조종해서 모든 점을 먹고 유령들을 피하세요! 파워 펠릿을 먹으면 잠시 유령을 먹을 수 있어요!</p>
+                <div class="game-tech">클래식 아케이드</div>
+                <a href="../new-games/pacman/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 갤러그 게임 -->
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h3 class="game-title">갤러그 게임<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">우주선을 조종해서 급강하하는 적들을 물리치세요! 적들이 다양한 패턴으로 공격해옵니다!</p>
+                <div class="game-tech">슈팅 아케이드</div>
+                <a href="../new-games/galaga/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 아케이드 컬렉션 -->
+            <div class="game-card">
+                <span class="game-icon">🕹️</span>
+                <h3 class="game-title">아케이드 컬렉션<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">6개의 클래식 아케이드 게임을 한 번에 즐기세요! 스페이스 인베이더, 브레이크아웃, 스네이크, 아스테로이드, 프로거, 갤러그!</p>
+                <div class="game-tech">멀티 아케이드</div>
+                <a href="../new-games/arcade-collection/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 아스테로이드 -->
+            <div class="game-card">
+                <span class="game-icon">🪨</span>
+                <h3 class="game-title">아스테로이드<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">우주선으로 소행성들을 파괴하세요! 큰 소행성은 작은 조각으로 분해됩니다! 화살표 키로 조종하고 스페이스바로 발사하세요!</p>
+                <div class="game-tech">클래식 아케이드</div>
+                <a href="../new-games/asteroids/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 센티피드 -->
+            <div class="game-card">
+                <span class="game-icon">🐛</span>
+                <h3 class="game-title">센티피드<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">마우스로 조준해서 센티피드와 거미를 물리치세요! 버섯 장애물을 피하며 적들을 격퇴하세요!</p>
+                <div class="game-tech">클래식 아케이드</div>
+                <a href="../new-games/centipede/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 미사일 커맨드 -->
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h3 class="game-title">미사일 커맨드<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">도시를 지키기 위해 미사일을 요격하세요! 연쇄 폭발로 더 많은 미사일을 막을 수 있어요!</p>
+                <div class="game-tech">방어 시뮬레이션</div>
+                <a href="../new-games/missile-command/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 동키콩 -->
+            <div class="game-card">
+                <span class="game-icon">🦍</span>
+                <h3 class="game-title">동키콩<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">마리오가 되어 동키콩의 배럴을 피하며 공주를 구하세요! 사다리를 타고 올라가며 해머로 배럴을 부수세요!</p>
+                <div class="game-tech">플랫폼 액션</div>
+                <a href="../new-games/donkey-kong/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- Q*bert -->
+            <div class="game-card">
+                <span class="game-icon">🔺</span>
+                <h3 class="game-title">Q*bert (피라미드 블록)<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">피라미드의 모든 블록 색깔을 바꾸세요! 적들을 피하며 큐브를 점프해서 색칠하세요!</p>
+                <div class="game-tech">퍼즐 액션</div>
+                <a href="../new-games/qbert/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 디그더그 -->
+            <div class="game-card">
+                <span class="game-icon">⛏️</span>
+                <h3 class="game-title">디그더그<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">땅을 파서 터널을 만들고 적들을 물리치세요! 펌프로 적을 부풀려 터뜨리거나 바위로 깔아뭉개세요!</p>
+                <div class="game-tech">액션 퍼즐</div>
+                <a href="../new-games/dig-dug/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 템페스트 -->
+            <div class="game-card">
+                <span class="game-icon">🌀</span>
+                <h3 class="game-title">템페스트<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">원형 터널에서 적들을 물리치세요! 벡터 그래픽 스타일의 클래식 슈팅 게임!</p>
+                <div class="game-tech">벡터 슈팅</div>
+                <a href="../new-games/tempest/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 트론 -->
+            <div class="game-card">
+                <span class="game-icon">🏍️</span>
+                <h3 class="game-title">트론 (라이트 사이클)<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">라이트 사이클을 조종해서 상대방을 가두세요! 벽에 부딪히지 않게 조심하며 AI와 대결하세요!</p>
+                <div class="game-tech">전략 액션</div>
+                <a href="../new-games/tron/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 크리스마스 마리오 -->
+            <div class="game-card">
+                <span class="game-icon">🎄</span>
+                <h3 class="game-title">크리스마스 마리오<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">산타 마리오가 되어 크리스마스 모험을 떠나세요! 5개 레벨과 산타할머니 보스전!</p>
+                <div class="game-tech">크리스마스 플랫포머</div>
+                <a href="../new-games/christmas-mario/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
+
+            <!-- 우주 슈팅 게임 -->
+            <div class="game-card">
+                <span class="game-icon">🚀</span>
+                <h3 class="game-title">우주 슈팅 게임<span class="new-badge">NEW!</span></h3>
+                <p class="game-description">10단계를 클리어하고 보스를 물리치세요! 5단계부터 적이 미사일을 쏩니다! 다양한 색의 적 비행기와 전투!</p>
+                <div class="game-tech">우주 슈팅</div>
+                <a href="../new-games/space-shooter/index.html" class="play-button">게임 시작 🚀</a>
+            </div>
         </div>
     </div>
 
     <script>
-        // 새로운 게임 데이터 (실제로는 서버나 로컬 스토리지에서 관리)
-        const newGames = [
-            {
-                id: 'pacman',
-                title: '팩맨 게임',
-                icon: '🟡',
-                description: '화살표 키로 팩맨을 조종해서 모든 점을 먹고 유령들을 피하세요! 파워 펠릿을 먹으면 잠시 유령을 먹을 수 있어요!',
-                tech: '클래식 아케이드',
-                path: '../new-games/pacman/index.html',
-                addedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2일 전 추가됨
-                showcaseEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5일 후
-            },
-            {
-                id: 'galaga',
-                title: '갤러그 게임',
-                icon: '🚀',
-                description: '우주선을 조종해서 급강하하는 적들을 물리치세요! 적들이 다양한 패턴으로 공격해옵니다!',
-                tech: '슈팅 아케이드',
-                path: '../new-games/galaga/index.html',
-                addedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1일 전 추가됨
-                showcaseEndDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString() // 6일 후
-            },
-            {
-                id: 'arcade-collection',
-                title: '아케이드 컬렉션',
-                icon: '🕹️',
-                description: '6개의 클래식 아케이드 게임을 한 번에 즐기세요! 스페이스 인베이더, 브레이크아웃, 스네이크, 아스테로이드, 프로거, 갤러그가 모두 포함되어 있습니다!',
-                tech: '멀티 아케이드',
-                path: '../new-games/arcade-collection/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'asteroids',
-                title: '아스테로이드',
-                icon: '🪨',
-                description: '우주선으로 소행성들을 파괴하세요! 큰 소행성은 작은 조각으로 분해됩니다! 화살표 키로 조종하고 스페이스바로 발사하세요!',
-                tech: '클래식 아케이드',
-                path: '../new-games/asteroids/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'centipede',
-                title: '센티피드',
-                icon: '🐛',
-                description: '마우스로 조준해서 센티피드와 거미를 물리치세요! 버섯 장애물을 피하며 적들을 격퇴하세요!',
-                tech: '클래식 아케이드',
-                path: '../new-games/centipede/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'missile-command',
-                title: '미사일 커맨드',
-                icon: '🚀',
-                description: '도시를 지키기 위해 미사일을 요격하세요! 연쇄 폭발로 더 많은 미사일을 막을 수 있어요!',
-                tech: '방어 시뮬레이션',
-                path: '../new-games/missile-command/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'donkey-kong',
-                title: '동키콩',
-                icon: '🦍',
-                description: '마리오가 되어 동키콩의 배럴을 피하며 공주를 구하세요! 사다리를 타고 올라가며 해머로 배럴을 부수세요!',
-                tech: '플랫폼 액션',
-                path: '../new-games/donkey-kong/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'qbert',
-                title: 'Q*bert (피라미드 블록)',
-                icon: '🔺',
-                description: '피라미드의 모든 블록 색깔을 바꾸세요! 적들을 피하며 큐브를 점프해서 색칠하세요!',
-                tech: '퍼즐 액션',
-                path: '../new-games/qbert/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'dig-dug',
-                title: '디그더그',
-                icon: '⛏️',
-                description: '땅을 파서 터널을 만들고 적들을 물리치세요! 펌프로 적을 부풀려 터뜨리거나 바위로 깔아뭉개세요!',
-                tech: '액션 퍼즐',
-                path: '../new-games/dig-dug/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'tempest',
-                title: '템페스트',
-                icon: '🌀',
-                description: '원형 터널에서 적들을 물리치세요! 벡터 그래픽 스타일의 클래식 슈팅 게임!',
-                tech: '벡터 슈팅',
-                path: '../new-games/tempest/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'tron',
-                title: '트론 (라이트 사이클)',
-                icon: '🏍️',
-                description: '라이트 사이클을 조종해서 상대방을 가두세요! 벽에 부딪히지 않게 조심하며 AI와 대결하세요!',
-                tech: '전략 액션',
-                path: '../new-games/tron/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'christmas-mario',
-                title: '크리스마스 마리오',
-                icon: '🎄',
-                description: '산타 마리오가 되어 크리스마스 모험을 떠나세요! 5개 레벨과 산타할머니 보스전!',
-                tech: '크리스마스 플랫포머',
-                path: '../new-games/christmas-mario/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            },
-            {
-                id: 'space-shooter',
-                title: '우주 슈팅 게임',
-                icon: '🚀',
-                description: '10단계를 클리어하고 보스를 물리치세요! 5단계부터 적이 미사일을 쏩니다! 다양한 색의 적 비행기와 전투!',
-                tech: '우주 슈팅',
-                path: '../new-games/space-shooter/index.html',
-                addedDate: new Date().toISOString(), // 오늘 추가됨
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후
-            }
-            // 여기에 더 많은 새로운 게임들을 추가할 수 있습니다
-        ];
+        // 게임 카드 애니메이션
+        document.querySelectorAll('.game-card').forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
 
-        // 로컬 스토리지에서 게임 데이터 로드
-        function loadGamesFromStorage() {
-            const stored = localStorage.getItem('newGamesShowcase');
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    // 기존 데이터와 새 데이터 병합
-                    return [...parsed, ...newGames.filter(newGame => 
-                        !parsed.some(existingGame => existingGame.id === newGame.id)
-                    )];
-                } catch (e) {
-                    console.error('저장된 게임 데이터 로드 실패:', e);
-                }
-            }
-            return newGames;
-        }
-
-        // 로컬 스토리지에 게임 데이터 저장
-        function saveGamesToStorage(games) {
-            try {
-                localStorage.setItem('newGamesShowcase', JSON.stringify(games));
-            } catch (e) {
-                console.error('게임 데이터 저장 실패:', e);
-            }
-        }
-
-        // 만료된 게임 필터링
-        function filterActiveGames(games) {
-            const now = new Date();
-            return games.filter(game => new Date(game.showcaseEndDate) > now);
-        }
-
-        // 게임 카드 생성
-        function createGameCard(game) {
-            const addedDate = new Date(game.addedDate);
-            const formattedDate = addedDate.toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+        // 게임 카드 클릭 효과
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-10px) scale(1.02)';
             });
-
-            return `
-                <div class="game-card">
-                    <span class="game-icon">${game.icon}</span>
-                    <h3 class="game-title">${game.title}<span class="new-badge">NEW!</span></h3>
-                    <p class="game-description">${game.description}</p>
-                    <div class="game-tech">${game.tech}</div>
-                    <div class="added-date">📅 ${formattedDate} 추가</div>
-                    <a href="${game.path}" class="play-button">게임 시작 🚀</a>
-                </div>
-            `;
-        }
-
-        // 게임 목록 렌더링
-        function renderGames() {
-            const allGames = loadGamesFromStorage();
-            const activeGames = filterActiveGames(allGames);
             
-            // 만료된 게임들 제거하고 저장
-            if (activeGames.length !== allGames.length) {
-                saveGamesToStorage(activeGames);
-            }
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        });
 
-            const gamesGrid = document.getElementById('gamesGrid');
-            const emptyState = document.getElementById('emptyState');
+        // 버튼 클릭 시 로딩 효과
+        document.querySelectorAll('.play-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const originalText = button.textContent;
+                button.textContent = '로딩 중... ⏳';
+                button.style.pointerEvents = 'none';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.pointerEvents = 'auto';
+                }, 1000);
+            });
+        });
 
-            if (activeGames.length === 0) {
-                gamesGrid.style.display = 'none';
-                emptyState.style.display = 'block';
-                return;
-            }
-
-            gamesGrid.style.display = 'grid';
-            emptyState.style.display = 'none';
-            
-            // 최신 게임부터 표시 (추가된 날짜 기준 내림차순)
-            activeGames.sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
-            
-            gamesGrid.innerHTML = activeGames.map(createGameCard).join('');
-        }
-
-        // 카운트다운 타이머 업데이트
-        function updateCountdown() {
-            const allGames = loadGamesFromStorage();
-            const activeGames = filterActiveGames(allGames);
-
-            if (activeGames.length === 0) {
-                document.getElementById('countdownTimer').style.display = 'none';
-                return;
-            }
-
-            // 가장 빨리 만료되는 게임의 만료 시간 사용
-            const earliestEndDate = activeGames.reduce((earliest, game) => {
-                const gameEndDate = new Date(game.showcaseEndDate);
-                return gameEndDate < earliest ? gameEndDate : earliest;
-            }, new Date(activeGames[0].showcaseEndDate));
-
-            const now = new Date();
-            const timeLeft = earliestEndDate - now;
-
-            if (timeLeft <= 0) {
-                renderGames(); // 만료된 게임 제거
-                return;
-            }
-
-            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-
-            document.getElementById('days').textContent = days;
-            document.getElementById('hours').textContent = hours;
-            document.getElementById('minutes').textContent = minutes;
-            document.getElementById('seconds').textContent = seconds;
-        }
-
-        // 새 게임 추가 함수 (개발자용)
-        function addNewGame(gameData) {
-            const games = loadGamesFromStorage();
-            const newGame = {
-                ...gameData,
-                addedDate: new Date().toISOString(),
-                showcaseEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-            };
-            
-            // 중복 체크
-            if (!games.some(game => game.id === newGame.id)) {
-                games.push(newGame);
-                saveGamesToStorage(games);
-                renderGames();
-            }
-        }
-
-        // 초기화
-        function init() {
-            // 초기 데이터 저장
-            saveGamesToStorage(loadGamesFromStorage());
-            
-            // 게임 목록 렌더링
-            renderGames();
-            
-            // 카운트다운 시작
-            updateCountdown();
-            setInterval(updateCountdown, 1000);
-            
-            // 1분마다 만료된 게임 체크
-            setInterval(renderGames, 60000);
-        }
-
-        // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', init);
-
-        // 개발자 콘솔에서 사용할 수 있는 함수들
-        window.addNewGame = addNewGame;
-        window.clearShowcase = () => {
-            localStorage.removeItem('newGamesShowcase');
-            renderGames();
-        };
+        console.log('🎮 새로운 게임 쇼케이스 로드 완료! 총 18개의 게임이 준비되었습니다!');
     </script>
 </body>
 </html>

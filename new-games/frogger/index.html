@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐸 프로거 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 10;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 10;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ff00;
+            z-index: 20;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .game-over button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .game-over button:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 30;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #00aa00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                width: 100vw;
+                height: 100vh;
+                border: none;
+                border-radius: 0;
+            }
+            
+            canvas {
+                border-radius: 0;
+            }
+            
+            .ui {
+                font-size: 14px;
+            }
+            
+            .controls {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+        
+        <div class="ui">
+            <div>점수: <span id="score">0</span></div>
+            <div>생명: <span id="lives">3</span></div>
+            <div>레벨: <span id="level">1</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            화살표 키: 이동 | 도로와 강을 안전하게 건너세요!
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">다시 시작</button>
+            <button onclick="location.href='../../index.html'">홈으로</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 상태
+        let gameState = {
+            score: 0,
+            lives: 3,
+            level: 1,
+            gameRunning: true,
+            keys: {}
+        };
+
+        // 개구리 (플레이어)
+        class Frog {
+            constructor() {
+                this.x = 400;
+                this.y = 550;
+                this.width = 30;
+                this.height = 30;
+                this.gridSize = 50;
+                this.moving = false;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.moveSpeed = 8;
+            }
+
+            update() {
+                // 격자 기반 이동
+                if (!this.moving) {
+                    if (gameState.keys['ArrowUp'] && this.y > 50) {
+                        this.targetY = this.y - this.gridSize;
+                        this.moving = true;
+                        gameState.keys['ArrowUp'] = false;
+                    }
+                    if (gameState.keys['ArrowDown'] && this.y < 550) {
+                        this.targetY = this.y + this.gridSize;
+                        this.moving = true;
+                        gameState.keys['ArrowDown'] = false;
+                    }
+                    if (gameState.keys['ArrowLeft'] && this.x > 25) {
+                        this.targetX = this.x - this.gridSize;
+                        this.moving = true;
+                        gameState.keys['ArrowLeft'] = false;
+                    }
+                    if (gameState.keys['ArrowRight'] && this.x < 775) {
+                        this.targetX = this.x + this.gridSize;
+                        this.moving = true;
+                        gameState.keys['ArrowRight'] = false;
+                    }
+                }
+
+                // 부드러운 이동
+                if (this.moving) {
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    
+                    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
+                        this.x = this.targetX;
+                        this.y = this.targetY;
+                        this.moving = false;
+                        
+                        // 목표 지점 도달 체크
+                        if (this.y <= 50) {
+                            this.reachGoal();
+                        }
+                    } else {
+                        this.x += dx * 0.3;
+                        this.y += dy * 0.3;
+                    }
+                }
+            }
+
+            reachGoal() {
+                gameState.score += 100 * gameState.level;
+                this.reset();
+                updateUI();
+                
+                // 레벨업 체크
+                if (gameState.score >= gameState.level * 500) {
+                    gameState.level++;
+                    updateUI();
+                }
+            }
+
+            reset() {
+                this.x = 400;
+                this.y = 550;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.moving = false;
+            }
+
+            draw() {
+                // 개구리 몸체
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // 개구리 눈
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 8, 4, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y - 8, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 눈동자
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 8, 2, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y - 8, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x - this.width/2,
+                    y: this.y - this.height/2,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 자동차 클래스
+        class Car {
+            constructor(x, y, speed, color, width = 60) {
+                this.x = x;
+                this.y = y;
+                this.speed = speed;
+                this.color = color;
+                this.width = width;
+                this.height = 30;
+            }
+
+            update() {
+                this.x += this.speed;
+                
+                // 화면 밖으로 나가면 반대편에서 다시 등장
+                if (this.speed > 0 && this.x > canvas.width + 50) {
+                    this.x = -this.width - 50;
+                } else if (this.speed < 0 && this.x < -this.width - 50) {
+                    this.x = canvas.width + 50;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // 자동차 창문
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(this.x + 10, this.y + 5, this.width - 20, this.height - 10);
+                
+                // 바퀴
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(this.x + 10, this.y + this.height, 8, 0, Math.PI * 2);
+                ctx.arc(this.x + this.width - 10, this.y + this.height, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 통나무 클래스
+        class Log {
+            constructor(x, y, speed, width = 100) {
+                this.x = x;
+                this.y = y;
+                this.speed = speed;
+                this.width = width;
+                this.height = 30;
+            }
+
+            update() {
+                this.x += this.speed;
+                
+                // 화면 밖으로 나가면 반대편에서 다시 등장
+                if (this.speed > 0 && this.x > canvas.width + 50) {
+                    this.x = -this.width - 50;
+                } else if (this.speed < 0 && this.x < -this.width - 50) {
+                    this.x = canvas.width + 50;
+                }
+            }
+
+            draw() {
+                // 통나무
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // 나무 결
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < this.width; i += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + i, this.y);
+                    ctx.lineTo(this.x + i, this.y + this.height);
+                    ctx.stroke();
+                }
+            }
+
+            getCollisionBox() {
+                return {
+                    x: this.x,
+                    y: this.y,
+                    width: this.width,
+                    height: this.height
+                };
+            }
+        }
+
+        // 게임 객체들
+        let frog = new Frog();
+        let cars = [];
+        let logs = [];
+
+        // 충돌 감지
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 자동차 생성
+        function createCars() {
+            cars = [];
+            const carRows = [450, 400, 350, 300, 250];
+            const colors = ['#ff0000', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            
+            carRows.forEach((y, index) => {
+                const direction = index % 2 === 0 ? 1 : -1;
+                const speed = (2 + Math.random() * 2 + gameState.level * 0.5) * direction;
+                const spacing = 150 + Math.random() * 100;
+                
+                for (let i = 0; i < 5; i++) {
+                    cars.push(new Car(
+                        i * spacing * direction - (direction > 0 ? 200 : -200),
+                        y,
+                        speed,
+                        colors[index % colors.length]
+                    ));
+                }
+            });
+        }
+
+        // 통나무 생성
+        function createLogs() {
+            logs = [];
+            const logRows = [200, 150, 100];
+            
+            logRows.forEach((y, index) => {
+                const direction = index % 2 === 0 ? 1 : -1;
+                const speed = (1.5 + Math.random() * 1.5 + gameState.level * 0.3) * direction;
+                const spacing = 180 + Math.random() * 80;
+                
+                for (let i = 0; i < 4; i++) {
+                    logs.push(new Log(
+                        i * spacing * direction - (direction > 0 ? 150 : -150),
+                        y,
+                        speed
+                    ));
+                }
+            });
+        }
+
+        // 배경 그리기
+        function drawBackground() {
+            // 하단 안전지대 (잔디)
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 500, canvas.width, 100);
+            
+            // 도로
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 250, canvas.width, 250);
+            
+            // 도로 중앙선
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 20]);
+            for (let y = 275; y < 475; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            
+            // 중간 안전지대
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 225, canvas.width, 25);
+            
+            // 강
+            ctx.fillStyle = '#0066cc';
+            ctx.fillRect(0, 75, canvas.width, 150);
+            
+            // 물결 효과
+            ctx.strokeStyle = '#004499';
+            ctx.lineWidth = 2;
+            for (let y = 85; y < 215; y += 20) {
+                ctx.beginPath();
+                for (let x = 0; x < canvas.width; x += 40) {
+                    ctx.moveTo(x, y);
+                    ctx.quadraticCurveTo(x + 20, y - 5, x + 40, y);
+                }
+                ctx.stroke();
+            }
+            
+            // 상단 목표지대 (잔디)
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 0, canvas.width, 75);
+            
+            // 목표 지점 표시
+            ctx.fillStyle = '#ffff00';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText('🏁 GOAL 🏁', canvas.width/2 - 60, 40);
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('level').textContent = gameState.level;
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.gameRunning = true;
+            frog.reset();
+            createCars();
+            createLogs();
+            updateUI();
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameState.gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // 화면 지우기
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 배경 그리기
+            drawBackground();
+
+            // 개구리 업데이트
+            frog.update();
+
+            // 자동차 업데이트
+            cars.forEach(car => {
+                car.update();
+                car.draw();
+                
+                // 개구리와 자동차 충돌 체크
+                if (checkCollision(frog.getCollisionBox(), car.getCollisionBox())) {
+                    gameState.lives--;
+                    frog.reset();
+                    updateUI();
+                    
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            });
+
+            // 통나무 업데이트
+            logs.forEach(log => {
+                log.update();
+                log.draw();
+            });
+
+            // 강에서 통나무 위에 있는지 체크
+            if (frog.y >= 75 && frog.y <= 225) {
+                let onLog = false;
+                logs.forEach(log => {
+                    if (checkCollision(frog.getCollisionBox(), log.getCollisionBox())) {
+                        onLog = true;
+                        // 통나무와 함께 이동
+                        if (!frog.moving) {
+                            frog.x += log.speed;
+                            frog.targetX = frog.x;
+                            
+                            // 화면 밖으로 나가지 않도록
+                            if (frog.x < 25) frog.x = 25;
+                            if (frog.x > 775) frog.x = 775;
+                        }
+                    }
+                });
+                
+                // 통나무 위에 없으면 물에 빠짐
+                if (!onLog && !frog.moving) {
+                    gameState.lives--;
+                    frog.reset();
+                    updateUI();
+                    
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+
+            // 개구리 그리기
+            frog.draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.code] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.code] = false;
+        });
+
+        // 게임 초기화
+        function initGame() {
+            createCars();
+            createLogs();
+            updateUI();
+        }
+
+        // 게임 시작
+        initGame();
+        gameLoop();
+
+        // 화면 크기 조정
+        function resizeCanvas() {
+            if (window.innerWidth < 768) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            } else {
+                canvas.width = 800;
+                canvas.height = 600;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    </script>
+</body>
+</html>

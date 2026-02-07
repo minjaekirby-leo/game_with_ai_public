@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍔 버거타임 - 서민재의 게임랜드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #8B4513, #D2691E, #F4A460);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 20%, #8B4513 20%, #8B4513 100%);
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+
+        .controls {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: #fff;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        canvas {
+            display: block;
+            background: #8B4513;
+            border: 3px solid #654321;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #fff;
+            display: none;
+            z-index: 200;
+        }
+
+        .level-complete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 128, 0, 0.9);
+            color: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #fff;
+            display: none;
+            z-index: 200;
+        }
+
+        .pepper-count {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="../../index.html" class="back-btn">🏠 홈으로</a>
+        
+        <div class="hud">
+            <div>점수: <span id="score">0</span></div>
+            <div>🍔 버거타임</div>
+            <div>레벨: <span id="level">1</span> | 생명: <span id="lives">3</span></div>
+        </div>
+
+        <div class="controls">
+            조작법: 화살표 키 - 이동, 스페이스바 - 후추 뿌리기
+        </div>
+
+        <div class="pepper-count">
+            🌶️ 후추: <span id="pepperCount">∞</span>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="level-complete" id="levelComplete">
+            <h2>레벨 완료!</h2>
+            <p>보너스 점수: <span id="bonusScore">0</span></p>
+            <button onclick="nextLevel()" style="background: #228B22; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 15px;">다음 레벨</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>도달 레벨: <span id="finalLevel">1</span></p>
+            <button onclick="restartGame()" style="background: #8B4513; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 15px;">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 캔버스 크기 설정
+        canvas.width = 800;
+        canvas.height = 600;
+        canvas.style.position = 'absolute';
+        canvas.style.left = '50%';
+        canvas.style.top = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+
+        // 게임 상태
+        let gameState = {
+            score: 0,
+            lives: 3,
+            level: 1,
+            gameRunning: true,
+            keys: {},
+            levelComplete: false
+        };
+
+        // 플레이어 (요리사 피터 페퍼)
+        class Player {
+            constructor() {
+                this.x = 100;
+                this.y = 500;
+                this.width = 25;
+                this.height = 30;
+                this.speed = 2;
+                this.direction = 1; // 1: 오른쪽, -1: 왼쪽
+                this.onPlatform = true;
+                this.climbing = false;
+                this.color = '#fff';
+                this.lastPepper = 0;
+            }
+
+            update() {
+                let moved = false;
+
+                // 이동 처리
+                if (gameState.keys['ArrowLeft']) {
+                    this.x -= this.speed;
+                    this.direction = -1;
+                    moved = true;
+                }
+                if (gameState.keys['ArrowRight']) {
+                    this.x += this.speed;
+                    this.direction = 1;
+                    moved = true;
+                }
+                if (gameState.keys['ArrowUp']) {
+                    // 사다리 올라가기
+                    const ladder = this.findLadder();
+                    if (ladder) {
+                        this.y -= this.speed;
+                        this.climbing = true;
+                        moved = true;
+                    }
+                }
+                if (gameState.keys['ArrowDown']) {
+                    // 사다리 내려가기
+                    const ladder = this.findLadder();
+                    if (ladder) {
+                        this.y += this.speed;
+                        this.climbing = true;
+                        moved = true;
+                    }
+                }
+
+                // 후추 뿌리기
+                if (gameState.keys['Space'] && Date.now() - this.lastPepper > 500) {
+                    this.throwPepper();
+                    this.lastPepper = Date.now();
+                }
+
+                // 플랫폼 충돌 검사
+                this.checkPlatformCollisions();
+
+                // 화면 경계 처리
+                this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+            }
+
+            findLadder() {
+                return ladders.find(ladder => 
+                    this.x + this.width/2 > ladder.x - 20 &&
+                    this.x + this.width/2 < ladder.x + ladder.width + 20 &&
+                    this.y + this.height > ladder.y - 10 &&
+                    this.y < ladder.y + ladder.height + 10
+                );
+            }
+
+            checkPlatformCollisions() {
+                // 사다리를 타고 있지 않을 때만 플랫폼 충돌 검사
+                if (this.climbing) return;
+                
+                this.onPlatform = false;
+                
+                platforms.forEach(platform => {
+                    if (this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height > platform.y - 5 &&
+                        this.y + this.height < platform.y + platform.height + 5) {
+                        
+                        this.y = platform.y - this.height;
+                        this.onPlatform = true;
+                        this.climbing = false;
+                    }
+                });
+
+                // 중력 적용 (플랫폼에 있지 않고 사다리도 타지 않을 때)
+                if (!this.onPlatform && !this.climbing) {
+                    this.y += 3;
+                }
+            }
+
+            throwPepper() {
+                // 무한 후추
+                peppers.push(new Pepper(
+                    this.x + (this.direction > 0 ? this.width : 0),
+                    this.y + this.height/2,
+                    this.direction
+                ));
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                if (this.direction === -1) ctx.scale(-1, 1);
+
+                // 요리사 모자
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-this.width/2, -this.height/2 - 5, this.width, 8);
+
+                // 요리사 얼굴
+                ctx.fillStyle = '#FFDBAC';
+                ctx.fillRect(-this.width/2 + 3, -this.height/2 + 3, this.width - 6, 12);
+
+                // 요리사 몸체
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-this.width/2, -this.height/2 + 15, this.width, this.height - 15);
+
+                // 요리사 팔
+                ctx.fillStyle = '#FFDBAC';
+                ctx.fillRect(-this.width/2 - 5, -this.height/2 + 18, 8, 12);
+                ctx.fillRect(this.width/2 - 3, -this.height/2 + 18, 8, 12);
+
+                ctx.restore();
+            }
+
+            takeDamage() {
+                gameState.lives--;
+                if (gameState.lives <= 0) {
+                    gameOver();
+                } else {
+                    // 시작 위치로 리셋
+                    this.x = 100;
+                    this.y = 500;
+                }
+            }
+        }
+
+        // 적 (소시지, 달걀, 피클)
+        class Enemy {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 20;
+                this.height = 25;
+                this.type = type; // 'sausage', 'egg', 'pickle'
+                this.speed = 0.5 + Math.random() * 0.5;
+                this.direction = Math.random() < 0.5 ? -1 : 1;
+                this.onPlatform = true;
+                this.climbing = false;
+                this.stunned = false;
+                this.stunnedTime = 0;
+                this.color = type === 'sausage' ? '#8B4513' : type === 'egg' ? '#FFFF00' : '#228B22';
+                this.points = type === 'sausage' ? 100 : type === 'egg' ? 150 : 200;
+            }
+
+            update() {
+                if (this.stunned) {
+                    this.stunnedTime--;
+                    if (this.stunnedTime <= 0) {
+                        this.stunned = false;
+                    }
+                    return;
+                }
+
+                // AI 이동
+                this.x += this.direction * this.speed;
+
+                // 플랫폼 끝에서 방향 전환
+                const currentPlatform = this.getCurrentPlatform();
+                if (currentPlatform) {
+                    if (this.x <= currentPlatform.x || this.x + this.width >= currentPlatform.x + currentPlatform.width) {
+                        this.direction *= -1;
+                    }
+                }
+
+                // 가끔 사다리 이용
+                if (Math.random() < 0.01) {
+                    const ladder = this.findNearbyLadder();
+                    if (ladder) {
+                        this.climbing = true;
+                        this.y += (Math.random() < 0.5 ? -1 : 1) * this.speed;
+                    }
+                }
+
+                // 플랫폼 충돌 검사
+                this.checkPlatformCollisions();
+            }
+
+            getCurrentPlatform() {
+                return platforms.find(platform => 
+                    this.x + this.width > platform.x &&
+                    this.x < platform.x + platform.width &&
+                    Math.abs(this.y + this.height - platform.y) < 10
+                );
+            }
+
+            findNearbyLadder() {
+                return ladders.find(ladder => 
+                    Math.abs(this.x + this.width/2 - ladder.x - ladder.width/2) < 30 &&
+                    this.y + this.height > ladder.y &&
+                    this.y < ladder.y + ladder.height
+                );
+            }
+
+            checkPlatformCollisions() {
+                this.onPlatform = false;
+                
+                platforms.forEach(platform => {
+                    if (this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height > platform.y - 5 &&
+                        this.y + this.height < platform.y + platform.height + 5) {
+                        
+                        this.y = platform.y - this.height;
+                        this.onPlatform = true;
+                        this.climbing = false;
+                    }
+                });
+
+                // 중력
+                if (!this.onPlatform && !this.climbing) {
+                    this.y += 2;
+                }
+            }
+
+            stun() {
+                this.stunned = true;
+                this.stunnedTime = 180; // 3초
+            }
+
+            draw() {
+                ctx.save();
+                
+                if (this.stunned) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'sausage') {
+                    // 소시지
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+                } else if (this.type === 'egg') {
+                    // 달걀
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + this.width/2, this.y + this.height/2, this.width/2, this.height/2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + this.width/2, this.y + this.height/2, this.width/3, this.height/3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'pickle') {
+                    // 피클
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = '#006400';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(this.x + 2, this.y + i * 8, this.width - 4, 3);
+                    }
+                }
+
+                // 눈
+                ctx.fillStyle = '#000';
+                ctx.fillRect(this.x + 5, this.y + 5, 3, 3);
+                ctx.fillRect(this.x + this.width - 8, this.y + 5, 3, 3);
+
+                ctx.restore();
+            }
+        }
+
+        // 후추
+        class Pepper {
+            constructor(x, y, direction) {
+                this.x = x;
+                this.y = y;
+                this.direction = direction;
+                this.speed = 4;
+                this.width = 15;
+                this.height = 8;
+                this.lifetime = 60; // 1초
+            }
+
+            update() {
+                this.x += this.direction * this.speed;
+                this.lifetime--;
+            }
+
+            draw() {
+                ctx.fillStyle = '#FF4500';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // 후추 입자 효과
+                for (let i = 0; i < 5; i++) {
+                    ctx.fillStyle = `rgba(255, 69, 0, ${Math.random()})`;
+                    ctx.fillRect(
+                        this.x + Math.random() * this.width,
+                        this.y + Math.random() * this.height,
+                        2, 2
+                    );
+                }
+            }
+
+            isExpired() {
+                return this.lifetime <= 0 || this.x < 0 || this.x > canvas.width;
+            }
+        }
+
+        // 버거 재료
+        class BurgerPart {
+            constructor(x, y, type, level) {
+                this.x = x;
+                this.y = y;
+                this.width = 60;
+                this.height = 15;
+                this.type = type; // 'bun_top', 'lettuce', 'patty', 'cheese', 'bun_bottom'
+                this.level = level;
+                this.stepped = 0; // 밟힌 횟수
+                this.maxSteps = 4;
+                this.falling = false;
+                this.fallSpeed = 0;
+                this.targetY = this.getTargetY();
+                this.color = this.getColor();
+            }
+
+            getColor() {
+                switch(this.type) {
+                    case 'bun_top': return '#DEB887';
+                    case 'lettuce': return '#228B22';
+                    case 'patty': return '#8B4513';
+                    case 'cheese': return '#FFD700';
+                    case 'bun_bottom': return '#DEB887';
+                    default: return '#DEB887';
+                }
+            }
+
+            getTargetY() {
+                // 최종 버거 위치 계산
+                const burgerBase = canvas.height - 100;
+                const partIndex = ['bun_bottom', 'patty', 'cheese', 'lettuce', 'bun_top'].indexOf(this.type);
+                return burgerBase - partIndex * this.height;
+            }
+
+            update() {
+                if (this.falling) {
+                    this.fallSpeed += 0.5;
+                    this.y += this.fallSpeed;
+                    
+                    if (this.y >= this.targetY) {
+                        this.y = this.targetY;
+                        this.falling = false;
+                        this.fallSpeed = 0;
+                    }
+                }
+            }
+
+            step() {
+                this.stepped++;
+                if (this.stepped >= this.maxSteps) {
+                    this.falling = true;
+                    gameState.score += 50;
+                }
+            }
+
+            draw() {
+                // 재료 그리기
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // 테두리
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+
+                // 밟힌 표시
+                for (let i = 0; i < this.stepped; i++) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(this.x + i * 15, this.y - 3, 10, 3);
+                }
+
+                // 타입별 특징
+                if (this.type === 'bun_top') {
+                    ctx.fillStyle = '#8B4513';
+                    for (let i = 0; i < 5; i++) {
+                        ctx.fillRect(this.x + i * 12, this.y + 2, 2, 2);
+                    }
+                } else if (this.type === 'lettuce') {
+                    ctx.fillStyle = '#32CD32';
+                    ctx.fillRect(this.x + 5, this.y + 3, this.width - 10, this.height - 6);
+                } else if (this.type === 'patty') {
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(this.x + 3, this.y + 3, this.width - 6, this.height - 6);
+                }
+            }
+        }
+
+        // 게임 객체들
+        const player = new Player();
+        let enemies = [];
+        let peppers = [];
+        let burgerParts = [];
+        let platforms = [];
+        let ladders = [];
+
+        // 레벨 생성
+        function createLevel() {
+            enemies = [];
+            peppers = [];
+            burgerParts = [];
+            platforms = [];
+            ladders = [];
+
+            // 플랫폼 생성
+            platforms.push(
+                { x: 0, y: 550, width: canvas.width, height: 20 }, // 바닥
+                { x: 50, y: 450, width: 200, height: 20 },
+                { x: 300, y: 400, width: 200, height: 20 },
+                { x: 550, y: 350, width: 200, height: 20 },
+                { x: 100, y: 300, width: 200, height: 20 },
+                { x: 400, y: 250, width: 200, height: 20 },
+                { x: 200, y: 150, width: 200, height: 20 }
+            );
+
+            // 사다리 생성
+            ladders.push(
+                { x: 150, y: 450, width: 20, height: 100 },
+                { x: 400, y: 350, width: 20, height: 100 },
+                { x: 250, y: 250, width: 20, height: 100 },
+                { x: 500, y: 200, width: 20, height: 100 },
+                { x: 300, y: 100, width: 20, height: 100 }
+            );
+
+            // 버거 재료 생성
+            const burgerTypes = ['bun_top', 'lettuce', 'patty', 'cheese', 'bun_bottom'];
+            burgerTypes.forEach((type, index) => {
+                burgerParts.push(new BurgerPart(
+                    200 + index * 80,
+                    platforms[index + 1].y - 20,
+                    type,
+                    index
+                ));
+            });
+
+            // 적 생성
+            const enemyTypes = ['sausage', 'egg', 'pickle'];
+            for (let i = 0; i < 3 + gameState.level; i++) {
+                const type = enemyTypes[i % enemyTypes.length];
+                const platform = platforms[1 + (i % (platforms.length - 1))];
+                enemies.push(new Enemy(
+                    platform.x + Math.random() * (platform.width - 30),
+                    platform.y - 30,
+                    type
+                ));
+            }
+        }
+
+        // 플랫폼과 사다리 그리기
+        function drawLevel() {
+            // 플랫폼
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+            });
+
+            // 사다리
+            ctx.fillStyle = '#DEB887';
+            ctx.strokeStyle = '#8B4513';
+            ladders.forEach(ladder => {
+                ctx.fillRect(ladder.x, ladder.y, ladder.width, ladder.height);
+                ctx.strokeRect(ladder.x, ladder.y, ladder.width, ladder.height);
+                
+                // 사다리 가로대
+                for (let y = ladder.y; y < ladder.y + ladder.height; y += 15) {
+                    ctx.fillRect(ladder.x, y, ladder.width, 3);
+                }
+            });
+        }
+
+        // 충돌 검사
+        function checkCollisions() {
+            // 플레이어와 적 충돌
+            enemies.forEach(enemy => {
+                if (!enemy.stunned &&
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y) {
+                    player.takeDamage();
+                }
+            });
+
+            // 후추와 적 충돌
+            peppers.forEach((pepper, pepperIndex) => {
+                enemies.forEach(enemy => {
+                    if (!enemy.stunned &&
+                        pepper.x < enemy.x + enemy.width &&
+                        pepper.x + pepper.width > enemy.x &&
+                        pepper.y < enemy.y + enemy.height &&
+                        pepper.y + pepper.height > enemy.y) {
+                        enemy.stun();
+                        gameState.score += enemy.points;
+                        peppers.splice(pepperIndex, 1);
+                    }
+                });
+            });
+
+            // 플레이어와 버거 재료 충돌
+            burgerParts.forEach(part => {
+                if (!part.falling &&
+                    player.x < part.x + part.width &&
+                    player.x + player.width > part.x &&
+                    player.y + player.height > part.y &&
+                    player.y + player.height < part.y + part.height + 10) {
+                    part.step();
+                }
+            });
+        }
+
+        // 레벨 완료 체크
+        function checkLevelComplete() {
+            const allFallen = burgerParts.every(part => part.y >= part.targetY);
+            if (allFallen && !gameState.levelComplete) {
+                gameState.levelComplete = true;
+                const bonus = gameState.level * 1000;
+                gameState.score += bonus;
+                document.getElementById('bonusScore').textContent = bonus;
+                document.getElementById('levelComplete').style.display = 'block';
+            }
+        }
+
+        // 게임 루프
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+
+            // 화면 지우기
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 배경 그라데이션
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.2, '#87CEEB');
+            gradient.addColorStop(0.2, '#8B4513');
+            gradient.addColorStop(1, '#654321');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 레벨 그리기
+            drawLevel();
+
+            // 게임 객체 업데이트
+            player.update();
+            enemies.forEach(enemy => enemy.update());
+            burgerParts.forEach(part => part.update());
+            
+            peppers.forEach((pepper, index) => {
+                pepper.update();
+                if (pepper.isExpired()) {
+                    peppers.splice(index, 1);
+                }
+            });
+
+            // 충돌 검사
+            checkCollisions();
+
+            // 레벨 완료 체크
+            checkLevelComplete();
+
+            // 그리기
+            burgerParts.forEach(part => part.draw());
+            enemies.forEach(enemy => enemy.draw());
+            peppers.forEach(pepper => pepper.draw());
+            player.draw();
+
+            // HUD 업데이트
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('pepperCount').textContent = '∞';
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.code] = true;
+            gameState.keys[e.key] = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.code] = false;
+            gameState.keys[e.key] = false;
+            e.preventDefault();
+        });
+
+        // 다음 레벨
+        function nextLevel() {
+            gameState.level++;
+            gameState.levelComplete = false;
+            document.getElementById('levelComplete').style.display = 'none';
+            createLevel();
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.gameRunning = true;
+            gameState.levelComplete = false;
+            player.x = 100;
+            player.y = 500;
+            document.getElementById('gameOver').style.display = 'none';
+            createLevel();
+            gameLoop();
+        }
+
+        // 게임 시작
+        createLevel();
+        gameLoop();
+    </script>
+</body>
+</html>
