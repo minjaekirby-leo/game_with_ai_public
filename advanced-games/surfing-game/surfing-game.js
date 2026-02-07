@@ -2,6 +2,41 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// 모바일 감지
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// 캔버스 크기 조정
+function resizeCanvas() {
+    const container = canvas.parentElement;
+    const maxWidth = Math.min(800, window.innerWidth - 40);
+    const maxHeight = Math.min(600, window.innerHeight * 0.6);
+    
+    // 비율 유지하면서 크기 조정
+    const aspectRatio = 800 / 600;
+    let newWidth = maxWidth;
+    let newHeight = newWidth / aspectRatio;
+    
+    if (newHeight > maxHeight) {
+        newHeight = maxHeight;
+        newWidth = newHeight * aspectRatio;
+    }
+    
+    canvas.style.width = newWidth + 'px';
+    canvas.style.height = newHeight + 'px';
+    
+    // 실제 캔버스 크기는 고정 (렌더링 품질 유지)
+    canvas.width = 800;
+    canvas.height = 600;
+}
+
+// 모바일 컨트롤 변수
+let mobileControls = {
+    left: false,
+    right: false,
+    jump: false,
+    trick: false
+};
+
 // 게임 상태
 let gameRunning = false;
 let gamePaused = false;
@@ -501,22 +536,24 @@ function generatePowerUps() {
 // 서퍼 업데이트
 function updateSurfer() {
     // 키보드 입력 처리
-    if (keys.ArrowLeft && surfer.x > 0) {
+    if ((keys.ArrowLeft || mobileControls.left) && surfer.x > 0) {
         surfer.x -= surfer.speed;
     }
-    if (keys.ArrowRight && surfer.x < canvas.width - surfer.width) {
+    if ((keys.ArrowRight || mobileControls.right) && surfer.x < canvas.width - surfer.width) {
         surfer.x += surfer.speed;
     }
-    if (keys.ArrowUp && surfer.onWave) {
+    if ((keys.ArrowUp || mobileControls.jump) && surfer.onWave) {
         surfer.velocityY = -12;
         surfer.inAir = true;
         surfer.onWave = false;
         createSplash(surfer.x + surfer.width/2, surfer.y + surfer.height);
+        mobileControls.jump = false; // 점프 후 리셋
     }
     
     // 트릭 처리
-    if (keys.Space && surfer.inAir && !surfer.trickActive) {
+    if ((keys.Space || mobileControls.trick) && surfer.inAir && !surfer.trickActive) {
         performTrick();
+        mobileControls.trick = false; // 트릭 후 리셋
     }
     
     // 물리 적용
@@ -804,6 +841,45 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
+// 모바일 버튼 이벤트
+document.addEventListener('DOMContentLoaded', () => {
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const trickBtn = document.getElementById('trickBtn');
+    
+    if (leftBtn) {
+        leftBtn.addEventListener('touchstart', () => mobileControls.left = true, { passive: true });
+        leftBtn.addEventListener('touchend', () => mobileControls.left = false, { passive: true });
+        leftBtn.addEventListener('mousedown', () => mobileControls.left = true);
+        leftBtn.addEventListener('mouseup', () => mobileControls.left = false);
+    }
+    
+    if (rightBtn) {
+        rightBtn.addEventListener('touchstart', () => mobileControls.right = true, { passive: true });
+        rightBtn.addEventListener('touchend', () => mobileControls.right = false, { passive: true });
+        rightBtn.addEventListener('mousedown', () => mobileControls.right = true);
+        rightBtn.addEventListener('mouseup', () => mobileControls.right = false);
+    }
+    
+    if (jumpBtn) {
+        jumpBtn.addEventListener('touchstart', () => mobileControls.jump = true, { passive: true });
+        jumpBtn.addEventListener('click', () => mobileControls.jump = true);
+    }
+    
+    if (trickBtn) {
+        trickBtn.addEventListener('touchstart', () => mobileControls.trick = true, { passive: true });
+        trickBtn.addEventListener('click', () => mobileControls.trick = true);
+    }
+});
+
+// 창 크기 변경 시 캔버스 크기 조정
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => {
+    setTimeout(resizeCanvas, 100);
+});
+
 // 초기화
+resizeCanvas();
 updateDisplay();
 document.getElementById('bestScore').textContent = bestScore;
